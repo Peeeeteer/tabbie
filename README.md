@@ -6,7 +6,7 @@
 
 Currently... I still suck at this and not much works...but I'm building it piece by piece, and sharing everything I learn along the way 
 
-[Make Your Own](https://github.com/peeeeteer/tabbie-robot) · [Learning Roadmap](./learnings/index.md) · [Follow the Build](#devlog)
+[Make Your Own](https://github.com/peeeeteer/tabbie-robot) · [Learning Roadmap](./learnings/index.md) · [Follow the Build](https://www.youtube.com/@peeeeteeer)
 
 </div>
 
@@ -20,7 +20,7 @@ It’s designed to:
 - Basicly your own little twitch streamer in the corner doing faces
 - Talk to you using voice + LCD expressions 🎙️
 - Help you with your day:
-  - ✅ Manage a to-do list
+  - ✅ Manage a to-do list (Pomodoro thing)
   - 🗓️ Show your upcoming schedule
   - 📄 Even read documents out loud
 
