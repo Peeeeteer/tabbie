@@ -12,15 +12,24 @@ And the goal was to:
 Show a screen and a mic and have it read and show that thing it read on a web page?
 
 
-1.
+1.1
 I installed vs code ardunio extensions
 
-2.
+1.2.
 Watched this tutorial:
 https://www.youtube.com/watch?v=I0ZIrzoI61g
 
-3.
+1.3.
 Ran into some problems running Arduino with VSCODE, watching this
 https://www.youtube.com/watch?v=gQ2lsSuXvVU
 
 Ended up installing platformio.ini which seems to be the main one anyone uses for boards like these?
+
+
+NOW Arudino does the ligth thing:
+https://github.com/seanmckaybeck/markdown-youtube/raw/master/media/A-1.mp4
+
+
+On to next thing.
+
+2.1 Steppa motor
