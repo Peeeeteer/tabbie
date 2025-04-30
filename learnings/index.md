@@ -12,19 +12,26 @@ Each step has:
 
 ## ✅ Completed
 
-- [01 – Blinking LED with Arduino](./01-blinking-led-arduino/)
-- [02 – Raspberry Pi Setup](./02-raspberry-pi-setup/)
-- [03 – Face Detection with OpenCV](./03-camera-vision-opencv/)
-- [04 – Text-to-Speech (Robot Voice)](./04-text-to-speech/)
 
 ## 🚧 In Progress
+- Electronic Basics (Light, Servo, Sensors)
+- Turning Servo Motors
+- 
 
-- [05 – Microphone + Voice Commands](./05-voice-recognition/)
-- [06 – LCD Screen Face Display](./06-building-a-face/)
-- [07 – Wi-Fi Sync to Website](./07-web-connection/)
 
 ## 🧪 Coming Up
+<!-- 
+- [01 – Blinking LED with Arduino](./01-blinking-led-arduino/)
+-->
+- 
 
+
+
+Future:
+- Text-To-Speech
+- Microphone + Voice Commands
+- LDC Screen Face Display
+- Wifi Sync to Website
 - Reading / summarizing docs
 - Connecting to calendar
 - Todo sync via website
