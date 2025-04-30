@@ -30,7 +30,7 @@ Ended up installing platformio.ini which seems to be the main one anyone uses fo
 
 
 NOW Arudino does the ligth thing:
-<video src="https://github.com/Peeeeteer/tabbie/raw/main/learnings/media/A-1.mp4" width="640" controls title="Arduino Light Demo"></video>
+<video src="https://github.com/Peeeeteer/tabbie/blob/main/learnings/01-arduino-uno-basic/media/A_1.mp4" width="640" controls title="Arduino Light Demo"></video>
 
 
 On to next thing.
