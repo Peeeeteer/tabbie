@@ -14,16 +14,18 @@ Each step has:
 
 
 ## 🚧 In Progress
-- Electronic Basics (Light, Servo, Sensors)
-- Turning Servo Motors
-- 
+[01 – Blinking LED with Arduino](./01-arduino-uno-basic)
+
 
 
 ## 🧪 Coming Up
 <!-- 
 - [01 – Blinking LED with Arduino](./01-blinking-led-arduino/)
 -->
-- 
+
+02 -  ESP32
+03 - 
+04 - etc...
 
 
 
