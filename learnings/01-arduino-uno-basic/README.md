@@ -12,7 +12,10 @@ And the goal was to:
 Show a screen and a mic and have it read and show that thing it read on a web page?
 
 
-1.1
+## Things I did.
+
+
+## 1.1 Lights
 I installed vs code ardunio extensions
 
 1.2.
@@ -27,9 +30,9 @@ Ended up installing platformio.ini which seems to be the main one anyone uses fo
 
 
 NOW Arudino does the ligth thing:
-https://github.com/seanmckaybeck/markdown-youtube/raw/master/media/A-1.mp4
+<video src="https://github.com/Peeeeteer/tabbie/raw/main/learnings/media/A-1.mp4" width="640" controls title="Arduino Light Demo"></video>
 
 
 On to next thing.
 
-2.1 Steppa motor
+## 2.1 Stepper motor
