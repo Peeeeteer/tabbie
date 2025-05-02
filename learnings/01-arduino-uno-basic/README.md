@@ -18,6 +18,10 @@ Show a screen and a mic and have it read and show that thing it read on a web pa
 ## 1.1 Lights
 I installed vs code ardunio extensions
 
+
+
+
+
 1.2.
 Watched this tutorial:
 https://www.youtube.com/watch?v=I0ZIrzoI61g
@@ -29,10 +33,15 @@ https://www.youtube.com/watch?v=gQ2lsSuXvVU
 Ended up installing platformio.ini which seems to be the main one anyone uses for boards like these?
 
 
-NOW Arudino does the ligth thing:
-<video src="https://2c80c8xyt7.ufs.sh/f/al4pGNqXq90D3gfPfqaw56Q8ZybfijWYxcDhFRXkVvKH7q9n" width="640" controls title="Arduino Light Demo"></video>
+NOW Arudino does the ligth thing: (Find code in the /src/main.py)
+
+
+https://github.com/user-attachments/assets/0f5b8252-3a36-44f9-81f7-1b0b11316123
+
 
 
 On to next thing.
 
 ## 2.1 Stepper motor
+
+I want some simple stepper moter things to show up, maybe read some current?
