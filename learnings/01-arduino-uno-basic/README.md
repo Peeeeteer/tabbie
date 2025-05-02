@@ -32,14 +32,26 @@ https://www.youtube.com/watch?v=gQ2lsSuXvVU
 
 Ended up installing platformio.ini which seems to be the main one anyone uses for boards like these?
 
-
 NOW Arudino does the ligth thing:
-<video src="https://2c80c8xyt7.ufs.sh/f/al4pGNqXq90D3gfPfqaw56Q8ZybfijWYxcDhFRXkVvKH7q9n" width="640" controls title="Arduino Light Demo"></video>
 
-https://2c80c8xyt7.ufs.sh/f/al4pGNqXq90D3gfPfqaw56Q8ZybfijWYxcDhFRXkVvKH7q9n
+
+https://github.com/user-attachments/assets/9d56f506-6bd0-425b-b68e-76e2e1bc5504
+
+
+
 
 On to next thing.
 
-## 2.1 Stepper motor
+## 2.1 Potentiometer
 
-I want some simple stepper moter things to show up, maybe read some current?
+With a Potentiometer, you can now turn the ligth led up and down. Same code in the main.cpp file 
+
+
+
+https://github.com/user-attachments/assets/5a38a1b8-3e5c-4d68-8e2c-4ae03be7157e
+
+
+
+## 2.2 Potentiometer
+
+Same code but you can also turn a Fan Motor
