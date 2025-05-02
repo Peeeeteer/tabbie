@@ -31,7 +31,7 @@ Ended up installing platformio.ini which seems to be the main one anyone uses fo
 
 NOW Arudino does the ligth thing:
 
-<video src="https://2c80c8xyt7.ufs.sh/f/al4pGNqXq90D3gfPfqaw56Q8ZybfijWYxcDhFRXkVvKH7q9n" width="640" controls title="Arduino Light Demo"></video>
+https://2c80c8xyt7.ufs.sh/f/al4pGNqXq90D3gfPfqaw56Q8ZybfijWYxcDhFRXkVvKH7q9n
 
 On to next thing.
 
