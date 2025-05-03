@@ -15,26 +15,32 @@ Currently... I still suck at this and not much works...but I'm building it piece
 ## 🛠️ What Is Tabbie?
 
 Tabbie is your little desk assistant — a cute robot that watches, listens, speaks, and helps.
+Basicly your own little twitch streamer in the corner doing faces
 
-It’s designed to:
-- Basicly your own little twitch streamer in the corner doing faces
+
+Tabbie connects to a [Tabbie.me website](./website) — or your own self-hosted version — where you can:
 - Talk to you using voice + face expressions 🎙️
 - Help you with your day:
   - ✅ Manage a to-do list (Pomodoro thing)
   - 🗓️ Show your upcoming schedule
   - 📄 Even read documents out loud
-
-Tabbie connects to a [Tabbie.me website](./website) — or your own self-hosted version — where you can:
-- Add/edit tasks and calendar events
-- Sync things between the site and the robot
-- Eventually: customize personality, expressions, and voice
-- Upload,Read And Find docs,images,invoices etc..
-- Hopefully more stuff later
+- Sync things between the site and the robot (todolist)
+- Eventually: customize personality, expressions, and voice and much more...
 
 It’s like if your little small robot assistant 
 
 ---
 
-## 📚 Devlog / Learnings
+## 🧠  Learning Progress so far / [Roadmap](./learnings/index.md)
 
-I’m learning electronics
+I havent built it yet and I'm still learning on how to make Tabbie,  
+Here’s the latest entry from my devlog 
+
+> **🧪 01 - Arduino Uno Basics**  
+> Learned how to blink an LED, Turn Servo with a potantioni... how ever you write that  
+> [📖 Read full log →](./learnings/01-arduino-uno-basic/README.md)
+
+I’ll keep updating this as I go.   
+Expect bad wiring, writing, dumb bugs... but it will work eventually 
+
+
