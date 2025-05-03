@@ -43,4 +43,4 @@ Future:
 
 > 📌 Want to follow along?  
 > Each folder is numbered + explained in simple terms.  
-> Start at [01 – Blinking LED](./01-blinking-led-arduino/) 🚀
+> Start at [01 – Arduino Basics](./01-arduino-uno-basic/) 🚀
