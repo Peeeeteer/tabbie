@@ -52,6 +52,14 @@ https://github.com/user-attachments/assets/5a38a1b8-3e5c-4d68-8e2c-4ae03be7157e
 
 
 
-## 2.2 Potentiometer
+2.2 Potentiometer
 
-Same code but you can also turn a Fan Motor
+Exact Same code but you can also use it to turn a Fan Motor... which is cool.
+
+
+https://github.com/user-attachments/assets/15904203-2893-4038-a614-c387fcf38571
+
+
+## 3.0 Servos/Step Motors?
+
+
