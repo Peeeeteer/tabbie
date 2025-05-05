@@ -63,3 +63,4 @@ https://github.com/user-attachments/assets/15904203-2893-4038-a614-c387fcf38571
 ## 3.0 Servos/Step Motors?
 
 
+Move servo with ptanetiomoter.

@@ -32,39 +32,75 @@
 // }
 
 
-// 2. Add Potentiometer
+// // 2. Add Potentiometer
+
+// #include <Arduino.h>
+
+// // Define the pins
+// const int potPin = A0; // Potentiometer connected to Analog pin A0
+// const int ledPin = 9;  // LED connected to PWM pin 9
+
+// void setup() {
+//   // Set the LED pin as an output
+//   pinMode(ledPin, OUTPUT);
+//   // Initialize serial communication (optional, for debugging)
+//   Serial.begin(9600); 
+// }
+
+// void loop() {
+//   // Read the potentiometer value (0-1023)
+//   int potValue = analogRead(potPin);
+
+//   // Map the potentiometer value to the LED brightness range (0-255)
+//   int brightness = map(potValue, 0, 1023, 0, 255);
+
+//   // Set the LED brightness
+//   analogWrite(ledPin, brightness);
+
+//   // Print the values to the Serial Monitor (optional)
+//   Serial.print("Potentiometer: ");
+//   Serial.print(potValue);
+//   Serial.print(" -> Brightness: ");
+//   Serial.println(brightness);
+
+//   // Small delay to stabilize readings (optional)
+//   delay(10); 
+// }
+
+
+// 3. Move Servo with potentiometer
 
 #include <Arduino.h>
+#include <Servo.h> // Include the Servo library
 
 // Define the pins
 const int potPin = A0; // Potentiometer connected to Analog pin A0
-const int ledPin = 9;  // LED connected to PWM pin 9
+const int servoPin = 9; // Servo signal pin connected to digital pin 9
+
+Servo myServo; // Create a Servo object
 
 void setup() {
-  // Set the LED pin as an output
-  pinMode(ledPin, OUTPUT);
+  myServo.attach(servoPin); // Attach the servo to the specified pin
   // Initialize serial communication (optional, for debugging)
-  Serial.begin(9600); 
+  Serial.begin(9600);
 }
 
 void loop() {
   // Read the potentiometer value (0-1023)
   int potValue = analogRead(potPin);
 
-  // Map the potentiometer value to the LED brightness range (0-255)
-  int brightness = map(potValue, 0, 1023, 0, 255);
+  // Map the potentiometer value to the servo angle range (0-180)
+  int angle = map(potValue, 0, 1023, 0, 180); // Map to servo angle
 
-  // Set the LED brightness
-  analogWrite(ledPin, brightness);
+  // Set the servo position
+  myServo.write(angle);
 
   // Print the values to the Serial Monitor (optional)
   Serial.print("Potentiometer: ");
   Serial.print(potValue);
-  Serial.print(" -> Brightness: ");
-  Serial.println(brightness);
+  Serial.print(" -> Angle: ");
+  Serial.println(angle);
 
-  // Small delay to stabilize readings (optional)
-  delay(10); 
+  // Small delay is important for servo stability
+  delay(15);
 }
-
-
