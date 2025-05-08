@@ -34,6 +34,9 @@ Ended up installing platformio.ini which seems to be the main one anyone uses fo
 
 NOW Arudino does the ligth thing:
 
+The code is inside ../src/main.cpp 
+Dont forget to pio lib install "Servo" (Komment and unkomment code for each part)
+
 
 https://github.com/user-attachments/assets/9d56f506-6bd0-425b-b68e-76e2e1bc5504
 
@@ -60,7 +63,11 @@ Exact Same code but you can also use it to turn a Fan Motor... which is cool.
 https://github.com/user-attachments/assets/15904203-2893-4038-a614-c387fcf38571
 
 
-## 3.0 Servos/Step Motors?
+## 3.0 Servos/Step Motors 
 
 
 Move servo with ptanetiomoter.
+
+
+## 3.1 Same thing, but now with tabbie head (The head will definetly look better in the future)
+
