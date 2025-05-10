@@ -2,7 +2,7 @@
 
 # 🤖 tabbie
 
-**An open-source desk robot with a screen, a voice, a camera — and a personality.**
+**An open-source desk robot with a screen, a voice — and a personality.**
 
 Currently... I still suck at this and not much works...but I'm building it piece by piece, and sharing everything I learn along the way 
 
