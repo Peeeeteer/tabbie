@@ -36,11 +36,9 @@ It’s like if your little small robot assistant
 I havent built it yet and I'm still learning on how to make Tabbie,  
 Here’s the latest entry from my devlog 
 
-> **🧪 01 - Arduino Uno Basics**  
-> Learned how to blink an LED, Turn Servo with a potantioni... how ever you write that  
-> [📖 Read full log →](./learnings/01-arduino-uno-basic/README.md)
+> **🧪 02-ESP32 basics**  
+> Learning to do same thing as Arduino but with ESP32  
+> [📖 Read full log →](./learnings/02-esp-32-basics/README.md)
 
-I’ll keep updating this as I go.   
-Expect bad wiring, writing, dumb bugs... but it will work eventually 
 
 
