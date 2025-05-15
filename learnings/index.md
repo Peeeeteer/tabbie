@@ -57,7 +57,9 @@ Each step has:
  
 - Ambient lighting while working  
 - Calendar sync  
-- Customize Tabbies personality  
+- Customize Tabbies personality
+- Simple Daily Summary (on voice or screen)
+- Task Reminders
 
 ---
 
