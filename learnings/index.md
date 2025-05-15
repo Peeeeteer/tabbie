@@ -11,36 +11,56 @@ Each step has:
 ---
 
 ## ✅ Completed
+- [01 – Blinking LED with Arduino](./01-arduino-uno-basic)
 
+---
 
 ## 🚧 In Progress
-[01 – Blinking LED with Arduino](./01-arduino-uno-basic)
+- [02 – Intro to ESP32](./02-esp-32-basics)
 
-
+---
 
 ## 🧪 Coming Up
-<!-- 
-- [01 – Blinking LED with Arduino](./01-blinking-led-arduino/)
--->
-
-02 -  ESP32
-03 - 
-04 - etc...
 
 
+- 03 – Wi-Fi Sync with Website  
+- 04 – LCD Face Display  
+- 05 – Voice Recognition Input  
+- 06 – Text-to-Speech Feedback  
+- 07 – Pomodoro Timer Logic  
+- 08 – To-Do List Integration with Web Sync  
+- 09 – Analytics: Time Tracking per Catgeory/Task
+- 10 - Custom Reminders 
 
-Future:
-- Text-To-Speech
-- Microphone + Voice Commands
-- LDC Screen Face Display
-- Wifi Sync to Website
-- Reading / summarizing docs
-- Connecting to calendar
-- Todo sync via website
-- Giving Tabbie a personality...
+---
+
+## 🎯 Tabbie v1 – Core Features
+
+- ✅ Cute robot face on a small screen  
+- ✅ Connects to a personal website (or local dashboard)  
+- ✅ Syncs your to-do list (see, check off, or add items via voice or text)  
+- ✅ Pomodoro timer with voice commands  
+  - "Start pomodoro for: _[Task Name]_"  
+  - "What are my todos for _[Tag/Category]_?"  
+- ✅ Time tracking under each category and task  
+- ✅ Website analytics to review how you spent your time
+- ✅ Custom reminders to stand up, drink water etc.. (can be modified via browser)
+- 
+
+> **Optional for v1:**
+> - Sound or light feedback for completed pomodoros  
+> - Idle detection / time reminders  
+
+---
+
+## 💡 Future Ideas
+ 
+- Ambient lighting while working  
+- Calendar sync  
+- Customize Tabbies personality  
 
 ---
 
 > 📌 Want to follow along?  
-> Each folder is numbered + explained in simple terms.  
-> Start at [01 – Arduino Basics](./01-arduino-uno-basic/) 🚀
+> Every folder is numbered and beginner-friendly.  
+> Start at [01 – Arduino Basics](./01-arduino-uno-basic/) 🚀  
