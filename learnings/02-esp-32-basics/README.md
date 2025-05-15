@@ -38,3 +38,23 @@ Show image from /media/esp32-3.png
 
 And now it blinks
 -> Video how it blinks.
+
+
+## 2. Do something else.
+
+Do same arduino thing, but this time with esp32, so just button that turns on and off a led.
+
+
+Was looking at this:
+https://esp32io.com/tutorials/esp32-button
+
+And read some stuff with chatgpt/gemini/claude/grok etc... anything works
+
+To clearly learn the code, I did this with chatgpt:
+Quiz me on it with 7 different quesitons,once I answer judge me honestly and provide feedback to my answer and give me a score from 0-10
+
+
+So that I dont only read the code, but fully understand whats going on. Really recommend it.
+Like this:
+https://gyazo.com/3653ac1843193fca82ac2226e312e881
+
