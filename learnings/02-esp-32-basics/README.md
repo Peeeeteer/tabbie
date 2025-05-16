@@ -40,9 +40,14 @@ And now it blinks
 -> Video how it blinks.
 
 
-## 2. Do something else.
+## 2. Button was pressed Print
 
-Do same arduino thing, but this time with esp32, so just button that turns on and off a led.
+When button is pressed in Terminal I get a
+
+"
+The button is released
+The button is pressed
+"
 
 
 Was looking at this:
@@ -58,3 +63,13 @@ So that I dont only read the code, but fully understand whats going on. Really r
 Like this:
 https://gyazo.com/3653ac1843193fca82ac2226e312e881
 
+
+And this quiz really helped me as when pressing button it was returning this weird gibbersihs, as I had it at 9600 as from arduino but for esp32 they talk faster so you need it at 115200 which is basicly a lot faster communication.
+
+
+## 3. Turn on a led with button press.
+
+Same thing, these guys are awesome:
+https://esp32io.com/tutorials/esp32-button-led
+
++ chatgpt with 7 quiz questions.
