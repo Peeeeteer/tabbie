@@ -73,3 +73,6 @@ Same thing, these guys are awesome:
 https://esp32io.com/tutorials/esp32-button-led
 
 + chatgpt with 7 quiz questions.
+
+
+This is harder than I thought for some reason cannot make it work.
