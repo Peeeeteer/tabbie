@@ -1,0 +1,33 @@
+{
+  "name": "tabbie-software-orchestrator",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Main orchestrator for the Tabbie software components.",
+  "scripts": {
+    "//": "--- Installation Steps ---",
+    "install:root-deps": "npm ci",
+    "install:frontend-deps": "cd react_frontend_dashboard && npm ci",
+    "install:firmware-deps": "echo \"INFO: Ensuring ESP32 firmware dependencies...\" && cd esp32_firmware && pio lib install",
+
+    "//": "--- Build Steps (if needed before dev) ---",
+    "build:frontend": "cd react_frontend_dashboard && npm run build",
+
+    "//": "--- Development Tasks ---",
+    "dev:frontend": "cd react_frontend_dashboard && npm run dev",
+    "dev:firmware-monitor": "echo \"INFO: Starting ESP32 serial monitor... Ensure firmware is uploaded.\" && cd esp32_firmware && pio device monitor --baud 115200",
+    "dev:firmware-upload-monitor": "echo \"INFO: Building, uploading, and monitoring ESP32 firmware...\" && cd esp32_firmware && pio run -t upload && pio device monitor --baud 115200",
+
+    "//": "--- Main Development Orchestrator ---",
+    "dev": "concurrently --kill-others-on-fail \"npm:dev:frontend\" \"npm:dev:firmware-upload-monitor\"",
+
+    "//": "--- THE ONE COMMAND for a new user after cloning ---",
+    "setup-and-run-dev": "npm run install:root-deps && npm run install:frontend-deps && npm run install:firmware-deps && echo \"INFO: Setup complete. Starting development servers...\" && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "platformio": "^6.1.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
