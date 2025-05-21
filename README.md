@@ -6,7 +6,7 @@
 
 Currently... I still suck at this and not much works...but I'm building it piece by piece, and sharing everything I learn along the way 
 
-[🤖 Make Your Own](https://github.com/peeeeteer/tabbie-robot) · [🗺️ Learning Roadmap](./learnings/index.md) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
+[🤖 Make Your Own](https://github.com/peeeeteer/make-tabbie) · [🗺️ Learning Roadmap](./tabbie-learns/index.md) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
 
 </div>
 
@@ -14,24 +14,23 @@ Currently... I still suck at this and not much works...but I'm building it piece
 
 ## 🛠️ What Is Tabbie?
 
-Tabbie is your little local desk assistant — a cute robot that watches, listens, speaks, and helps.
+Tabbie is your little local desk assistant — a cute robot that watches, listens, speaks, and helps.  
 Basicly your own little twitch streamer in the corner doing faces
 
-
-Tabbie connects to a your own self-hosted version — where you can:
-- Talk to you using voice + face expressions 🎙️
-- Help you with your day:
-  - Syncs your to-do list (see, check off, or add items via voice or text)
-  - Pomodoro timer with voice commands
-        "Start pomodoro for: [Task Name]"
-        "What are my todos for [Tag/Category]?"
-  - Create Reminders.
-         Drink water every 30 minutes
-         Walk Dog (and yourself) once an hour
-  - Website analytics to review how you spent your time
+🧑‍💻 What Can Tabbie Do?  
+Tabbie is a Dev Kit, connects to your own local server and can:
+- 🗣️ Talk to you with voice + facial expressions  
+- ✅ Manage your to-do list (view, add, check off tasks)  
+- ⏲️ Run Pomodoro timers  
+  > “Start pomodoro for *[Task]*”  
+- 🔔 Set reminders  
+  > “Drink water every 30 mins”  
+  > “Walk the dog every hour”  
+- 📊 Show how you spend your time online
 
 
-It’s like if your little small robot assistant 
+
+It's like if your little small self-made robot assistant 
 
 
 ## 📂 Project Structure Overview
@@ -65,14 +64,23 @@ TABBIE/
 └── README.md                    # You are here!
 ```
 
+## 🚀 Getting started
+
+Want to dive into the code, run Tabbie on your local machine, or start contributing?
+
+➡️ **[View Local Development Setup Instructions](./tabbie/README.md)**
+
+This guide (located within the main Tabbie software directory) will walk you through installing the necessary tools and running Tabbie's frontend and firmware.
+
+<!--
 ## 🧠  Learning Progress so far / [Roadmap](./tabbie-learns/index.md) 
-<!-- Note: You might want to update the link above if you rename the 'learnings' folder -->
+<!-- Note: You might want to update the link above if you rename the 'learnings' folder 
 
 I havent built it yet and I'm still learning on how to make Tabbie,  
-Here’s the latest entry from my devlog 
+Here's the latest entry from my devlog 
 
 > **🧪 02-ESP32 basics**  
 > Learning to do same thing as Arduino but with ESP32  
 > [📖 Read full log →](./learnings/02-esp-32-basics/README.md) <!-- Update this path too if 'learnings' is renamed -->
 
----
+
