@@ -76,3 +76,25 @@ https://esp32io.com/tutorials/esp32-button-led
 
 
 This is harder than I thought for some reason cannot make it work.
+
+
+But yea, made it work now. Here it how it looks.
+
+
+So now Quized myself again, this the prompt I usually use.
+
+"
+Everything we dicusssed right now from the circuit to the code to light up the led using a button.
+Explain everything and then quiz me with 10 questions.
+
+Judge each question as a critical teacher and at the end provide me a great from 1-10.
+"
+
+Again, I do this too keep the things I learn in my head or else I fucking just fucking phase out.
+
+Results:
+https://gyazo.com/2a3283c427c87865d0a13a4a09c0fc34
+
+
+
+## 4. Turn on same LED but using the Web
