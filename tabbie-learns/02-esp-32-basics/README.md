@@ -98,3 +98,22 @@ https://gyazo.com/2a3283c427c87865d0a13a4a09c0fc34
 
 
 ## 4. Turn on same LED but using the Web
+
+You have to find your SSID here (on Windows):
+https://gyazo.com/1110d44d83ae12785252bd3f034dedcc
+
+And add the password (make sure you dont share these and have it as a local )
+
+And now you should be able ot turn on / off led by pressing the button:
+https://gyazo.com/b12efbcb9b813e89330eb06d994ae163
+
+And it will turn and off the LED on the ESP32 (the built in one)
+
+Also added .env file where you can add your wifi log and pw, so that its never pushed, just copy hte env.example and remove the example part.
+
+
+
+So now yea, it should look something like this:
+
+
+Turn on/Off led, via wifi, this is prettry awesome.
