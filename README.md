@@ -17,6 +17,8 @@ Currently... I still suck at this and not much works...but I'm building it piece
 Tabbie is your little local desk assistant — a cute robot that watches, listens, speaks, and helps.  
 Basicly your own little twitch streamer in the corner doing faces
 
+And its the best way to get started with Electronics for Developers
+
 🧑‍💻 What Can Tabbie Do?  
 Tabbie is a Dev Kit, connects to your own local server and can:
 - 🗣️ Talk to you with voice + facial expressions  
