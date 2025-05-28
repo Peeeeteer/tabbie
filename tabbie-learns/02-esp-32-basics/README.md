@@ -112,7 +112,6 @@ And it will turn and off the LED on the ESP32 (the built in one)
 Also added .env file where you can add your wifi log and pw, so that its never pushed, just copy hte env.example and remove the example part.
 
 
-
 So now yea, it should look something like this:
 
 

@@ -293,7 +293,7 @@ void setup() {
   addLog("Status:  http://" + WiFi.localIP().toString() + "/led/status");
   addLog("Logs:    http://" + WiFi.localIP().toString() + "/logs");
 }
-  
+
 void loop() {
   // Check WiFi connection status
   if (WiFi.status() != WL_CONNECTED) {

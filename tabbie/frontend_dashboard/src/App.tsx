@@ -22,17 +22,68 @@ export default function Page() {
   const [logs, setLogs] = React.useState<string[]>([]);
   const [logsLoading, setLogsLoading] = React.useState(false);
   const [esp32Connected, setEsp32Connected] = React.useState(false);
+  const [esp32URL, setEsp32URL] = React.useState<string>("");
 
-  // ESP32 IP address - Update this to match your ESP32's IP
-  const ESP32_IP = "192.168.2.79";
+  // Auto-discovery with IP scanning (no mDNS complexity)
+  const discoverESP32 = async () => {
+    // Don't rediscover if we already have a working URL
+    if (esp32URL) {
+      console.log(`Using existing URL: ${esp32URL}`);
+      return esp32URL;
+    }
+
+    // Try environment variable first (for manual overrides)
+    const envURL = import.meta.env.VITE_ESP32_URL;
+    if (envURL) {
+      console.log("Using environment variable:", envURL);
+      setEsp32URL(envURL);
+      return envURL;
+    }
+
+    // Smart IP scanning - check most common ESP32 locations
+    const commonIPs = [
+      "192.168.2.79",   // Your current ESP32 IP
+      "192.168.1.79", "192.168.0.79",    // Common ESP32 IPs
+      "192.168.1.100", "192.168.2.100", "192.168.0.100",  // DHCP pool starts
+      "192.168.1.50", "192.168.2.50", "192.168.0.50"      // Mid-range IPs
+    ];
+
+    console.log("🔍 Scanning for ESP32 on local network...");
+    for (const ip of commonIPs) {
+      try {
+        console.log(`Trying IP: ${ip}`);
+        const response = await fetch(`http://${ip}/led/status`, { 
+          signal: AbortSignal.timeout(2000) 
+        });
+        if (response.ok) {
+          console.log(`✅ Found ESP32 at: ${ip}`);
+          const foundURL = `http://${ip}`;
+          setEsp32URL(foundURL);
+          return foundURL;
+        }
+      } catch (error) {
+        console.log(`❌ ${ip} - ${error instanceof Error ? error.message : 'Connection failed'}`);
+      }
+    }
+
+    console.log("❌ ESP32 not found. Please check connection.");
+    return null;
+  };
 
   const handleLEDToggle = async () => {
     setIsLoading(true);
     try {
+      // Ensure we have a valid URL
+      const url = await discoverESP32();
+      if (!url) {
+        alert('ESP32 not found. Please check if it\'s powered on and connected to WiFi.');
+        return;
+      }
+
       const newState = !ledState;
       const endpoint = newState ? 'on' : 'off';
       
-      const response = await fetch(`http://${ESP32_IP}/led/${endpoint}`, {
+      const response = await fetch(`${url}/led/${endpoint}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +111,10 @@ export default function Page() {
   // Function to check LED status on component mount
   const checkLEDStatus = async () => {
     try {
-      const response = await fetch(`http://${ESP32_IP}/led/status`);
+      const url = await discoverESP32();
+      if (!url) return;
+      
+      const response = await fetch(`${url}/led/status`);
       if (response.ok) {
         const data = await response.json();
         setLedState(data.state);
@@ -75,7 +129,13 @@ export default function Page() {
   const fetchLogs = async () => {
     try {
       setLogsLoading(true);
-      const response = await fetch(`http://${ESP32_IP}/logs`);
+      const url = await discoverESP32();
+      if (!url) {
+        setEsp32Connected(false);
+        return;
+      }
+      
+      const response = await fetch(`${url}/logs`);
       if (response.ok) {
         const data = await response.json();
         // Reverse the logs array so newest logs appear at the top
@@ -99,8 +159,13 @@ export default function Page() {
 
   // Check LED status and fetch logs when component mounts
   React.useEffect(() => {
-    checkLEDStatus();
-    fetchLogs();
+    const initializeConnection = async () => {
+      await discoverESP32();
+      checkLEDStatus();
+      fetchLogs();
+    };
+    
+    initializeConnection();
     
     // Set up interval to refresh logs every 3 seconds
     const interval = setInterval(fetchLogs, 3000);
@@ -144,12 +209,25 @@ export default function Page() {
               >
                 {isLoading ? "..." : `LED ${ledState ? 'ON' : 'OFF'}`}
               </Button>
+              <Button 
+                onClick={async () => {
+                  console.log("🔄 Manual reconnection triggered...");
+                  setEsp32URL(""); // Clear current URL
+                  await discoverESP32();
+                  checkLEDStatus();
+                  fetchLogs();
+                }}
+                variant="outline"
+                size="sm"
+              >
+                🔄 Reconnect
+              </Button>
               <div className={`w-4 h-4 rounded-full ${esp32Connected ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-sm text-muted-foreground">
                 Status: {esp32Connected ? 'Connected' : 'Disconnected'}
               </span>
               <span className="text-xs text-muted-foreground">
-                ESP32: {ESP32_IP}
+                ESP32: {esp32URL || "Discovering..."}
               </span>
             </div>
           </div>
