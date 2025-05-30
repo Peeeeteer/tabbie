@@ -1,88 +1,114 @@
 <div align="center">
 
-# 🤖 tabbie
+# 🤖 Tabbie
 
-**An open-source desk robot with a screen, a voice — and a personality.**
+**The desk robot that teaches you electronics — one LED, servo, and silly face at a time.**  
+Are you a **web developer** curious about **electronics**, but don't know where to start?
 
-Currently... I still suck at this and not much works...but I'm building it piece by piece, and sharing everything I learn along the way 
+**Build Tabbie.**  
+An open-source robot kit powered by an ESP32 and controlled via a local React dashboard — made to teach developers hardware from scratch, by building something real.
 
-[🤖 Make Your Own](https://github.com/peeeeteer/make-tabbie) · [🗺️ Learning Roadmap](./tabbie-learns/index.md) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
+[📬 Sign up for the waitlist](https://tabbie.me) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
 
 </div>
 
 ---
 
-## 🛠️ What Is Tabbie?
+## 🧠 What is Tabbie?
 
-Tabbie is your little local desk assistant — a cute robot that watches, listens, speaks, and helps.  
-Basicly your own little twitch streamer in the corner doing faces
+**Tabbie is a learning kit disguised as a cute robot.**  
+It’s a full hands-on project where **software meets hardware** — made for coders who’ve never touched a breadboard.
 
-And its the best way to get started with Electronics for Developers
-
-🧑‍💻 What Can Tabbie Do?  
-Tabbie is a Dev Kit, connects to your own local server and can:
-- 🗣️ Talk to you with voice + facial expressions  
-- ✅ Manage your to-do list (view, add, check off tasks)  
-- ⏲️ Run Pomodoro timers  
-  > “Start pomodoro for *[Task]*”  
-- 🔔 Set reminders  
-  > “Drink water every 30 mins”  
-  > “Walk the dog every hour”  
-- 📊 Show how you spend your time online
+By the end, you’ll have:
+- 🖥️ A React dashboard talking to real-world hardware  
+- 🔌 An ESP32-based robot with a screen, sound, and servos  
+- 🧠 A beginner-to-intermediate grasp of microcontrollers and electronics
 
 
 
-It's like if your little small self-made robot assistant 
+## 🤖 What Can Tabbie Do?
+
+Once built, your Tabbie will be able to:
+
+- ✅ Display and manage your to-do list  
+- ⏲️ Run Pomodoro timers like “Start pomodoro for [task]”  
+- 🔔 Set reminders (e.g., “Drink water every 30 mins”)  
+- 📊 Track your online activity
+- 🗣️ Talk to you with sound + facial expressions _(in the future)_
+
+It’s like your own tiny Twitch streamer, productivity coach, and digital desk buddy.
+
+## 🧑‍💻 What Will You Learn?
+
+Tabbie is modular — each feature you build teaches you something useful:
+
+| Feature                      | What You'll Learn                        |
+|-----------------------------|------------------------------------------|
+| 🔴 Light up a LED           | GPIO basics, React <-> ESP32 comm        |
+| 🧠 Animate facial expressions | SPI screen control, frame buffers        |
+| 🦾 Control servo arms        | PWM, motor control, external power       |
+| 📻 Play voice/sound         | DFPlayer Mini, MP3 control over serial   |
+| 🎤 React to your voice      | I2S mic, sound input, basic signal logic |
+| ⏱️ Build Pomodoro timers    | Syncing frontend with microcontroller    |
+| ✅ To-do list manager       | SD card I/O, simple JSON file handling   |
+| 📡 WiFi & APIs              | ESP32 webserver, RESTful communication   |
+
+## 🚀 Get Started
+
+So you’re ready to build your own Tabbie? Heck yeah.  
+Whether you want to buy the official kit or DIY it from scratch — you’re covered.
+
+👉 [**Starter Guide → tabbie.me**](https://tabbie.me) *(Coming Soon — sign up for the waitlist!)*
+
+## ❓ Why Build Tabbie?
+
+You could follow another “LED blink” tutorial...  
+**Or you could build a robot with a screen, voice, arms — and a personality.**
+
+- 🎓 Actually learn electronics by building something cool  
+- 💬 Understand how software connects to the real world  
+- 🤖 Give your desk a quirky assistant with real hardware  
+- 🧪 Experiment, break stuff, and learn by doing  
+- ✨ Walk away with something you *actually* made  
+
+## 🔌 Tools & Tech Stack
+
+| Part               | What We're Using                       |
+|-------------------|----------------------------------------|
+| **Microcontroller** | ESP32 DevKit C (or similar)            |
+| **Display**         | ILI9341 2.8” TFT (SPI)                 |
+| **Audio**           | DFPlayer Mini + speaker                |
+| **Microphone**      | I2S digital mic (e.g., INMP441)        |
+| **Servos**          | SG90 or similar (x2)                   |
+| **Power**           | External 5V source (USB or battery)    |
+| **Frontend**        | React                                  |
+| **Backend**         | Node.js or Python                      |
+| **Firmware**        | C++ (Arduino / PlatformIO)             |
 
 
-## 📂 Project Structure Overview
 
-This repository is organized to help you find your way around Tabbie's world:
+**Sounds fun?**  
+👉 [**Join the waitlist at tabbie.me**](https://tabbie.me)
 
-```text
+
+---
+
+## 🛠️ Project Structure
+
+```txt
 TABBIE/
-├── make-tabbie/                 # Everything to physically build Tabbie.
-│   ├── 3d-files/                # STL, CAD, and other 3D printable parts.
-│   └── assembly_instructions.md # (Coming Soon) How to put it all together & extra parts you need
+├── make-tabbie/                 # 3D-printed parts & assembly info
+│   ├── 3d-files/                # STL & CAD files
+│   └── assembly_instructions.md # How to put it all together
 │
-├── tabbie-learns/               # learning the basics of Arduino,ESP32, notes, and experiments to build Tabbie.
-│   │                            # Great for beginners wanting to see how it's made!
-│   ├── 01-arduino-uno-basic/    # Learned basics of Arduino with simple Challenges
-│   └── 02-esp-32-basics/        # Learned basics of ESP32 with simple Challenges
+├── tabbie-learns/               # Step-by-step learning + experiments
+│   ├── 01-arduino-uno-basic/    
+│   └── 02-esp-32-basics/       
 │       └── index.md
 │
-├── tabbie/                      # The heart of Tabbie's software.
-│   ├── esp32_firmware/          # Code running on the ESP32 (C++/Arduino).
-│   │   ├── src/main.cpp
-│   │   └── platformio.ini
-│   ├── local_backend_server/    # Server for local development (Node.js/Python).
-│   │   ├── data/                # Local JSON data files (todos, etc.).
-│   │   └── server.js            # (or app.py)
-│   └── react_frontend_dashboard/  # Web interface (React).
-│       ├── src/App.js
-│       └── package.json
+├── tabbie/                      # The actual working software
+│   ├── esp32_firmware/          # C++ code running on the ESP32
+│   ├── local_backend_server/    # Node.js or Python server for backend logic
+│   └── react_frontend_dashboard/# Your control panel for the robot
 │
-├── CONTRIBUTING.md              # How to help make Tabbie better.
-└── README.md                    # You are here!
-```
-
-## 🚀 Getting started
-
-Want to dive into the code, run Tabbie on your local machine, or start contributing?
-
-➡️ **[View Local Development Setup Instructions](./tabbie/README.md)**
-
-This guide (located within the main Tabbie software directory) will walk you through installing the necessary tools and running Tabbie's frontend and firmware.
-
-<!--
-## 🧠  Learning Progress so far / [Roadmap](./tabbie-learns/index.md) 
-<!-- Note: You might want to update the link above if you rename the 'learnings' folder 
-
-I havent built it yet and I'm still learning on how to make Tabbie,  
-Here's the latest entry from my devlog 
-
-> **🧪 02-ESP32 basics**  
-> Learning to do same thing as Arduino but with ESP32  
-> [📖 Read full log →](./learnings/02-esp-32-basics/README.md) <!-- Update this path too if 'learnings' is renamed -->
-
-
+└── README.md                    # You are here.
