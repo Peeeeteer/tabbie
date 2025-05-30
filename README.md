@@ -30,13 +30,38 @@ By the end, you’ll have:
 
 Once built, your Tabbie will be able to:
 
+- 😋 Do funny faces
 - ✅ Display and manage your to-do list  
 - ⏲️ Run Pomodoro timers like “Start pomodoro for [task]”  
 - 🔔 Set reminders (e.g., “Drink water every 30 mins”)  
-- 📊 Track your online activity
 - 🗣️ Talk to you with sound + facial expressions _(in the future)_
 
-It’s like your own tiny Twitch streamer, productivity coach, and digital desk buddy.
+It’s like your making own tiny Twitch streamer, habbit tracker and digital desk buddy.
+
+
+## ❓ Why Build Tabbie?
+
+You could follow another “LED blink” tutorial...  
+**Or you could build a robot with a screen, voice, arms — and a personality.**
+
+- 🎓 Actually learn electronics by building something cool  
+- 💬 Understand how software connects to the real world  
+- 🤖 Give your desk a quirky assistant that makes you look at your phone less
+- 🧪 Experiment, break stuff, and learn by doing  
+- ✨ Walk away with something you *actually* made
+
+
+## 🚀 Get Started
+
+So you’re ready to build your own Tabbie? Noice.   
+Whether you want to buy the official kit or DIY it from scratch — you’re covered.
+
+👉 [**Starter Guide → tabbie.me**](https://tabbie.me) *(Coming Soon — sign up for the waitlist!)*
+
+
+---
+
+<!---
 
 ## 🧑‍💻 What Will You Learn?
 
@@ -53,45 +78,6 @@ Tabbie is modular — each feature you build teaches you something useful:
 | ✅ To-do list manager       | SD card I/O, simple JSON file handling   |
 | 📡 WiFi & APIs              | ESP32 webserver, RESTful communication   |
 
-## 🚀 Get Started
-
-So you’re ready to build your own Tabbie? Heck yeah.  
-Whether you want to buy the official kit or DIY it from scratch — you’re covered.
-
-👉 [**Starter Guide → tabbie.me**](https://tabbie.me) *(Coming Soon — sign up for the waitlist!)*
-
-## ❓ Why Build Tabbie?
-
-You could follow another “LED blink” tutorial...  
-**Or you could build a robot with a screen, voice, arms — and a personality.**
-
-- 🎓 Actually learn electronics by building something cool  
-- 💬 Understand how software connects to the real world  
-- 🤖 Give your desk a quirky assistant with real hardware  
-- 🧪 Experiment, break stuff, and learn by doing  
-- ✨ Walk away with something you *actually* made  
-
-## 🔌 Tools & Tech Stack
-
-| Part               | What We're Using                       |
-|-------------------|----------------------------------------|
-| **Microcontroller** | ESP32 DevKit C (or similar)            |
-| **Display**         | ILI9341 2.8” TFT (SPI)                 |
-| **Audio**           | DFPlayer Mini + speaker                |
-| **Microphone**      | I2S digital mic (e.g., INMP441)        |
-| **Servos**          | SG90 or similar (x2)                   |
-| **Power**           | External 5V source (USB or battery)    |
-| **Frontend**        | React                                  |
-| **Backend**         | Node.js or Python                      |
-| **Firmware**        | C++ (Arduino / PlatformIO)             |
-
-
-
-**Sounds fun?**  
-👉 [**Join the waitlist at tabbie.me**](https://tabbie.me)
-
-
----
 
 ## 🛠️ Project Structure
 
@@ -112,3 +98,5 @@ TABBIE/
 │   └── react_frontend_dashboard/# Your control panel for the robot
 │
 └── README.md                    # You are here.
+
+´´´
