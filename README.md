@@ -1,12 +1,9 @@
 <div align="center">
 
-# 🤖 Tabbie
+# 🤖 Tabbie  
+Are you a **developer** curious about **electronics**, but don't know where to start?
 
-**The desk robot that teaches you electronics — one LED, servo, and silly face at a time.**  
-Are you a **web developer** curious about **electronics**, but don't know where to start?
-
-**Build Tabbie.**  
-An open-source robot kit powered by an ESP32 and controlled via a local React dashboard — made to teach developers hardware from scratch, by building something real.
+**Make Tabbie.**  
 
 [📬 Sign up for the waitlist](https://tabbie.me) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
 
@@ -30,7 +27,7 @@ By the end, you’ll have:
 
 Once built, your Tabbie will be able to:
 
-- 😋 Do funny faces
+- 😋 Do funny faces, move and be fun
 - ✅ Display and manage your to-do list  
 - ⏲️ Run Pomodoro timers like “Start pomodoro for [task]”  
 - 🔔 Set reminders (e.g., “Drink water every 30 mins”)  
@@ -99,4 +96,5 @@ TABBIE/
 │
 └── README.md                    # You are here.
 
-´´´
+An open-source robot kit powered by an ESP32 and controlled via a local React dashboard — made to teach developers hardware from scratch, by building something real.
+**The desk robot that teaches you electronics — one LED, servo, and silly face at a time.**  
