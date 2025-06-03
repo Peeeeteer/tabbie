@@ -5,7 +5,7 @@ Are you a **developer** curious about **electronics**, but don't know where to s
 
 **Make Tabbie.**  
 
-[📬 Sign up for the waitlist](https://tabbie.me) · [📺 Follow the Build](https://www.youtube.com/@peeeeteeer)
+[📬 Sign up for the waitlist](https://tabbie.me) · [📺 Follow the Build](https://www.youtube.com/@peeeeteer)
 
 </div>
 
