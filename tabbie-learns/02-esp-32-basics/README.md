@@ -116,3 +116,19 @@ So now yea, it should look something like this:
 
 
 Turn on/Off led, via wifi, this is prettry awesome.
+
+
+So now in the browser you can go do:
+http://192.168.2.79/led/off
+http://192.168.2.79/led/on 
+
+
+To do it (just check which ip you have, it might be different.)
+
+And it should turn on/off the built in led on the esp32.
+
+To make it feel even cooler, power it with a power bank or something, not connected to the pc, so you really feel the internet thing working.
+Example here:
+
+
+## 5. Turn on same LED but using the Web

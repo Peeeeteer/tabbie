@@ -307,3 +307,7 @@ void loop() {
   // Small delay to prevent excessive processing
   delay(10);
 }
+
+
+
+// 5. ESP32 with screen control (Add here)
