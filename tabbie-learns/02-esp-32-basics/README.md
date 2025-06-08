@@ -7,6 +7,12 @@ https://amzn.to/3GIhij3
 
 ## 1. Simple light up light on the board
 
+
+I ran this platformio setup when starting with WROOM:
+https://gyazo.com/37ea603742f484d6cf2d05bb1ba84736
+
+
+
 When I ran the code, I got this error msg:
 ```text
 A fatal error occurred: Failed to connect to ESP32: Invalid head of packet (0x00): Possible serial noise or corruption.
