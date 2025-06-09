@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🤖 Tabbie  
-Are you a **developer** curious about **electronics**, but don't know where to start?
+Are you a curious about **electronics**, but don't know where to start?
 
 **Make Tabbie.**  
 
@@ -14,7 +14,7 @@ Are you a **developer** curious about **electronics**, but don't know where to s
 ## 🧠 What is Tabbie?
 
 **Tabbie is a learning kit disguised as a cute robot.**  
-It’s a full hands-on project where **software meets hardware** — made for coders who’ve never touched a breadboard.
+It’s a full hands-on project where **software meets hardware** — made for people who are getting started with Electronics.
 
 By the end, you’ll have:
 - 🖥️ A React dashboard talking to real-world hardware  
