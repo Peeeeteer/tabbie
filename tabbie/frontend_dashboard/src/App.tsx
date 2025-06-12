@@ -17,7 +17,7 @@ import {
 import React from "react"
 
 export default function Page() {
-  const [ledState, setLedState] = React.useState(false);
+  const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
   const [logs, setLogs] = React.useState<string[]>([]);
   const [logsLoading, setLogsLoading] = React.useState(false);
@@ -52,7 +52,7 @@ export default function Page() {
     for (const ip of commonIPs) {
       try {
         console.log(`Trying IP: ${ip}`);
-        const response = await fetch(`http://${ip}/led/status`, { 
+        const response = await fetch(`http://${ip}/face/status`, { 
           signal: AbortSignal.timeout(2000) 
         });
         if (response.ok) {
@@ -70,7 +70,7 @@ export default function Page() {
     return null;
   };
 
-  const handleLEDToggle = async () => {
+  const handleFaceChange = async (faceType: string) => {
     setIsLoading(true);
     try {
       // Ensure we have a valid URL
@@ -79,11 +79,8 @@ export default function Page() {
         alert('ESP32 not found. Please check if it\'s powered on and connected to WiFi.');
         return;
       }
-
-      const newState = !ledState;
-      const endpoint = newState ? 'on' : 'off';
       
-      const response = await fetch(`${url}/led/${endpoint}`, {
+      const response = await fetch(`${url}/face/${faceType}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -92,36 +89,36 @@ export default function Page() {
 
       if (response.ok) {
         const data = await response.json();
-        setLedState(newState);
-        console.log(`LED ${newState ? 'ON' : 'OFF'} - Response:`, data);
-        // Refresh logs after LED action
+        setCurrentFace(faceType);
+        console.log(`Face changed to ${faceType} - Response:`, data);
+        // Refresh logs after face change
         fetchLogs();
       } else {
-        console.error('Failed to control LED:', response.statusText);
-        alert('Failed to control LED. Make sure ESP32 is connected.');
+        console.error('Failed to change face:', response.statusText);
+        alert('Failed to change face. Make sure ESP32 is connected.');
       }
     } catch (error) {
-      console.error('Error controlling LED:', error);
+      console.error('Error changing face:', error);
       alert('Error connecting to ESP32. Check if it\'s powered on and connected to WiFi.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Function to check LED status on component mount
-  const checkLEDStatus = async () => {
+  // Function to check face status on component mount
+  const checkFaceStatus = async () => {
     try {
       const url = await discoverESP32();
       if (!url) return;
       
-      const response = await fetch(`${url}/led/status`);
+      const response = await fetch(`${url}/face/status`);
       if (response.ok) {
         const data = await response.json();
-        setLedState(data.state);
-        console.log('LED Status:', data);
+        setCurrentFace(data.currentFace || "default");
+        console.log('Face Status:', data);
       }
     } catch (error) {
-      console.log('Could not fetch LED status:', error);
+      console.log('Could not fetch face status:', error);
     }
   };
 
@@ -143,7 +140,7 @@ export default function Page() {
         
         // Check if ESP32 is connected based on logs
         const hasWifiConnection = data.logs?.some((log: string) => 
-          log.includes("Connected to WiFi!") || log.includes("Web server started!")
+          log.includes("WiFi Connected Successfully!") || log.includes("Web server started!")
         );
         setEsp32Connected(hasWifiConnection);
       } else {
@@ -157,11 +154,11 @@ export default function Page() {
     }
   };
 
-  // Check LED status and fetch logs when component mounts
+  // Check face status and fetch logs when component mounts
   React.useEffect(() => {
     const initializeConnection = async () => {
       await discoverESP32();
-      checkLEDStatus();
+      checkFaceStatus();
       fetchLogs();
     };
     
@@ -197,24 +194,43 @@ export default function Page() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {/* LED Control Section */}
+          {/* Face Control Section */}
           <div className="flex flex-col gap-4 p-4 bg-card rounded-lg border">
-            <h2 className="text-lg font-semibold">LED Control</h2>
-            <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">🤖 Tabbie Face Control</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-medium">Current Face:</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium">
+                {currentFace === "default" ? "📝 Default Text" : 
+                 currentFace === "focus" ? "🎯 Focus Mode" : currentFace}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <Button 
-                onClick={handleLEDToggle}
+                onClick={() => handleFaceChange("default")}
                 disabled={isLoading}
-                variant={ledState ? "default" : "outline"}
-                className={ledState ? "bg-green-600 hover:bg-green-700" : ""}
+                variant={currentFace === "default" ? "default" : "outline"}
+                className="flex flex-col items-center gap-1 h-16"
               >
-                {isLoading ? "..." : `LED ${ledState ? 'ON' : 'OFF'}`}
+                <span className="text-lg">📝</span>
+                <span className="text-xs">Default</span>
               </Button>
+              <Button 
+                onClick={() => handleFaceChange("focus")}
+                disabled={isLoading}
+                variant={currentFace === "focus" ? "default" : "outline"}
+                className="flex flex-col items-center gap-1 h-16 bg-purple-100 hover:bg-purple-200 text-purple-800"
+              >
+                <span className="text-lg">🎯</span>
+                <span className="text-xs">Focus</span>
+              </Button>
+            </div>
+            <div className="flex items-center gap-4 pt-2 border-t">
               <Button 
                 onClick={async () => {
                   console.log("🔄 Manual reconnection triggered...");
                   setEsp32URL(""); // Clear current URL
                   await discoverESP32();
-                  checkLEDStatus();
+                  checkFaceStatus();
                   fetchLogs();
                 }}
                 variant="outline"
@@ -256,14 +272,18 @@ export default function Page() {
                     <div key={index} className="text-xs font-mono mb-1 leading-relaxed">
                       <span className="text-slate-400 mr-2">›</span>
                       <span className={
-                        log.includes("Connected to WiFi") || log.includes("Web server started") 
+                        log.includes("WiFi Connected Successfully") || log.includes("Web server started") 
                           ? "text-green-400" 
-                          : log.includes("LED ON") 
+                          : log.includes("Happy face") || log.includes("Default animation")
                           ? "text-blue-400"
-                          : log.includes("LED OFF")
+                          : log.includes("Sad face")
                           ? "text-orange-400"
-                          : log.includes("Failed") || log.includes("Error")
+                          : log.includes("Focus face")
+                          ? "text-purple-400"
+                          : log.includes("Failed") || log.includes("Error") || log.includes("❌")
                           ? "text-red-400"
+                          : log.includes("✅")
+                          ? "text-green-400"
                           : "text-slate-300"
                       }>
                         {log}
@@ -284,7 +304,7 @@ export default function Page() {
               <span className="text-muted-foreground">Voice Commands</span>
             </div>
             <div className="aspect-video rounded-xl bg-muted/50 flex items-center justify-center">
-              <span className="text-muted-foreground">Facial Expressions</span>
+              <span className="text-muted-foreground">Future Content</span>
             </div>
           </div>
           

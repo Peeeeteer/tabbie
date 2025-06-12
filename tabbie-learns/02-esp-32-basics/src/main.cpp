@@ -130,183 +130,183 @@
 
 
 
-// 4. On/Off LED via Wifi (Add here)
+  // 4. On/Off LED via Wifi (Add here)
 
-// WiFi credentials - These will be set by build script from .env file
-// DO NOT put actual credentials here - they come from .env file
-#ifndef WIFI_SSID
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#endif
-#ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-#endif
+  // WiFi credentials - These will be set by build script from .env file
+  // DO NOT put actual credentials here - they come from .env file
+  #ifndef WIFI_SSID
+  #define WIFI_SSID "YOUR_WIFI_SSID"
+  #endif
+  #ifndef WIFI_PASSWORD
+  #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+  #endif
 
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+  const char* ssid = WIFI_SSID;
+  const char* password = WIFI_PASSWORD;
 
-// Define the pins we are using
-#define LED_BUILTIN_PIN 2      // The built-in LED is connected to GPIO 2 on most ESP32 boards
+  // Define the pins we are using
+  #define LED_BUILTIN_PIN 2      // The built-in LED is connected to GPIO 2 on most ESP32 boards
 
-// Create web server on port 80
-WebServer server(80);
+  // Create web server on port 80
+  WebServer server(80);
 
-// Global variable to store LED state
-bool ledState = false;
+  // Global variable to store LED state
+  bool ledState = false;
 
-// Log buffer for storing recent messages
-#define LOG_BUFFER_SIZE 20
-String logBuffer[LOG_BUFFER_SIZE];
-int logIndex = 0;
-int logCount = 0;
+  // Log buffer for storing recent messages
+  #define LOG_BUFFER_SIZE 20
+  String logBuffer[LOG_BUFFER_SIZE];
+  int logIndex = 0;
+  int logCount = 0;
 
-// Function to add log message to buffer
-void addLog(String message) {
-  logBuffer[logIndex] = message;
-  logIndex = (logIndex + 1) % LOG_BUFFER_SIZE;
-  if (logCount < LOG_BUFFER_SIZE) {
-    logCount++;
+  // Function to add log message to buffer
+  void addLog(String message) {
+    logBuffer[logIndex] = message;
+    logIndex = (logIndex + 1) % LOG_BUFFER_SIZE;
+    if (logCount < LOG_BUFFER_SIZE) {
+      logCount++;
+    }
+    Serial.println(message); // Also print to serial
   }
-  Serial.println(message); // Also print to serial
-}
 
-void connectToWiFi() {
-  // Start WiFi connection
-  addLog("Connecting to WiFi network: " + String(ssid));
-  
-  WiFi.begin(ssid, password);
-  
-  // Wait for connection
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
+  void connectToWiFi() {
+    // Start WiFi connection
+    addLog("Connecting to WiFi network: " + String(ssid));
+    
+    WiFi.begin(ssid, password);
+    
+    // Wait for connection
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println();
+      addLog("Connected to WiFi!");
+      addLog("IP address: " + WiFi.localIP().toString());
+      addLog("Signal strength (RSSI): " + String(WiFi.RSSI()) + " dBm");
+    } else {
+      Serial.println();
+      addLog("Failed to connect to WiFi");
+      addLog("Please check your credentials and try again");
+    }
   }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println();
-    addLog("Connected to WiFi!");
-    addLog("IP address: " + WiFi.localIP().toString());
-    addLog("Signal strength (RSSI): " + String(WiFi.RSSI()) + " dBm");
-  } else {
-    Serial.println();
-    addLog("Failed to connect to WiFi");
-    addLog("Please check your credentials and try again");
+
+  // Handle LED ON request
+  void handleLEDOn() {
+    ledState = true;
+    digitalWrite(LED_BUILTIN_PIN, HIGH);
+    addLog("LED ON - via web request");
+    
+    // Enable CORS and send response
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(200, "application/json", "{\"status\":\"LED ON\",\"state\":true}");
   }
-}
 
-// Handle LED ON request
-void handleLEDOn() {
-  ledState = true;
-  digitalWrite(LED_BUILTIN_PIN, HIGH);
-  addLog("LED ON - via web request");
-  
-  // Enable CORS and send response
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "application/json", "{\"status\":\"LED ON\",\"state\":true}");
-}
-
-// Handle LED OFF request
-void handleLEDOff() {
-  ledState = false;
-  digitalWrite(LED_BUILTIN_PIN, LOW);
-  addLog("LED OFF - via web request");
-  
-  // Enable CORS and send response
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "application/json", "{\"status\":\"LED OFF\",\"state\":false}");
-}
-
-// Handle LED status request
-void handleLEDStatus() {
-  // Enable CORS and send response
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  
-  String response = "{\"state\":" + String(ledState ? "true" : "false") + ",\"status\":\"" + String(ledState ? "LED ON" : "LED OFF") + "\"}";
-  server.send(200, "application/json", response);
-}
-
-// Handle logs request
-void handleLogs() {
-  // Enable CORS and send response
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  
-  String response = "{\"logs\":[";
-  
-  // Add logs in chronological order
-  for (int i = 0; i < logCount; i++) {
-    int index = (logIndex - logCount + i + LOG_BUFFER_SIZE) % LOG_BUFFER_SIZE;
-    if (i > 0) response += ",";
-    response += "\"" + logBuffer[index] + "\"";
+  // Handle LED OFF request
+  void handleLEDOff() {
+    ledState = false;
+    digitalWrite(LED_BUILTIN_PIN, LOW);
+    addLog("LED OFF - via web request");
+    
+    // Enable CORS and send response
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(200, "application/json", "{\"status\":\"LED OFF\",\"state\":false}");
   }
-  
-  response += "],\"count\":" + String(logCount) + "}";
-  server.send(200, "application/json", response);
-}
 
-// Handle CORS preflight requests
-void handleCORS() {
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "text/plain", "");
-}
+  // Handle LED status request
+  void handleLEDStatus() {
+    // Enable CORS and send response
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    
+    String response = "{\"state\":" + String(ledState ? "true" : "false") + ",\"status\":\"" + String(ledState ? "LED ON" : "LED OFF") + "\"}";
+    server.send(200, "application/json", response);
+  }
 
-void setup() {
-  // Initialize Serial communication at 115200 bits per second for debugging
-  Serial.begin(115200);
-  addLog("Tabbie ESP32 starting up...");
+  // Handle logs request
+  void handleLogs() {
+    // Enable CORS and send response
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    
+    String response = "{\"logs\":[";
+    
+    // Add logs in chronological order
+    for (int i = 0; i < logCount; i++) {
+      int index = (logIndex - logCount + i + LOG_BUFFER_SIZE) % LOG_BUFFER_SIZE;
+      if (i > 0) response += ",";
+      response += "\"" + logBuffer[index] + "\"";
+    }
+    
+    response += "],\"count\":" + String(logCount) + "}";
+    server.send(200, "application/json", response);
+  }
 
-  addLog("WiFi-enabled LED control ready");
-  
-  // Connect to WiFi
-  connectToWiFi();
+  // Handle CORS preflight requests
+  void handleCORS() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(200, "text/plain", "");
+  }
 
-  // Add your LED control logic here
-  pinMode(LED_BUILTIN_PIN, OUTPUT);
-  digitalWrite(LED_BUILTIN_PIN, LOW); // Start with LED off
+  void setup() {
+    // Initialize Serial communication at 115200 bits per second for debugging
+    Serial.begin(115200);
+    addLog("Tabbie ESP32 starting up...");
 
-  // Setup web server routes
-  server.on("/led/on", HTTP_GET, handleLEDOn);
-  server.on("/led/off", HTTP_GET, handleLEDOff);
-  server.on("/led/status", HTTP_GET, handleLEDStatus);
-  server.on("/logs", HTTP_GET, handleLogs);
-  server.on("/led/on", HTTP_OPTIONS, handleCORS);
-  server.on("/led/off", HTTP_OPTIONS, handleCORS);
-  server.on("/led/status", HTTP_OPTIONS, handleCORS);
-  server.on("/logs", HTTP_OPTIONS, handleCORS);
-
-  // Start the server
-  server.begin();
-  addLog("Web server started!");
-  addLog("LED Control URLs:");
-  addLog("LED ON:  http://" + WiFi.localIP().toString() + "/led/on");
-  addLog("LED OFF: http://" + WiFi.localIP().toString() + "/led/off");
-  addLog("Status:  http://" + WiFi.localIP().toString() + "/led/status");
-  addLog("Logs:    http://" + WiFi.localIP().toString() + "/logs");
-}
-
-void loop() {
-  // Check WiFi connection status
-  if (WiFi.status() != WL_CONNECTED) {
-    addLog("WiFi connection lost. Attempting to reconnect...");
+    addLog("WiFi-enabled LED control ready");
+    
+    // Connect to WiFi
     connectToWiFi();
+
+    // Add your LED control logic here
+    pinMode(LED_BUILTIN_PIN, OUTPUT);
+    digitalWrite(LED_BUILTIN_PIN, LOW); // Start with LED off
+
+    // Setup web server routes
+    server.on("/led/on", HTTP_GET, handleLEDOn);
+    server.on("/led/off", HTTP_GET, handleLEDOff);
+    server.on("/led/status", HTTP_GET, handleLEDStatus);
+    server.on("/logs", HTTP_GET, handleLogs);
+    server.on("/led/on", HTTP_OPTIONS, handleCORS);
+    server.on("/led/off", HTTP_OPTIONS, handleCORS);
+    server.on("/led/status", HTTP_OPTIONS, handleCORS);
+    server.on("/logs", HTTP_OPTIONS, handleCORS);
+
+    // Start the server
+    server.begin();
+    addLog("Web server started!");
+    addLog("LED Control URLs:");
+    addLog("LED ON:  http://" + WiFi.localIP().toString() + "/led/on");
+    addLog("LED OFF: http://" + WiFi.localIP().toString() + "/led/off");
+    addLog("Status:  http://" + WiFi.localIP().toString() + "/led/status");
+    addLog("Logs:    http://" + WiFi.localIP().toString() + "/logs");
   }
-  
-  // Handle web server requests
-  server.handleClient();
-  
-  // Small delay to prevent excessive processing
-  delay(10);
-}
+
+  void loop() {
+    // Check WiFi connection status
+    if (WiFi.status() != WL_CONNECTED) {
+      addLog("WiFi connection lost. Attempting to reconnect...");
+      connectToWiFi();
+    }
+    
+    // Handle web server requests
+    server.handleClient();
+    
+    // Small delay to prevent excessive processing
+    delay(10);
+  }
 
 
 
