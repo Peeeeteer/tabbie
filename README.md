@@ -1,11 +1,11 @@
 <div align="center">
 
 # 🤖 Tabbie  
-Are you a **developer** curious about **electronics**, but don't know where to start?
+Ever wanted a **to-do app with a Cute Face**? One that lives on your desk?
 
-**Make Tabbie.**  
+**That’s Tabbie.**
 
-[📬 Sign up for the waitlist](https://tabbie.me) · [📺 Follow the Build](https://www.youtube.com/@peeeeteer)
+[📬 Join the waitlist](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@peeeeteer)
 
 </div>
 
@@ -13,52 +13,51 @@ Are you a **developer** curious about **electronics**, but don't know where to s
 
 ## 🧠 What is Tabbie?
 
-**Tabbie is a learning kit disguised as a cute robot.**  
-It’s a full hands-on project where **software meets hardware** — made for coders who’ve never touched a breadboard.
+**Tabbie is a DIY desk robot that helps you work, focus, and learn.**  
+It’s like a to-do app — but physical, local, and full of personality.
 
-By the end, you’ll have:
-- 🖥️ A React dashboard talking to real-world hardware  
-- 🔌 An ESP32-based robot with a screen, sound, and servos  
-- 🧠 A beginner-to-intermediate grasp of microcontrollers and electronics
+Tabbie lives on your desk, connects to your computer, and helps with small daily things like:
+- ✅ Managing your to-do list
+- ⏲️ Running Pomodoro timers
+- 🔔 Setting reminders (like “drink water every 30 mins”)
+- 😋 Making faces, moving around, and being silly
+- 🗣️ Talking to you (coming soon!)
 
-
-
-## 🤖 What Can Tabbie Do?
-
-Once built, your Tabbie will be able to:
-
-- 😋 Do funny faces, move and be fun
-- ✅ Display and manage your to-do list  
-- ⏲️ Run Pomodoro timers like “Start pomodoro for [task]”  
-- 🔔 Set reminders (e.g., “Drink water every 30 mins”)  
-- 🗣️ Talk to you with sound + facial expressions _(in the future)_
-
-It’s like your making own tiny Twitch streamer, habbit tracker and digital desk buddy.
+**Think:** a mini Twitch streamer sitting on your desk, cheering you on — but also keeping you on track.
 
 
-## ❓ Why Build Tabbie?
+## ✨ Made to Be Built
 
-You could follow another “LED blink” tutorial...  
-**Or you could build a robot with a screen, voice, arms — and a personality.**
+Tabbie is open-source and totally customizable.  
+You can build it yourself with 3D-printed parts and off-the-shelf components — or just buy a Kit
 
-- 🎓 Actually learn electronics by building something cool  
-- 💬 Understand how software connects to the real world  
-- 🤖 Give your desk a quirky assistant that makes you look at your phone less
-- 🧪 Experiment, break stuff, and learn by doing  
-- ✨ Walk away with something you *actually* made
+By default, it’s powered by:
+- 🧠 An ESP32 microcontroller
+- 🖥️ A local React dashboard that talks to the robot
+- 🔌 A screen, servos, speaker — all connected to your code
+
+Whether you’re a beginner or just a curious dev who wants to tinker with hardware — Tabbie is a fun place to start.
 
 
-## 🚀 Get Started
 
-So you’re ready to build your own Tabbie? Noice.   
-Whether you want to buy the official kit or DIY it from scratch — you’re covered.
 
-👉 [**Starter Guide → tabbie.me**](https://tabbie.me) *(Coming Soon — sign up for the waitlist!)*
 
+<!---
+
+## 🤖 Tabbie is still in development  
+👉 [**Sign up for the waitlist → tabbie.me**](https://tabbie.me)  
+
+
+
+## 🛠️ Not a Course. Just a Walkthrough.
+
+This isn’t a class or bootcamp.  
+If you want to build your own, there’s a step-by-step walkthrough to help you set everything up
+
+Tabbie is a physical project you can make, mod, or just enjoy.
 
 ---
 
-<!---
 
 ## 🧑‍💻 What Will You Learn?
 
