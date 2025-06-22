@@ -27,6 +27,7 @@ export default function Page() {
   const [isScanning, setIsScanning] = React.useState(false);
   const [showSetupWizard, setShowSetupWizard] = React.useState(false);
   const [isHealthChecking, setIsHealthChecking] = React.useState(false);
+  const [isReconnecting, setIsReconnecting] = React.useState(false);
 
   // Smart ESP32 Auto-Discovery
   const discoverESP32 = async () => {
@@ -133,6 +134,26 @@ export default function Page() {
     // Refresh the interface
     checkFaceStatus();
     fetchLogs();
+  };
+
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    setEsp32Connected(false);
+    setEsp32URL(""); // Clear old URL
+    
+    try {
+      const url = await discoverESP32();
+      if (url) {
+        setEsp32URL(url);
+        setEsp32Connected(true);
+        checkFaceStatus();
+        fetchLogs();
+      }
+    } catch (error) {
+      console.log('Reconnect failed:', error);
+    } finally {
+      setIsReconnecting(false);
+    }
   };
 
   const handleFaceChange = async (faceType: string) => {
@@ -244,7 +265,7 @@ export default function Page() {
     }
   };
 
-  // Periodic connection health check
+  // Periodic connection health check with auto-recovery
   const checkConnectionHealth = async () => {
     if (!esp32URL) return;
     
@@ -257,14 +278,26 @@ export default function Page() {
       if (response.ok) {
         setEsp32Connected(true);
       } else {
-        console.log('Health check failed - bad response');
+        console.log('Health check failed - bad response, will attempt auto-reconnect');
         setEsp32Connected(false);
         setEsp32URL(""); // Clear URL if health check fails
+        // Auto-attempt reconnection after a short delay
+        setTimeout(() => {
+          if (!esp32Connected && !isReconnecting) {
+            handleReconnect();
+          }
+        }, 2000);
       }
     } catch (error) {
-      console.log('Health check failed - network error:', error);
+      console.log('Health check failed - network error, will attempt auto-reconnect:', error);
       setEsp32Connected(false);
       setEsp32URL(""); // Clear URL on health check failure
+      // Auto-attempt reconnection after a short delay
+      setTimeout(() => {
+        if (!esp32Connected && !isReconnecting) {
+          handleReconnect();
+        }
+      }, 2000);
     } finally {
       setIsHealthChecking(false);
     }
@@ -375,7 +408,7 @@ export default function Page() {
                 <div className={`w-4 h-4 rounded-full ${
                   esp32Connected 
                     ? (isHealthChecking ? 'bg-blue-500 animate-pulse' : 'bg-green-500')
-                    : isScanning 
+                    : (isScanning || isReconnecting)
                       ? 'bg-yellow-500 animate-pulse' 
                       : 'bg-red-500'
                 }`} />
@@ -383,15 +416,30 @@ export default function Page() {
                   Status: {
                     esp32Connected 
                       ? (isHealthChecking ? 'Checking...' : 'Connected')
-                      : isScanning 
-                        ? 'Scanning...' 
-                        : 'Disconnected'
+                      : isReconnecting
+                        ? 'Reconnecting...'
+                        : isScanning 
+                          ? 'Scanning...' 
+                          : 'Disconnected'
                   }
                 </span>
               </div>
+              {!esp32Connected && !isScanning && !isReconnecting && (
+                <Button 
+                  onClick={handleReconnect}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  🔄 Reconnect
+                </Button>
+              )}
             </div>
             <div className="text-xs text-muted-foreground">
-              ESP32: {esp32URL || (isScanning ? "Scanning network..." : "Not found")}
+              ESP32: {esp32URL || 
+                (isReconnecting ? "Attempting to reconnect..." : 
+                 isScanning ? "Scanning network..." : 
+                 "Not found - click Reconnect to retry")}
             </div>
           </div>
           
