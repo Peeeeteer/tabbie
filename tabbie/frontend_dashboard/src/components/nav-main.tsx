@@ -20,6 +20,7 @@ import {
 
 export function NavMain({
   items,
+  onSetupWizard,
 }: {
   items: {
     title: string
@@ -29,8 +30,10 @@ export function NavMain({
     items?: {
       title: string
       url: string
+      onClick?: () => void
     }[]
   }[]
+  onSetupWizard?: () => void
 }) {
   return (
     <SidebarGroup>
@@ -56,9 +59,15 @@ export function NavMain({
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
-                          <span>{subItem.title}</span>
-                        </a>
+                        {subItem.onClick ? (
+                          <button onClick={subItem.onClick} className="w-full text-left">
+                            <span>{subItem.title}</span>
+                          </button>
+                        ) : (
+                          <a href={subItem.url}>
+                            <span>{subItem.title}</span>
+                          </a>
+                        )}
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}

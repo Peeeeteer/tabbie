@@ -14,4 +14,25 @@ export default defineConfig({
   optimizeDeps: {
     include: ['class-variance-authority'],
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        configure: (proxy, options) => {
+          // Fallback for when API server isn't running
+          proxy.on('error', (err, req, res) => {
+            console.log('API server not available, using mock responses');
+            if (req.url?.includes('/api/setup/upload')) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, message: 'Mock upload success' }));
+            } else if (req.url?.includes('/api/setup/discover')) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ip: '192.168.2.93' })); // Mock discovered IP
+            }
+          });
+        }
+      }
+    }
+  },
 })

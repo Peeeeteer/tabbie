@@ -29,6 +29,7 @@
 // }
 
 
+// 
 // // 2. ESP32 + GME12864-11
 // #include <Wire.h>
 // #include <Adafruit_GFX.h>
@@ -257,6 +258,7 @@
 #include <Adafruit_SSD1306.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <Preferences.h>
 
 // Display settings
 #define SCREEN_WIDTH 128
@@ -266,6 +268,9 @@
 
 // Create display object
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// Preferences for storing WiFi credentials
+Preferences preferences;
 
 // WiFi credentials - These will be set by build script from .env file
 // DO NOT put actual credentials here - they come from .env file
@@ -329,6 +334,10 @@ void connectToWiFi() {
   addLog("🔄 Connecting to WiFi network: " + String(ssid));
   addLog("📊 SSID Length: " + String(strlen(ssid)) + " characters");
   
+  // Configure WiFi for better stability
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  
   WiFi.begin(ssid, password);
   
   int attempts = 0;
@@ -382,6 +391,38 @@ void connectToWiFi() {
           network += " ← TARGET NETWORK FOUND!";
         }
         addLog(network);
+      }
+    }
+  }
+}
+
+// Maintain WiFi connection with less sensitivity
+void maintainWiFiConnection() {
+  static unsigned long lastWiFiCheck = 0;
+  static int disconnectCount = 0;
+  
+  // Check WiFi every 15 seconds instead of constantly
+  if (millis() - lastWiFiCheck > 15000) {
+    lastWiFiCheck = millis();
+    
+    if (WiFi.status() != WL_CONNECTED) {
+      disconnectCount++;
+      addLog("⚠️ WiFi disconnected (count: " + String(disconnectCount) + ")");
+      
+      // Only try to reconnect after 3 consecutive failures
+      if (disconnectCount >= 3) {
+        addLog("🔄 Attempting WiFi reconnection...");
+        WiFi.reconnect();
+        disconnectCount = 0; // Reset counter
+        
+        // Wait a bit for reconnection
+        delay(2000);
+      }
+    } else {
+      // Reset disconnect count on successful connection
+      if (disconnectCount > 0) {
+        addLog("✅ WiFi reconnected successfully!");
+        disconnectCount = 0;
       }
     }
   }
@@ -520,21 +561,31 @@ void setup() {
   addLog("Status:  http://" + WiFi.localIP().toString() + "/face/status");
   addLog("Logs:    http://" + WiFi.localIP().toString() + "/logs");
   
+  // Show connection info on display for easy setup
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("WiFi Connected!");
+  display.println("IP: " + WiFi.localIP().toString());
+  display.println("");
+  display.println("Open Frontend:");
+  display.println("localhost:5174");
+  display.println("");
+  display.println("ESP32 MAC:");
+  display.println(WiFi.macAddress());
+  display.display();
+  
   // Show initial default face
   showDefaultFace();
 }
 
 void loop() {
-  // Check WiFi connection status
-  if (WiFi.status() != WL_CONNECTED) {
-    addLog("❌ WiFi connection lost. Attempting to reconnect...");
-    connectToWiFi();
-  }
+  // Maintain WiFi connection (less aggressive)
+  maintainWiFiConnection();
   
   // Handle web server requests
   server.handleClient();
-  
-  
   
   // Small delay to prevent excessive processing
   delay(10);

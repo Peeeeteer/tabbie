@@ -32,6 +32,8 @@ https://www.youtube.com/watch?v=gQ2lsSuXvVU
 
 Ended up installing platformio.ini which seems to be the main one anyone uses for boards like these?
 
+If your on a Mac and you dont see the extension, you will need to pip install the platformio and then manually do the project init and such, without the extension gui (But if you on VS code it should be fine)
+
 NOW Arudino does the ligth thing:
 
 The code is inside ../src/main.cpp 

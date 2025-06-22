@@ -14,6 +14,7 @@ import {
   SquareTerminal,
   Bell,
   BarChart3,
+  Wrench,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -192,14 +193,39 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  onSetupWizard?: () => void;
+}
+
+export function AppSidebar({ onSetupWizard, ...props }: AppSidebarProps) {
+  // Add setup wizard to settings items
+  const dataWithSetup = {
+    ...data,
+    navMain: data.navMain.map(item => {
+      if (item.title === "Settings") {
+        return {
+          ...item,
+          items: [
+            {
+              title: "🛠️ ESP32 Setup",
+              url: "#",
+              onClick: onSetupWizard,
+            },
+            ...item.items,
+          ]
+        };
+      }
+      return item;
+    })
+  };
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={dataWithSetup.navMain} onSetupWizard={onSetupWizard} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
