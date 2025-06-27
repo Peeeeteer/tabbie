@@ -89,7 +89,12 @@ So yes,
 We are able to stream images / bits over wifi to show on the face but actually maybe not required.
 
 
-So the goal now is to 
+
+anyway,
+added the same thing now where users are able ot control over wifi and also in the frontend dashboard add their wifi login and such.
+
+A real pain in the ass to make it as easy as possible for someone to connect their tabbie and ran into a bunch of bugs when setting the thing up with a new esp32 which is good to learn now 
+not once people start using it.
 
 
 

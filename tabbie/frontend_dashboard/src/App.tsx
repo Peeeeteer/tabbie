@@ -13,11 +13,20 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  Sidebar,
 } from "@/components/ui/sidebar"
 import React from "react"
 import { SetupWizard } from "@/components/SetupWizard"
+import { TodoProvider } from "@/contexts/TodoContext"
+import CategorySidebar from "@/components/CategorySidebar"
+import TodoPage from "@/components/TodoPage"
+import TasksPage from "@/components/TasksPage"
+import EventsPage from "@/components/EventsPage"
+import NotificationsPage from "@/components/NotificationsPage"
 
 export default function Page() {
+  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings'>('dashboard');
+  const [currentView, setCurrentView] = React.useState<'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal'>('all');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
   const [logs, setLogs] = React.useState<string[]>([]);
@@ -350,9 +359,17 @@ export default function Page() {
   }, [esp32URL]); // Add esp32URL as dependency
 
   return (
-    <SidebarProvider>
-      <AppSidebar onSetupWizard={() => setShowSetupWizard(true)} />
-      <SidebarInset>
+    <TodoProvider>
+      <SidebarProvider>
+        <Sidebar>
+          <CategorySidebar 
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            currentView={currentView}
+            onViewChange={setCurrentView}
+          />
+        </Sidebar>
+        <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
@@ -366,15 +383,62 @@ export default function Page() {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Control Panel</BreadcrumbPage>
+                  <BreadcrumbPage>
+                    {currentPage === 'dashboard' ? 'Control Panel' :
+                     currentPage === 'tasks' ? 'Tasks' :
+                     currentPage === 'reminders' ? 'Reminders' :
+                     currentPage === 'events' ? 'Events' :
+                     currentPage === 'notifications' ? 'Notifications' :
+                     currentPage === 'pomodoro' ? 'Pomodoro Timer' :
+                     currentPage === 'calendar' ? 'Calendar' :
+                     currentPage === 'timetracking' ? 'Time Tracking' :
+                     currentPage === 'settings' ? 'Settings' : 'Control Panel'}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {/* Face Control Section */}
-          <div className="flex flex-col gap-4 p-4 bg-card rounded-lg border">
+          {currentPage === 'tasks' ? (
+            <TasksPage currentView={currentView} onViewChange={setCurrentView} />
+          ) : currentPage === 'reminders' ? (
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">🔔 Reminders</h2>
+              <p className="text-muted-foreground">Set smart reminders and get notified by Tabbie!</p>
+            </div>
+          ) : currentPage === 'events' ? (
+            <EventsPage />
+          ) : currentPage === 'notifications' ? (
+            <NotificationsPage />
+          ) : currentPage === 'pomodoro' ? (
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">🍅 Pomodoro Timer</h2>
+              <p className="text-muted-foreground">Start focused work sessions with Tabbie's guidance!</p>
+            </div>
+          ) : currentPage === 'calendar' ? (
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">📅 Calendar</h2>
+              <p className="text-muted-foreground">View your schedule and plan your day with Tabbie</p>
+            </div>
+          ) : currentPage === 'timetracking' ? (
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">📊 Time Tracking</h2>
+              <p className="text-muted-foreground mb-4">Ask Tabbie to manage your day or how you spent it!</p>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-800">"Hey Tabbie, how did I spend my time today?"</p>
+                <p className="text-sm text-blue-800">"Tabbie, help me plan my day better"</p>
+              </div>
+            </div>
+          ) : currentPage === 'settings' ? (
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">⚙️ Settings</h2>
+              <p className="text-muted-foreground">Settings and configuration coming soon!</p>
+            </div>
+          ) : (
+            <>
+              {/* Face Control Section */}
+              <div className="flex flex-col gap-4 p-4 bg-card rounded-lg border">
             <h2 className="text-lg font-semibold">🤖 Tabbie Face Control</h2>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium">Current Face:</span>
@@ -544,6 +608,8 @@ export default function Page() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </SidebarInset>
 
@@ -571,6 +637,7 @@ export default function Page() {
           </div>
         </div>
       )}
-    </SidebarProvider>
+      </SidebarProvider>
+    </TodoProvider>
   )
 }
