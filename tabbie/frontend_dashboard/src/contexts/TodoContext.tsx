@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { UserData, Category, Task, PomodoroSession } from '@/types/todo';
+import { DEFAULT_CATEGORIES } from '@/types/todo';
 import { loadUserData, saveUserData, generateId } from '@/utils/storage';
 
 interface TodoContextType {
@@ -18,6 +19,7 @@ interface TodoContextType {
   updateCategory: (categoryId: string, updates: Partial<Category>) => void;
   deleteCategory: (categoryId: string) => void;
   setSelectedCategory: (categoryId: string | null) => void;
+  resetCategoriesToDefault: () => void;
   
   // Task methods
   addTask: (title: string, categoryId: string, description?: string, dueDate?: Date) => void;
@@ -115,6 +117,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setSelectedCategory = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
+  };
+
+  const resetCategoriesToDefault = () => {
+    setUserData(prev => ({
+      ...prev,
+      categories: [...DEFAULT_CATEGORIES],
+    }));
   };
 
   // Task methods
@@ -258,6 +267,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateCategory,
     deleteCategory,
     setSelectedCategory,
+    resetCategoriesToDefault,
     
     addTask,
     updateTask,

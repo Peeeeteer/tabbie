@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 interface DateTimePickerProps {
   date?: Date;
@@ -43,6 +43,13 @@ export function DateTimePicker({
       newDate.setHours(parseInt(hours), parseInt(minutes));
       onDateChange(newDate);
     }
+  };
+
+  const handleQuickDate = (daysOffset: number) => {
+    const [hours, minutes] = time.split(':');
+    const newDate = addDays(new Date(), daysOffset);
+    newDate.setHours(parseInt(hours), parseInt(minutes));
+    onDateChange(newDate);
   };
 
   React.useEffect(() => {
@@ -94,6 +101,50 @@ export function DateTimePicker({
             </Button>
           </div>
         </div>
+        
+        {/* Quick Date Shortcuts */}
+        <div className="p-3 border-b bg-gray-50">
+          <div className="text-xs font-medium text-gray-600 mb-2">Quick Select</div>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickDate(0)}
+              className="h-8 px-2 text-xs flex items-center gap-1"
+            >
+              <span>📅</span>
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickDate(1)}
+              className="h-8 px-2 text-xs flex items-center gap-1"
+            >
+              <span>🌅</span>
+              Tomorrow
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickDate(3)}
+              className="h-8 px-2 text-xs flex items-center gap-1"
+            >
+              <span>📆</span>
+              3 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickDate(7)}
+              className="h-8 px-2 text-xs flex items-center gap-1"
+            >
+              <span>🗓️</span>
+              Week
+            </Button>
+          </div>
+        </div>
+        
         <Calendar
           mode="single"
           selected={date}

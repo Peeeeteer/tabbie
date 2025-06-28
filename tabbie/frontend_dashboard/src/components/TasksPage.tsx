@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Play, CheckSquare, Clock, Calendar, Edit3, Save, X, CalendarDays, List, ChevronDown, Hash, User, Briefcase, Code, Palette, Home, Pause } from 'lucide-react';
+import { Plus, Play, CheckSquare, Clock, Calendar, Edit3, Save, X, CalendarDays, List, ChevronDown, Hash, User, Briefcase, Code, Palette, Home, Pause, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +29,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     deleteTask,
     startPomodoro,
     pomodoroTimer,
+    resetCategoriesToDefault,
   } = useTodo();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -36,9 +37,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
   const [taskCategory, setTaskCategory] = useState<string>('work');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState<Date | undefined>();
+  const [editCategory, setEditCategory] = useState<string>('work');
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const createPanelRef = React.useRef<HTMLDivElement>(null);
+  const editPanelRef = React.useRef<HTMLDivElement>(null);
 
   const today = new Date();
   const tomorrow = new Date(today);
@@ -144,28 +151,79 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   };
 
   const handleEditTask = (task: Task) => {
-    setEditingTask(task.id);
+    setEditingTask(task);
     setEditTitle(task.title);
     setEditDescription(task.description || '');
+    setEditDueDate(task.dueDate);
+    setEditCategory(task.categoryId);
+    setIsEditPanelOpen(true);
   };
 
   const handleSaveEdit = () => {
-    if (editingTask) {
-      updateTask(editingTask, {
+    if (editingTask && editTitle.trim()) {
+      updateTask(editingTask.id, {
         title: editTitle,
         description: editDescription,
+        dueDate: editDueDate,
+        categoryId: editCategory,
       });
       setEditingTask(null);
       setEditTitle('');
       setEditDescription('');
+      setEditDueDate(undefined);
+      setEditCategory('work');
+      setIsEditPanelOpen(false);
     }
   };
 
   const handleCancelEdit = () => {
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+      setAutoSaveTimeout(null);
+    }
     setEditingTask(null);
     setEditTitle('');
     setEditDescription('');
+    setEditDueDate(undefined);
+    setEditCategory('work');
+    setIsEditPanelOpen(false);
   };
+
+  const autoSaveTask = () => {
+    if (editingTask && editTitle.trim()) {
+      updateTask(editingTask.id, {
+        title: editTitle,
+        description: editDescription,
+        dueDate: editDueDate,
+        categoryId: editCategory,
+      });
+    }
+  };
+
+  const scheduleAutoSave = () => {
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+    }
+    const timeoutId = setTimeout(autoSaveTask, 500);
+    setAutoSaveTimeout(timeoutId);
+  };
+
+  // Handle outside clicks
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isCreatePanelOpen && createPanelRef.current && !createPanelRef.current.contains(event.target as Node)) {
+        setIsCreatePanelOpen(false);
+      }
+      if (isEditPanelOpen && editPanelRef.current && !editPanelRef.current.contains(event.target as Node)) {
+        handleCancelEdit();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCreatePanelOpen, isEditPanelOpen]);
 
   const selectedCategory = userData.categories.find(cat => cat.id === selectedCategoryId);
 
@@ -212,7 +270,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           <TaskItem
             key={task.id}
             task={task}
-            isEditing={editingTask === task.id}
+            isEditing={false}
             editTitle={editTitle}
             editDescription={editDescription}
             onEditTitleChange={setEditTitle}
@@ -304,20 +362,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   return (
     <div className="flex h-full bg-white relative">
       {/* Main Content Area - Full Width */}
-      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${isCreatePanelOpen ? 'mr-96' : 'mr-0'}`}>
+      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${(isCreatePanelOpen || isEditPanelOpen) ? 'mr-96' : 'mr-0'}`}>
         {/* Header with View Navigation */}
         <div className="bg-white border-b border-gray-200">
           <div className="p-6 pb-0">
             <div className="flex items-center justify-between mb-4 h-10">
               <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
-              <span className="text-sm text-gray-500 h-10 flex items-center">
-                {today.toLocaleDateString('en-US', { 
-                  weekday: 'long',
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </span>
             </div>
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
@@ -399,8 +449,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   </div>
                 </button>
 
-                {/* Category Dropdown - Next to other tabs */}
-                <div className="pb-3">
+                {/* Category Dropdown and Add Task Button - Next to other tabs */}
+                <div className="pb-3 flex items-center gap-3">
                   <Select value={['work', 'coding', 'hobby', 'personal'].includes(currentView) ? currentView : ''} onValueChange={(value) => onViewChange?.(value as any)}>
                     <SelectTrigger className="w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                       <SelectValue placeholder="Categories" />
@@ -452,18 +502,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
 
-              {/* Add Task Button - Same height as tabs */}
-              <div className="pb-3">
-                <Button 
-                  onClick={() => setIsCreatePanelOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Task
-                </Button>
+                  <Button 
+                    onClick={() => setIsCreatePanelOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Task
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -476,14 +523,17 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       </div>
 
       {/* Right Sliding Panel for Task Creation */}
-      <div className={`
-        fixed top-0 right-0 h-full w-96 bg-white border-l border-gray-200 
-        transform transition-transform duration-300 ease-in-out z-50 shadow-2xl
-        ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
-      `}>
-        {/* Panel Header - Matching main content style */}
-        <div className="p-6 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between mb-6">
+      <div 
+        ref={createPanelRef}
+        className={`
+          fixed top-20 right-4 h-[calc(100vh-6rem)] w-96 bg-white border border-gray-200 rounded-lg shadow-xl
+          transform transition-transform duration-300 ease-in-out z-50
+          ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
+        `}
+      >
+        {/* Panel Header */}
+        <div className="bg-white border-b border-gray-200 p-6 pb-0">
+          <div className="flex items-center justify-between mb-4 h-10">
             <h2 className="text-xl font-semibold text-gray-900">Create New Task</h2>
             <Button 
               variant="ghost" 
@@ -494,14 +544,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
               <X className="w-5 h-5" />
             </Button>
           </div>
-          
-          {/* Continuation line */}
-          <div className="border-b border-gray-200" style={{ marginLeft: '-24px', marginRight: '-24px' }}></div>
+          <div className="pb-3"></div>
         </div>
 
         {/* Task Creation Form */}
         <div className="p-6 space-y-6 h-full overflow-y-auto">
-          {/* Category Selection - Moved up */}
+          {/* Category Selection */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-900">Category</label>
             <Select value={taskCategory} onValueChange={setTaskCategory}>
@@ -545,14 +593,18 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             />
           </div>
 
-
-
           {/* Due Date & Time */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
             <DateTimePicker
               date={newTaskDueDate}
-              onDateChange={setNewTaskDueDate}
+              onDateChange={(date) => {
+                setNewTaskDueDate(date);
+                // Auto-close panel when date is selected via shortcuts
+                if (date) {
+                  setTimeout(() => setIsCreatePanelOpen(false), 100);
+                }
+              }}
               placeholder="Pick date and time"
               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
@@ -615,6 +667,109 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         </div>
       </div>
 
+      {/* Right Sliding Panel for Task Editing */}
+      <div 
+        ref={editPanelRef}
+        className={`
+          fixed top-20 right-4 h-[calc(100vh-6rem)] w-96 bg-white border border-gray-200 rounded-lg shadow-xl
+          transform transition-transform duration-300 ease-in-out z-50
+          ${isEditPanelOpen ? 'translate-x-0' : 'translate-x-full'}
+        `}
+      >
+        {/* Panel Header */}
+        <div className="bg-white border-b border-gray-200 p-6 pb-0">
+          <div className="flex items-center justify-between mb-4 h-10">
+            <h2 className="text-xl font-semibold text-gray-900">Edit Task</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleCancelEdit}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <div className="pb-3"></div>
+        </div>
+
+        {/* Task Edit Form */}
+        <div className="p-6 space-y-6 h-full overflow-y-auto">
+          {/* Category Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900">Category</label>
+            <Select value={editCategory} onValueChange={(value) => {
+              setEditCategory(value);
+              scheduleAutoSave();
+            }}>
+              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectValue placeholder="Choose category" />
+              </SelectTrigger>
+              <SelectContent>
+                {userData.categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{category.icon}</span>
+                      <span>{category.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Title Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900">Title</label>
+            <Input
+              placeholder="Enter task title..."
+              value={editTitle}
+              onChange={(e) => {
+                setEditTitle(e.target.value);
+                scheduleAutoSave();
+              }}
+              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
+              autoFocus
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900">Description</label>
+            <Textarea
+              placeholder="Add more details..."
+              value={editDescription}
+              onChange={(e) => {
+                setEditDescription(e.target.value);
+                scheduleAutoSave();
+              }}
+              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[100px] resize-none"
+            />
+          </div>
+
+          {/* Due Date & Time */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
+            <DateTimePicker
+              date={editDueDate}
+              onDateChange={(date) => {
+                setEditDueDate(date);
+                scheduleAutoSave();
+                // Auto-close panel when date is selected via shortcuts
+                if (date) {
+                  setTimeout(() => setIsEditPanelOpen(false), 100);
+                }
+              }}
+              placeholder="Pick date and time"
+              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Auto-save indicator */}
+          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+            ✨ Changes are automatically saved as you type
+          </div>
+        </div>
+      </div>
 
     </div>
   );
@@ -715,33 +870,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
   canStartPomodoro,
   showTime = false,
 }) => {
-  const categoryConfig = {
-    work: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
-    personal: { color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-    coding: { color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
-    hobby: { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
-  }[task.categoryId] || { color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
-
-  const getPriorityColor = (priority: Task['priority']): string => {
-    switch (priority) {
-      case 'high': return 'border-l-red-400 bg-gradient-to-r from-red-50/50 to-transparent';
-      case 'medium': return 'border-l-blue-400 bg-gradient-to-r from-blue-50/50 to-transparent';
-      case 'low': return 'border-l-green-400 bg-gradient-to-r from-green-50/50 to-transparent';
-      default: return 'border-l-gray-300 bg-white';
-    }
-  };
-
-  const formatDueDate = (date: string) => {
-    const dueDate = new Date(date);
-    const now = new Date();
-    const isToday = dueDate.toDateString() === now.toDateString();
-    const isTomorrow = dueDate.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
-    
-    if (isToday) return `Today ${dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-    if (isTomorrow) return `Tomorrow ${dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-    return dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  };
-
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
   
   // Get Pomodoro timer state from context
@@ -760,140 +888,52 @@ const TaskItem: React.FC<TaskItemProps> = ({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="p-5 bg-white rounded-xl border-2 border-blue-200 shadow-sm">
-        <div className="space-y-3">
-          <Input
-            value={editTitle}
-            onChange={(e) => onEditTitleChange(e.target.value)}
-            placeholder="Task title"
-            className="font-medium text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-          />
-          <Textarea
-            value={editDescription}
-            onChange={(e) => onEditDescriptionChange(e.target.value)}
-            placeholder="Add a description..."
-            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
-            rows={3}
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={onSaveEdit} className="bg-blue-600 hover:bg-blue-700">
-              <Save className="w-3 h-3 mr-1" />
-              Save
-            </Button>
-            <Button size="sm" variant="outline" onClick={onCancelEdit} className="border-gray-300">
-              <X className="w-3 h-3 mr-1" />
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Minimal todo item - just title and checkbox
   return (
-    <div className={`
-      group p-4 rounded-xl border-l-4 shadow-sm hover:shadow-md transition-all duration-200 
-      ${getPriorityColor(task.priority)}
-      ${task.completed ? 'opacity-70' : 'hover:translate-y-[-1px]'}
-    `}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4 flex-1 min-w-0">
-          <button
-            onClick={onToggleComplete}
-            className={`
-              mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 transform
-              ${task.completed 
-                ? 'bg-gradient-to-br from-green-400 to-green-600 border-green-500 text-white scale-110 shadow-lg animate-pulse' 
-                : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:scale-105'
-              }
-            `}
-          >
-            {task.completed && (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-          </button>
-          
-          <div className="flex-1 min-w-0">
-            <h3 className={`
-              font-semibold text-gray-900 leading-snug
-              ${task.completed ? 'line-through text-gray-500' : ''}
-            `}>
-              {task.title}
-            </h3>
-            
-            {task.description && (
-              <p className={`
-                text-sm mt-2 leading-relaxed
-                ${task.completed ? 'text-gray-400' : 'text-gray-600'}
-              `}>
-                {task.description}
-              </p>
-            )}
-            
-            <div className="flex items-center gap-3 mt-3 flex-wrap">
-              <span className={`
-                inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
-                ${categoryConfig.color} ${categoryConfig.bg} ${categoryConfig.border}
-              `}>
-                {task.categoryId.charAt(0).toUpperCase() + task.categoryId.slice(1)}
-              </span>
-              
-              {task.dueDate && showTime && (
-                <span className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
-                  <Clock className="w-3 h-3" />
-                  {formatDueDate(task.dueDate.toISOString())}
-                </span>
-              )}
-              
-              {/* Show Pomodoro Progress if this task is currently running */}
-              {isCurrentTaskPomodoro && pomodoroTimer && (
-                <PomodoroProgress
-                  isRunning={pomodoroTimer.isRunning}
-                  timeLeft={pomodoroTimer.timeLeft}
-                  totalTime={25 * 60} // 25 minutes default
-                  onToggle={handlePomodoroToggle}
-                />
-              )}
-              
-              {completedSessions > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-200">
-                  🍅 {completedSessions}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onEdit}
-            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Edit task"
-          >
-            <Edit3 className="w-4 h-4" />
-          </Button>
-          {canStartPomodoro && !task.completed && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handlePomodoroToggle}
-              className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title={isCurrentTaskPomodoro ? (pomodoroTimer.isRunning ? "Pause Pomodoro" : "Resume Pomodoro") : "Start Pomodoro"}
-            >
-              {isCurrentTaskPomodoro && pomodoroTimer.isRunning ? (
-                <Pause className="w-4 h-4" />
-              ) : (
-                <Play className="w-4 h-4" />
-              )}
-            </Button>
-          )}
-        </div>
+    <div 
+      className="group flex items-center gap-3 py-2 px-1 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+      onClick={() => onEdit()}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleComplete();
+        }}
+        className={`
+          flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200
+          ${task.completed 
+            ? 'bg-blue-500 border-blue-500 text-white' 
+            : 'border-gray-300 hover:border-blue-400'
+          }
+        `}
+      >
+        {task.completed && (
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+      
+      <div className="flex-1 min-w-0">
+        <span className={`
+          text-sm font-medium cursor-pointer
+          ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}
+        `}>
+          {task.title}
+        </span>
+      </div>
+
+      {/* Small indicators */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {task.dueDate && (
+          <Clock className="w-3 h-3 text-gray-400" />
+        )}
+        {completedSessions > 0 && (
+          <span className="text-xs text-gray-400">🍅{completedSessions}</span>
+        )}
+        {isCurrentTaskPomodoro && (
+          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        )}
       </div>
     </div>
   );
