@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, List, RotateCcw, MoreVertical, Edit, Play, Trash2 } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, List, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
@@ -19,6 +19,26 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TasksPageProps {
   currentView: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
@@ -34,6 +54,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     toggleTaskComplete,
     startPomodoro,
     resetCategoriesToDefault,
+    reorderTasks,
   } = useTodo();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -56,6 +77,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const viewPanelRef = React.useRef<HTMLDivElement>(null);
   const navigationRef = React.useRef<HTMLDivElement>(null);
 
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -68,7 +97,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       if (!task.dueDate) return false;
       const taskDate = new Date(task.dueDate);
       return taskDate.toDateString() === today.toDateString();
-    });
+    }).sort((a, b) => a.order - b.order);
   };
 
   const getTomorrowTasks = () => {
@@ -77,7 +106,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       if (!task.dueDate) return false;
       const taskDate = new Date(task.dueDate);
       return taskDate.toDateString() === tomorrow.toDateString();
-    });
+    }).sort((a, b) => a.order - b.order);
   };
 
   const getNext7DaysTasks = () => {
@@ -94,15 +123,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
              taskDateString !== tomorrowString && 
              taskDate > tomorrow && 
              taskDate <= next7Days;
-    });
+    }).sort((a, b) => a.order - b.order);
   };
 
   const getAllTasks = () => {
-    return userData.tasks.filter(task => !task.completed);
+    return userData.tasks.filter(task => !task.completed).sort((a, b) => a.order - b.order);
   };
 
   const getCompletedTasks = () => {
-    return userData.tasks.filter(task => task.completed);
+    return userData.tasks.filter(task => task.completed).sort((a, b) => a.order - b.order);
   };
 
 
@@ -250,6 +279,91 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     // Don't close create panel if it's open - user might want to keep creating
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const draggedTask = userData.tasks.find(task => task.id === active.id);
+    if (!draggedTask) return;
+
+    // Check if we're dragging to a different time section
+    const overData = over.data?.current;
+    const activeData = active.data?.current;
+
+    if (overData?.section && activeData?.section && overData.section !== activeData.section) {
+      // Cross-section dragging - update due date
+      let newDueDate: Date | undefined;
+      
+      switch (overData.section) {
+        case 'today':
+          newDueDate = new Date();
+          newDueDate.setHours(23, 59, 59, 999); // End of today
+          break;
+        case 'tomorrow':
+          newDueDate = new Date();
+          newDueDate.setDate(newDueDate.getDate() + 1);
+          newDueDate.setHours(23, 59, 59, 999); // End of tomorrow
+          break;
+        case 'next7days':
+          newDueDate = new Date();
+          newDueDate.setDate(newDueDate.getDate() + 3); // Default to 3 days from now
+          newDueDate.setHours(23, 59, 59, 999);
+          break;
+      }
+
+      if (newDueDate) {
+        updateTask(draggedTask.id, { dueDate: newDueDate });
+      }
+    } else {
+      // Same section reordering
+      let filteredTasks: Task[] = [];
+      
+      switch (currentView) {
+        case 'all':
+          filteredTasks = getAllTasks();
+          break;
+        case 'today':
+          filteredTasks = getTodayTasks();
+          break;
+        case 'tomorrow':
+          filteredTasks = getTomorrowTasks();
+          break;
+        case 'next7days':
+          filteredTasks = getNext7DaysTasks();
+          break;
+        case 'completed':
+          filteredTasks = getCompletedTasks();
+          break;
+        case 'work':
+          filteredTasks = getCategoryTasksByType('work');
+          break;
+        case 'coding':
+          filteredTasks = getCategoryTasksByType('coding');
+          break;
+        case 'hobby':
+          filteredTasks = getCategoryTasksByType('hobby');
+          break;
+        case 'personal':
+          filteredTasks = getCategoryTasksByType('personal');
+          break;
+        default:
+          filteredTasks = getAllTasks();
+      }
+
+      const oldIndex = filteredTasks.findIndex(task => task.id === active.id);
+      const newIndex = filteredTasks.findIndex(task => task.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedTasks = arrayMove(filteredTasks, oldIndex, newIndex);
+        const taskIds = reorderedTasks.map(task => task.id);
+        reorderTasks(taskIds);
+      }
+    }
+  };
+
 
 
   const handleCancelEdit = () => {
@@ -356,9 +470,24 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isViewPanelOpen) {
+          setIsViewPanelOpen(false);
+          setViewingTask(null);
+        } else if (isEditPanelOpen) {
+          handleCancelEdit();
+        } else if (isCreatePanelOpen) {
+          setIsCreatePanelOpen(false);
+        }
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isCreatePanelOpen, isEditPanelOpen, isViewPanelOpen]);
 
@@ -369,7 +498,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     if (!category) return [];
     return userData.tasks.filter(task => 
       task.categoryId === category.id && !task.completed
-    );
+    ).sort((a, b) => a.order - b.order);
   };
 
   const getCategoryTaskCount = (categoryType: string) => {
@@ -386,9 +515,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
   const renderCategoryTasks = (categoryId: string, icon: string, name: string) => {
     const tasks = getCategoryTasksByType(categoryId);
-    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length);
+    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId);
   };
 
+<<<<<<< HEAD
   const renderTasksByCategory = (tasks: Task[], emptyMessage: string = "No tasks yet") => {
     if (tasks.length === 0) {
       return (
@@ -433,6 +563,141 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   };
 
   const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number) => (
+=======
+  const renderNext7DaysWithCrossDrag = () => {
+    const todayTasks = getTodayTasks();
+    const tomorrowTasks = getTomorrowTasks();
+    const next7DaysTasks = getNext7DaysTasks();
+    const allTasks = [...todayTasks, ...tomorrowTasks, ...next7DaysTasks];
+
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={allTasks.map(task => task.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-8">
+            {/* Today Section */}
+            <DroppableSection section="today" className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg text-gray-800">Today</h3>
+                  {todayTasks.length > 0 && (
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{todayTasks.length}</span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {today.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
+                {todayTasks.map((task) => (
+                  <SortableTaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={() => toggleTaskComplete(task.id)}
+                    onView={() => handleViewTask(task)}
+                    onEdit={() => handleEditTask(task)}
+                    onStartPomodoro={() => startPomodoro(task)}
+                    onDelete={() => deleteTask(task.id)}
+                    isDraggable={true}
+                    section="today"
+                  />
+                ))}
+                {todayTasks.length === 0 && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">Drop tasks here for today</p>
+                  </div>
+                )}
+              </div>
+            </DroppableSection>
+
+            {/* Tomorrow Section */}
+            <DroppableSection section="tomorrow" className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg text-gray-800">Tomorrow</h3>
+                  {tomorrowTasks.length > 0 && (
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{tomorrowTasks.length}</span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {tomorrow.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
+                {tomorrowTasks.map((task) => (
+                  <SortableTaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={() => toggleTaskComplete(task.id)}
+                    onView={() => handleViewTask(task)}
+                    onEdit={() => handleEditTask(task)}
+                    onStartPomodoro={() => startPomodoro(task)}
+                    onDelete={() => deleteTask(task.id)}
+                    isDraggable={true}
+                    section="tomorrow"
+                  />
+                ))}
+                {tomorrowTasks.length === 0 && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">Drop tasks here for tomorrow</p>
+                  </div>
+                )}
+              </div>
+            </DroppableSection>
+
+            {/* Next 7 Days Section */}
+            <DroppableSection section="next7days" className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg text-gray-800">Next 7 Days</h3>
+                  {next7DaysTasks.length > 0 && (
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{next7DaysTasks.length}</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
+                {next7DaysTasks.map((task) => (
+                  <SortableTaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={() => toggleTaskComplete(task.id)}
+                    onView={() => handleViewTask(task)}
+                    onEdit={() => handleEditTask(task)}
+                    onStartPomodoro={() => startPomodoro(task)}
+                    onDelete={() => deleteTask(task.id)}
+                    isDraggable={true}
+                    section="next7days"
+                  />
+                ))}
+                {next7DaysTasks.length === 0 && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">Drop tasks here for later this week</p>
+                  </div>
+                )}
+              </div>
+            </DroppableSection>
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  };
+
+  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string) => (
+>>>>>>> todo/draggable-tasks-rearange
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -453,31 +718,67 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       </div>
 
       {/* Task list */}
-      <div className="space-y-1">
-        {tasks.map((task) => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            onToggleComplete={() => toggleTaskComplete(task.id)}
-            onView={() => handleViewTask(task)}
-            onEdit={() => handleEditTask(task)}
-            onStartPomodoro={() => startPomodoro(task)}
-            onDelete={() => deleteTask(task.id)}
-          />
-        ))}
-        {tasks.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-3xl mb-3">✨</div>
-            <p className="text-gray-500">No tasks {title.toLowerCase()}</p>
-          </div>
-        )}
-      </div>
+      {isDraggable ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={tasks.map(task => task.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-1">
+              {tasks.map((task) => (
+                <SortableTaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleComplete={() => toggleTaskComplete(task.id)}
+                  onView={() => handleViewTask(task)}
+                  onEdit={() => handleEditTask(task)}
+                  onStartPomodoro={() => startPomodoro(task)}
+                  onDelete={() => deleteTask(task.id)}
+                  isDraggable={true}
+                  section={section}
+                />
+              ))}
+              {tasks.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                  <div className="text-3xl mb-3">✨</div>
+                  <p className="text-gray-500">No tasks {title.toLowerCase()}</p>
+                </div>
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="space-y-1">
+          {tasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggleComplete={() => toggleTaskComplete(task.id)}
+              onView={() => handleViewTask(task)}
+              onEdit={() => handleEditTask(task)}
+              onStartPomodoro={() => startPomodoro(task)}
+              onDelete={() => deleteTask(task.id)}
+            />
+          ))}
+          {tasks.length === 0 && (
+            <div className="text-center py-12 text-gray-400">
+              <div className="text-3xl mb-3">✨</div>
+              <p className="text-gray-500">No tasks {title.toLowerCase()}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
   const renderContent = () => {
     switch (currentView) {
       case 'all':
+<<<<<<< HEAD
         return renderAllTasksByCategory();
       
       case 'today':
@@ -542,6 +843,29 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       
       case 'completed':
         return renderTasksByCategory(getCompletedTasks(), "No completed tasks");
+=======
+        return renderTaskSection('All Tasks', getAllTasks(), undefined, getAllTaskCount(), true, 'all');
+      
+      case 'today':
+        return (
+          <div>
+            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount(), true, 'today')}
+          </div>
+        );
+      
+      case 'tomorrow':
+        return (
+          <div>
+            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount(), true, 'tomorrow')}
+          </div>
+        );
+      
+      case 'next7days':
+        return renderNext7DaysWithCrossDrag();
+      
+      case 'completed':
+        return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), true, 'completed');
+>>>>>>> todo/draggable-tasks-rearange
       
       case 'work':
         return renderCategoryTasks('work', '💼', 'Work');
@@ -1187,7 +1511,85 @@ interface TaskItemProps {
   onEdit: () => void;
   onStartPomodoro: () => void;
   onDelete: () => void;
+  dragHandle?: React.ReactNode;
 }
+
+interface SortableTaskItemProps extends Omit<TaskItemProps, 'dragHandle'> {
+  isDraggable: boolean;
+  section?: string;
+}
+
+const DroppableSection: React.FC<{ 
+  children: React.ReactNode; 
+  section: string; 
+  className?: string;
+}> = ({ children, section, className = "" }) => {
+  const { setNodeRef } = useDroppable({
+    id: `droppable-${section}`,
+    data: {
+      section: section,
+    }
+  });
+
+  return (
+    <div ref={setNodeRef} className={className}>
+      {children}
+    </div>
+  );
+};
+
+const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
+  task,
+  onToggleComplete,
+  onView,
+  onEdit,
+  onStartPomodoro,
+  onDelete,
+  isDraggable,
+  section,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: task.id,
+    data: {
+      section: section,
+    }
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TaskItem
+        task={task}
+        onToggleComplete={onToggleComplete}
+        onView={onView}
+        onEdit={onEdit}
+        onStartPomodoro={onStartPomodoro}
+        onDelete={onDelete}
+        dragHandle={isDraggable ? (
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded mr-2"
+          >
+            <GripVertical className="w-4 h-4 text-gray-400" />
+          </div>
+        ) : undefined}
+      />
+    </div>
+  );
+};
 
 
 
@@ -1198,6 +1600,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onEdit,
   onStartPomodoro,
   onDelete,
+  dragHandle,
 }) => {
   const { userData } = useTodo();
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
@@ -1212,6 +1615,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       className="group flex items-center gap-3 py-2 px-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-blue-200"
       onClick={() => onView()}
     >
+      {dragHandle}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -1279,7 +1683,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               }}
               className="flex items-center gap-2"
             >
-              <Edit className="w-4 h-4" />
+              <Eye className="w-4 h-4" />
               View Details
             </DropdownMenuItem>
             <DropdownMenuItem

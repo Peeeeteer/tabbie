@@ -19,9 +19,15 @@ export const loadUserData = (): UserData => {
       const parsed = JSON.parse(storedData, reviveDate) as UserData;
       
       // Ensure all required fields exist with defaults
+      const tasks = (parsed.tasks || []).map((task, index) => ({
+        ...task,
+        // Add order field if it doesn't exist (migration)
+        order: task.order !== undefined ? task.order : index,
+      }));
+
       return {
         categories: parsed.categories || DEFAULT_CATEGORIES,
-        tasks: parsed.tasks || [],
+        tasks,
         pomodoroSessions: parsed.pomodoroSessions || [],
         settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       };

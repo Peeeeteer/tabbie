@@ -26,6 +26,7 @@ interface TodoContextType {
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskComplete: (taskId: string) => void;
+  reorderTasks: (taskIds: string[]) => void;
   
   // Pomodoro methods
   startPomodoro: (task: Task) => void;
@@ -129,6 +130,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Task methods
   const addTask = (title: string, categoryId?: string, description?: string, dueDate?: Date): string => {
     const taskId = generateId();
+    const nextOrder = Math.max(...userData.tasks.map(t => t.order), 0) + 1;
     const newTask: Task = {
       id: taskId,
       title,
@@ -140,6 +142,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updated: new Date(),
       dueDate,
       pomodoroSessions: [],
+      order: nextOrder,
     };
     setUserData(prev => ({
       ...prev,
@@ -173,6 +176,16 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateTask(taskId, { 
       completed: !userData.tasks.find(t => t.id === taskId)?.completed 
     });
+  };
+
+  const reorderTasks = (taskIds: string[]) => {
+    setUserData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(task => {
+        const newOrder = taskIds.indexOf(task.id);
+        return newOrder >= 0 ? { ...task, order: newOrder, updated: new Date() } : task;
+      }),
+    }));
   };
 
   // Pomodoro methods
@@ -275,6 +288,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateTask,
     deleteTask,
     toggleTaskComplete,
+    reorderTasks,
     
     startPomodoro,
     pausePomodoro,

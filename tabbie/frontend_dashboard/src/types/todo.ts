@@ -18,6 +18,7 @@ export interface Task {
   updated: Date;
   pomodoroSessions: PomodoroSession[];
   estimatedPomodoros?: number;
+  order: number;
 }
 
 export interface PomodoroSession {
