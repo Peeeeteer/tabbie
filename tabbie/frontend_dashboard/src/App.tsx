@@ -24,7 +24,7 @@ import NotificationsPage from "@/components/NotificationsPage"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings'>('dashboard');
-  const [currentView, setCurrentView] = React.useState<'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal'>('all');
+  const [currentView, setCurrentView] = React.useState<'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal'>('all');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
   const [logs, setLogs] = React.useState<string[]>([]);

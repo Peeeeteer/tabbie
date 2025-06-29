@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
-import { Plus, Play, Pause, Square, CheckSquare, Clock, Filter } from 'lucide-react';
+import { Plus, Play, Pause, Square, CheckSquare, Clock, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const TodoPage: React.FC = () => {
   const {
@@ -19,19 +38,29 @@ const TodoPage: React.FC = () => {
     pausePomodoro,
     resumePomodoro,
     stopPomodoro,
+    reorderTasks,
   } = useTodo();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Get filtered tasks based on selected category
   const filteredTasks = userData.tasks.filter(task => {
     if (selectedCategoryId && task.categoryId !== selectedCategoryId) return false;
     if (!showCompleted && task.completed) return false;
     return true;
-  });
+  }).sort((a, b) => a.order - b.order);
 
   const selectedCategory = userData.categories.find(cat => cat.id === selectedCategoryId);
+  const isAllTab = !selectedCategoryId;
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() && selectedCategoryId) {
@@ -43,6 +72,23 @@ const TodoPage: React.FC = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleAddTask();
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = filteredTasks.findIndex(task => task.id === active.id);
+    const newIndex = filteredTasks.findIndex(task => task.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reorderedTasks = arrayMove(filteredTasks, oldIndex, newIndex);
+      const taskIds = reorderedTasks.map(task => task.id);
+      reorderTasks(taskIds);
     }
   };
 
@@ -159,13 +205,7 @@ const TodoPage: React.FC = () => {
 
       {/* Task List */}
       <div className="flex-1 overflow-y-auto">
-        {!selectedCategoryId ? (
-          <div className="p-8 text-center text-gray-500">
-            <div className="text-4xl mb-4">📂</div>
-            <h3 className="text-lg font-medium mb-2">Select a Category</h3>
-            <p>Choose a category from the sidebar to view and manage your tasks.</p>
-          </div>
-        ) : filteredTasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <div className="text-4xl mb-4">✅</div>
             <h3 className="text-lg font-medium mb-2">
@@ -173,11 +213,37 @@ const TodoPage: React.FC = () => {
             </h3>
             <p>
               {showCompleted 
-                ? 'You haven\'t completed any tasks in this category yet.'
-                : 'Add your first task above to get started!'
+                ? `You haven't completed any tasks ${isAllTab ? 'yet' : 'in this category yet'}.`
+                : `${isAllTab ? 'Add your first task by selecting a category!' : 'Add your first task above to get started!'}`
               }
             </p>
           </div>
+        ) : isAllTab ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredTasks.map(task => task.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="p-4 space-y-2">
+                {filteredTasks.map((task) => (
+                  <SortableTaskItem
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={() => toggleTaskComplete(task.id)}
+                    onDelete={() => deleteTask(task.id)}
+                    onStartPomodoro={() => startPomodoro(task)}
+                    isCurrentTask={currentTask?.id === task.id}
+                    canStartPomodoro={!pomodoroTimer.isRunning}
+                    isDraggable={true}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="p-4 space-y-2">
             {filteredTasks.map((task) => (
@@ -205,7 +271,59 @@ interface TaskItemProps {
   onStartPomodoro: () => void;
   isCurrentTask: boolean;
   canStartPomodoro: boolean;
+  dragHandle?: React.ReactNode;
 }
+
+interface SortableTaskItemProps extends TaskItemProps {
+  isDraggable: boolean;
+}
+
+const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
+  task,
+  onToggleComplete,
+  onDelete,
+  onStartPomodoro,
+  isCurrentTask,
+  canStartPomodoro,
+  isDraggable,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TaskItem
+        task={task}
+        onToggleComplete={onToggleComplete}
+        onDelete={onDelete}
+        onStartPomodoro={onStartPomodoro}
+        isCurrentTask={isCurrentTask}
+        canStartPomodoro={canStartPomodoro}
+        dragHandle={isDraggable ? (
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+          >
+            <GripVertical className="w-4 h-4 text-gray-400" />
+          </div>
+        ) : undefined}
+      />
+    </div>
+  );
+};
 
 const TaskItem: React.FC<TaskItemProps> = ({
   task,
@@ -214,6 +332,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onStartPomodoro,
   isCurrentTask,
   canStartPomodoro,
+  dragHandle,
 }) => {
   const getPriorityColor = (priority: Task['priority']): string => {
     switch (priority) {
@@ -233,6 +352,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       ${getPriorityColor(task.priority)}
     `}>
       <div className="flex items-start gap-3">
+        {dragHandle}
         <button
           onClick={onToggleComplete}
           className={`
