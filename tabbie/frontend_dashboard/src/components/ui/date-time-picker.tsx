@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ export function DateTimePicker({
   };
 
   const handleTimeChange = (newTime: string) => {
+    // The HTML time input always gives us 24-hour format (e.g., "14:30")
     setTime(newTime);
     if (date) {
       const [hours, minutes] = newTime.split(':');
@@ -45,23 +46,36 @@ export function DateTimePicker({
     }
   };
 
+  const handleToggle24Hour = () => {
+    setIs24Hour(!is24Hour);
+    // No need to change the time input - it stays in 24h format
+    // Only the display format changes
+  };
+
+  const [isOpen, setIsOpen] = React.useState(false);
+
   const handleQuickDate = (daysOffset: number) => {
     const [hours, minutes] = time.split(':');
-    const newDate = addDays(new Date(), daysOffset);
+    const now = new Date();
+    const newDate = new Date(now);
+    newDate.setDate(now.getDate() + daysOffset);
     newDate.setHours(parseInt(hours), parseInt(minutes));
     onDateChange(newDate);
+    // Close only the popover, not parent panels
+    setIsOpen(false);
   };
 
   React.useEffect(() => {
     if (date) {
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      setTime(`${hours}:${minutes}`);
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      // Always store in 24-hour format for the HTML input
+      setTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
     }
   }, [date]);
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -83,18 +97,18 @@ export function DateTimePicker({
         <div className="p-3 border-b">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-500" />
               <Input
                 type="time"
                 value={time}
                 onChange={(e) => handleTimeChange(e.target.value)}
-                className="w-auto"
+                className="w-auto cursor-pointer"
+                onClick={(e) => e.currentTarget.showPicker?.()}
               />
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIs24Hour(!is24Hour)}
+              onClick={handleToggle24Hour}
               className="text-xs px-2 py-1 h-7"
             >
               {is24Hour ? '24h' : 'AM/PM'}

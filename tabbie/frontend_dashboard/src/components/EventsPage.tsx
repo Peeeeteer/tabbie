@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Bell, Zap, Coffee, Eye, Footprints, Droplets, Plus, GripVertical, Settings, Trash2, Play, Pause } from 'lucide-react';
+import { Clock, Bell, Zap, Coffee, Eye, Footprints, Droplets, Plus, GripVertical, Trash2, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

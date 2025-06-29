@@ -4,7 +4,7 @@ import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '@/types/todo';
 const STORAGE_KEY = 'tabbie_user_data';
 
 // Helper function to revive Date objects from JSON
-const reviveDate = (key: string, value: any) => {
+const reviveDate = (_key: string, value: unknown) => {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value)) {
     return new Date(value);
   }

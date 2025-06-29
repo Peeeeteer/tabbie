@@ -16,7 +16,7 @@ export function SetupWizard({ onComplete, currentESP32URL, isConnected }: SetupW
   const [discoveredIP, setDiscoveredIP] = useState<string>('');
   const [setupLog, setSetupLog] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<{currentFace?: string} | null>(null);
 
   // If already connected, start in status mode
   React.useEffect(() => {
@@ -74,7 +74,7 @@ export function SetupWizard({ onComplete, currentESP32URL, isConnected }: SetupW
       } else {
         addLog('❌ Failed to upload to ESP32. Please check USB connection.');
       }
-    } catch (error) {
+    } catch {
       addLog('❌ Upload failed. Please ensure ESP32 is connected via USB.');
     } finally {
       setIsUploading(false);
@@ -96,7 +96,7 @@ export function SetupWizard({ onComplete, currentESP32URL, isConnected }: SetupW
       } else {
         addLog('❌ Could not find ESP32. Please check WiFi connection.');
       }
-    } catch (error) {
+    } catch {
       addLog('❌ Discovery failed. Please try manual setup.');
     } finally {
       setIsDiscovering(false);

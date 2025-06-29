@@ -22,7 +22,7 @@ interface TodoContextType {
   resetCategoriesToDefault: () => void;
   
   // Task methods
-  addTask: (title: string, categoryId: string, description?: string, dueDate?: Date) => void;
+  addTask: (title: string, categoryId: string, description?: string, dueDate?: Date) => string;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskComplete: (taskId: string) => void;
@@ -127,9 +127,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task methods
-  const addTask = (title: string, categoryId: string, description?: string, dueDate?: Date) => {
+  const addTask = (title: string, categoryId: string, description?: string, dueDate?: Date): string => {
+    const taskId = generateId();
     const newTask: Task = {
-      id: generateId(),
+      id: taskId,
       title,
       description,
       categoryId,
@@ -144,6 +145,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       tasks: [...prev.tasks, newTask],
     }));
+    return taskId;
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {

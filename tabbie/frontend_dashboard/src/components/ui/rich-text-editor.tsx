@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import { forwardRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -37,7 +37,7 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[120px] p-3',
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[180px] p-3',
       },
     },
   });
@@ -128,7 +128,7 @@ export function RichTextEditor({
       </div>
       
       {/* Editor */}
-      <div className="min-h-[120px] relative">
+      <div className="min-h-[180px] relative">
         <EditorContent 
           editor={editor} 
           className="prose-sm"

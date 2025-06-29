@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Play, CheckSquare, Clock, Calendar, Edit3, Save, X, CalendarDays, List, ChevronDown, Hash, User, Briefcase, Code, Palette, Home, Pause, RotateCcw } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, List, RotateCcw, MoreVertical, Edit, Play, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   Select,
   SelectContent,
@@ -11,24 +11,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
 
 interface TasksPageProps {
-  currentView: 'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+  currentView: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
+  onViewChange?: (view: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
 }
 
 const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const {
     userData,
-    selectedCategoryId,
     addTask,
     updateTask,
-    toggleTaskComplete,
     deleteTask,
+    toggleTaskComplete,
     startPomodoro,
-    pomodoroTimer,
     resetCategoriesToDefault,
   } = useTodo();
 
@@ -38,7 +42,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [taskCategory, setTaskCategory] = useState<string>('work');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [isViewPanelOpen, setIsViewPanelOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [autoCreatedTaskId, setAutoCreatedTaskId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
@@ -46,6 +53,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const createPanelRef = React.useRef<HTMLDivElement>(null);
   const editPanelRef = React.useRef<HTMLDivElement>(null);
+  const viewPanelRef = React.useRef<HTMLDivElement>(null);
+  const navigationRef = React.useRef<HTMLDivElement>(null);
 
   const today = new Date();
   const tomorrow = new Date(today);
@@ -88,17 +97,42 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return userData.tasks.filter(task => task.completed);
   };
 
-  const getCategoryTasks = () => {
-    if (!selectedCategoryId) return [];
-    return userData.tasks.filter(task => 
-      task.categoryId === selectedCategoryId && !task.completed
-    );
-  };
+
 
   const getTodayTaskCount = () => getTodayTasks().length;
+  const getTomorrowTaskCount = () => getTomorrowTasks().length;
   const getNext7DaysTaskCount = () => getTomorrowTasks().length + getNext7DaysTasks().length;
   const getAllTaskCount = () => getAllTasks().length;
   const getCompletedTaskCount = () => getCompletedTasks().length;
+
+  const formatSmartDate = (date: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    const timeStr = date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    if (targetDate.getTime() === today.getTime()) {
+      return `Today by ${timeStr}`;
+    } else if (targetDate.getTime() === tomorrow.getTime()) {
+      return `Tomorrow by ${timeStr}`;
+    } else if (targetDate.getTime() < today.getTime()) {
+      return `Overdue since ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    } else {
+      const daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff <= 7) {
+        return `${date.toLocaleDateString('en-US', { weekday: 'long' })} by ${timeStr}`;
+      } else {
+        return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} by ${timeStr}`;
+      }
+    }
+  };
 
   const handleTaskTitleChange = (value: string) => {
     setNewTaskTitle(value);
@@ -114,10 +148,24 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         setTaskCategory(matchingCategory.id);
       }
     }
+
+    // Auto-create task when user starts typing
+    if (value.trim() && !autoCreatedTaskId) {
+      const categoryId = taskCategory || userData.categories[0]?.id || 'work';
+      const newTaskId = addTask(value.trim(), categoryId, '', undefined);
+      setAutoCreatedTaskId(newTaskId);
+    } else if (!value.trim() && autoCreatedTaskId) {
+      // Delete auto-created task if user clears the title
+      deleteTask(autoCreatedTaskId);
+      setAutoCreatedTaskId(null);
+    } else if (value.trim() && autoCreatedTaskId) {
+      // Update existing auto-created task
+      updateTask(autoCreatedTaskId, { title: value.trim() });
+    }
   };
 
-  const handleAddTask = (dueDate?: Date, targetCategoryId?: string) => {
-    if (newTaskTitle.trim()) {
+  const handleAddTask = (dueDate?: Date, targetCategoryId?: string, autoCreate = false): string | undefined => {
+    if (newTaskTitle.trim() || autoCreate) {
       let categoryId = targetCategoryId || taskCategory;
       
       // Remove @ mentions from the title
@@ -133,21 +181,54 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         categoryId = taskCategory || userData.categories[0]?.id || 'work';
       }
       
-      addTask(cleanTitle, categoryId, newTaskDescription, newTaskDueDate || dueDate);
+      const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate);
       
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setNewTaskDueDate(undefined);
-      setTaskCategory('work');
-      setIsCreatePanelOpen(false);
+      if (!autoCreate) {
+        setNewTaskTitle('');
+        setNewTaskDescription('');
+        setNewTaskDueDate(undefined);
+        setTaskCategory('work');
+        setIsCreatePanelOpen(false);
+        setAutoCreatedTaskId(null);
+      }
+      
+      return newTaskId;
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent, dueDate?: Date) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleAddTask(dueDate);
+      // If we have an auto-created task, finalize it and close panel
+      if (autoCreatedTaskId && newTaskTitle.trim()) {
+        // Final update to ensure all form data is saved
+        updateTask(autoCreatedTaskId, {
+          title: newTaskTitle.trim(),
+          description: newTaskDescription,
+          dueDate: newTaskDueDate || dueDate,
+          categoryId: taskCategory,
+        });
+        setIsCreatePanelOpen(false);
+        setNewTaskTitle('');
+        setNewTaskDescription('');
+        setNewTaskDueDate(undefined);
+        setTaskCategory('work');
+        setAutoCreatedTaskId(null);
+      } else {
+        // Create new task normally
+        handleAddTask(dueDate);
+      }
     }
+    if (e.key === 'Escape') {
+      setIsCreatePanelOpen(false);
+    }
+  };
+
+  const handleViewTask = (task: Task) => {
+    setViewingTask(task);
+    setIsViewPanelOpen(true);
+    setIsEditPanelOpen(false);
+    setIsCreatePanelOpen(false);
   };
 
   const handleEditTask = (task: Task) => {
@@ -157,24 +238,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     setEditDueDate(task.dueDate);
     setEditCategory(task.categoryId);
     setIsEditPanelOpen(true);
+    setIsViewPanelOpen(false);
+    // Don't close create panel if it's open - user might want to keep creating
   };
 
-  const handleSaveEdit = () => {
-    if (editingTask && editTitle.trim()) {
-      updateTask(editingTask.id, {
-        title: editTitle,
-        description: editDescription,
-        dueDate: editDueDate,
-        categoryId: editCategory,
-      });
-      setEditingTask(null);
-      setEditTitle('');
-      setEditDescription('');
-      setEditDueDate(undefined);
-      setEditCategory('work');
-      setIsEditPanelOpen(false);
-    }
-  };
+
 
   const handleCancelEdit = () => {
     if (autoSaveTimeout) {
@@ -209,13 +277,74 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   };
 
   // Handle outside clicks
+  // Helper function to check if the click target should not close panels
+  const shouldIgnoreClick = (target: Element): boolean => {
+    // Panel and navigation elements
+    const isClickingNavigation = navigationRef.current && navigationRef.current.contains(target);
+    const isClickingCreatePanel = createPanelRef.current && createPanelRef.current.contains(target);
+    const isClickingEditPanel = editPanelRef.current && editPanelRef.current.contains(target);
+    const isClickingViewPanel = viewPanelRef.current && viewPanelRef.current.contains(target);
+    
+    if (isClickingNavigation || isClickingCreatePanel || isClickingEditPanel || isClickingViewPanel) {
+      return true;
+    }
+    
+    // Popover/dropdown elements (date picker, category selector, etc.)
+    const popoverSelectors = [
+      '[data-radix-popper-content-wrapper]',
+      '[data-radix-select-content]',
+      '[data-radix-popover-content]',
+      '[data-radix-calendar]',
+      '[data-radix-select-viewport]',
+      '[data-radix-select-item]',
+      '.react-datepicker',
+      '.react-datepicker__tab-loop',
+      '[role="dialog"]',
+      '[role="listbox"]',
+      '[role="menu"]',
+      '[role="combobox"]',
+      '[role="option"]',
+      '[data-state="open"]',
+      '.prose', // Rich text editor
+      '[data-tippy-root]', // Tooltip elements
+      '.ProseMirror', // Rich text editor content
+      '.tiptap', // TipTap editor
+      '[data-radix-portal]', // Radix portals
+    ];
+    
+    return popoverSelectors.some(selector => target.closest(selector));
+  };
+
+  // Update auto-created task when due date, description, or category changes
+  React.useEffect(() => {
+    if (autoCreatedTaskId && newTaskTitle.trim()) {
+      updateTask(autoCreatedTaskId, {
+        title: newTaskTitle.trim(),
+        description: newTaskDescription,
+        dueDate: newTaskDueDate,
+        categoryId: taskCategory,
+      });
+    }
+  }, [autoCreatedTaskId, newTaskDescription, newTaskDueDate, taskCategory]);
+
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isCreatePanelOpen && createPanelRef.current && !createPanelRef.current.contains(event.target as Node)) {
+      const target = event.target as Element;
+      
+      if (shouldIgnoreClick(target)) {
+        return;
+      }
+      
+      // Close panels when clicking outside
+      if (isCreatePanelOpen) {
         setIsCreatePanelOpen(false);
       }
-      if (isEditPanelOpen && editPanelRef.current && !editPanelRef.current.contains(event.target as Node)) {
+      if (isEditPanelOpen) {
         handleCancelEdit();
+      }
+      if (isViewPanelOpen) {
+        setIsViewPanelOpen(false);
+        setViewingTask(null);
       }
     };
 
@@ -223,9 +352,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isCreatePanelOpen, isEditPanelOpen]);
+  }, [isCreatePanelOpen, isEditPanelOpen, isViewPanelOpen]);
 
-  const selectedCategory = userData.categories.find(cat => cat.id === selectedCategoryId);
+  
 
   const getCategoryTasksByType = (categoryType: string) => {
     const category = userData.categories.find(cat => cat.id === categoryType);
@@ -270,18 +399,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           <TaskItem
             key={task.id}
             task={task}
-            isEditing={false}
-            editTitle={editTitle}
-            editDescription={editDescription}
-            onEditTitleChange={setEditTitle}
-            onEditDescriptionChange={setEditDescription}
             onToggleComplete={() => toggleTaskComplete(task.id)}
-            onStartPomodoro={() => startPomodoro(task)}
+            onView={() => handleViewTask(task)}
             onEdit={() => handleEditTask(task)}
-            onSaveEdit={handleSaveEdit}
-            onCancelEdit={handleCancelEdit}
-            canStartPomodoro={!pomodoroTimer.isRunning}
-            showTime={true}
+            onStartPomodoro={() => startPomodoro(task)}
+            onDelete={() => deleteTask(task.id)}
           />
         ))}
         {tasks.length === 0 && (
@@ -303,6 +425,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         return (
           <div>
             {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount())}
+          </div>
+        );
+      
+      case 'tomorrow':
+        return (
+          <div>
+            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount())}
           </div>
         );
       
@@ -335,20 +464,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     }
   };
 
-  const getCategoryIcon = (categoryId: string) => {
-    switch (categoryId) {
-      case 'work': return <Briefcase className="w-4 h-4" />;
-      case 'coding': return <Code className="w-4 h-4" />;
-      case 'hobby': return <Palette className="w-4 h-4" />;
-      case 'personal': return <Home className="w-4 h-4" />;
-      default: return <Hash className="w-4 h-4" />;
-    }
-  };
+
 
   const getViewTitle = () => {
     switch (currentView) {
       case 'all': return 'All Tasks';
       case 'today': return 'Today';
+      case 'tomorrow': return 'Tomorrow';
       case 'next7days': return 'Next 7 Days';
       case 'completed': return 'Completed';
       case 'work': return 'Work Tasks';
@@ -361,8 +483,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
   return (
     <div className="flex h-full bg-white relative">
-      {/* Main Content Area - Full Width */}
-      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${(isCreatePanelOpen || isEditPanelOpen) ? 'mr-96' : 'mr-0'}`}>
+      {/* Main Content Area - Always has margin for consistent sizing */}
+      <div className="flex-1 flex flex-col h-full mr-[576px]">
         {/* Header with View Navigation */}
         <div className="bg-white border-b border-gray-200">
           <div className="p-6 pb-0">
@@ -371,7 +493,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             </div>
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
-            <div className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
+            <div ref={navigationRef} className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
               <div className="flex items-center space-x-6">
                 <button
                   onClick={() => onViewChange?.('all')}
@@ -406,6 +528,25 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                     {getTodayTaskCount() > 0 && (
                       <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
                         {getTodayTaskCount()}
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => onViewChange?.('tomorrow')}
+                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    currentView === 'tomorrow'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" />
+                    Tomorrow
+                    {getTomorrowTaskCount() > 0 && (
+                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                        {getTomorrowTaskCount()}
                       </span>
                     )}
                   </div>
@@ -451,7 +592,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 {/* Category Dropdown and Add Task Button - Next to other tabs */}
                 <div className="pb-3 flex items-center gap-3">
-                  <Select value={['work', 'coding', 'hobby', 'personal'].includes(currentView) ? currentView : ''} onValueChange={(value) => onViewChange?.(value as any)}>
+                  <Select value={['work', 'coding', 'hobby', 'personal'].includes(currentView) ? currentView : ''} onValueChange={(value) => onViewChange?.(value as 'work' | 'coding' | 'hobby' | 'personal')}>
                     <SelectTrigger className="w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                       <SelectValue placeholder="Categories" />
                     </SelectTrigger>
@@ -504,11 +645,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   </Select>
 
                   <Button 
-                    onClick={() => setIsCreatePanelOpen(true)}
+                    onClick={() => {
+                      setIsCreatePanelOpen(true);
+                      setIsViewPanelOpen(false);
+                      setViewingTask(null);
+                    }}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Task
+                    New Task
                   </Button>
                 </div>
               </div>
@@ -526,7 +671,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       <div 
         ref={createPanelRef}
         className={`
-          fixed top-20 right-4 h-[calc(100vh-6rem)] w-96 bg-white border border-gray-200 rounded-lg shadow-xl
+          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
           transform transition-transform duration-300 ease-in-out z-50
           ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -551,22 +696,42 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         <div className="p-6 space-y-6 h-full overflow-y-auto">
           {/* Category Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">Category</label>
-            <Select value={taskCategory} onValueChange={setTaskCategory}>
-              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                <SelectValue placeholder="Choose category" />
-              </SelectTrigger>
-              <SelectContent>
-                {userData.categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{category.icon}</span>
-                      <span>{category.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-900">Category</label>
+              {userData.categories.length === 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetCategoriesToDefault}
+                  className="h-6 text-xs"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
+            {userData.categories.length > 0 ? (
+              <Select value={taskCategory} onValueChange={setTaskCategory}>
+                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Choose category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userData.categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="text-sm text-gray-500 p-3 border border-gray-200 rounded-md bg-gray-50">
+                No categories available. Click "Reset" to restore default categories.
+              </div>
+            )}
           </div>
 
           {/* Title Input */}
@@ -585,11 +750,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           {/* Description */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-900">Description</label>
-            <Textarea
+            <RichTextEditor
+              content={newTaskDescription}
+              onChange={setNewTaskDescription}
               placeholder="Add more details..."
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[100px] resize-none"
+              className="min-h-[200px]"
             />
           </div>
 
@@ -598,71 +763,17 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
             <DateTimePicker
               date={newTaskDueDate}
-              onDateChange={(date) => {
-                setNewTaskDueDate(date);
-                // Auto-close panel when date is selected via shortcuts
-                if (date) {
-                  setTimeout(() => setIsCreatePanelOpen(false), 100);
-                }
-              }}
+              onDateChange={setNewTaskDueDate}
               placeholder="Pick date and time"
               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-6 space-y-3">
-            <Button 
-              onClick={() => handleAddTask()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-              disabled={!newTaskTitle.trim()}
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Task
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="flex-1 text-gray-700 border-gray-300 hover:bg-gray-50"
-                onClick={() => {
-                  setNewTaskTitle('');
-                  setNewTaskDescription('');
-                  setNewTaskDueDate(undefined);
-                  setTaskCategory('work');
-                }}
-              >
-                Clear
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="flex-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsCreatePanelOpen(false)}
-              >
-                Cancel
-              </Button>
+          {/* Instructions */}
+          <div className="pt-6">
+            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
+              💡 <strong>Tips:</strong> Task is created automatically as you type. Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Enter</kbd> to finish, <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Esc</kbd> to close.
             </div>
-          </div>
-
-          {/* Quick Tips */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-              ✨ Pro Tips
-            </h4>
-            <ul className="text-sm text-gray-700 space-y-2">
-              <li className="flex items-start">
-                <span className="text-gray-500 mr-2">•</span>
-                Use @work, @coding, @hobby, @personal for quick category assignment
-              </li>
-              <li className="flex items-start">
-                <span className="text-gray-500 mr-2">•</span>
-                Press Enter to instantly create your task
-              </li>
-              <li className="flex items-start">
-                <span className="text-gray-500 mr-2">•</span>
-                Add descriptions for complex or important tasks
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -671,7 +782,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       <div 
         ref={editPanelRef}
         className={`
-          fixed top-20 right-4 h-[calc(100vh-6rem)] w-96 bg-white border border-gray-200 rounded-lg shadow-xl
+          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
           transform transition-transform duration-300 ease-in-out z-50
           ${isEditPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -696,25 +807,45 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         <div className="p-6 space-y-6 h-full overflow-y-auto">
           {/* Category Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">Category</label>
-            <Select value={editCategory} onValueChange={(value) => {
-              setEditCategory(value);
-              scheduleAutoSave();
-            }}>
-              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                <SelectValue placeholder="Choose category" />
-              </SelectTrigger>
-              <SelectContent>
-                {userData.categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{category.icon}</span>
-                      <span>{category.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-900">Category</label>
+              {userData.categories.length === 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetCategoriesToDefault}
+                  className="h-6 text-xs"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
+            {userData.categories.length > 0 ? (
+              <Select value={editCategory} onValueChange={(value) => {
+                setEditCategory(value);
+                scheduleAutoSave();
+              }}>
+                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Choose category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userData.categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="text-sm text-gray-500 p-3 border border-gray-200 rounded-md bg-gray-50">
+                No categories available. Click "Reset" to restore default categories.
+              </div>
+            )}
           </div>
 
           {/* Title Input */}
@@ -735,14 +866,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           {/* Description */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-900">Description</label>
-            <Textarea
-              placeholder="Add more details..."
-              value={editDescription}
-              onChange={(e) => {
-                setEditDescription(e.target.value);
+            <RichTextEditor
+              content={editDescription}
+              onChange={(content) => {
+                setEditDescription(content);
                 scheduleAutoSave();
               }}
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[100px] resize-none"
+              placeholder="Add more details..."
+              className="min-h-[200px]"
             />
           </div>
 
@@ -754,10 +885,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
               onDateChange={(date) => {
                 setEditDueDate(date);
                 scheduleAutoSave();
-                // Auto-close panel when date is selected via shortcuts
-                if (date) {
-                  setTimeout(() => setIsEditPanelOpen(false), 100);
-                }
               }}
               placeholder="Pick date and time"
               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -771,128 +898,211 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         </div>
       </div>
 
+      {/* Right Sliding Panel for Task Viewing */}
+      <div 
+        ref={viewPanelRef}
+        className={`
+          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
+          transform transition-transform duration-300 ease-in-out z-50
+          ${isViewPanelOpen ? 'translate-x-0' : 'translate-x-full'}
+        `}
+      >
+        {/* Panel Header */}
+        <div className="bg-white border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Task Details</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setIsViewPanelOpen(false);
+                setViewingTask(null);
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => viewingTask && handleEditTask(viewingTask)}
+              variant="outline"
+              size="sm"
+              className="font-medium"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => viewingTask && startPomodoro(viewingTask)}
+              className="font-medium"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Pomodoro
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (viewingTask) {
+                  deleteTask(viewingTask.id);
+                  setIsViewPanelOpen(false);
+                  setViewingTask(null);
+                }
+              }}
+              className="font-medium text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        </div>
+
+        {/* Task View Content */}
+        {viewingTask && (
+          <div className="flex-1 overflow-y-auto">
+            {/* Title Section */}
+            <div className="p-6 pb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl mt-1">
+                  {userData.categories.find(cat => cat.id === viewingTask.categoryId)?.icon || '📝'}
+                </span>
+                <div className="flex-1">
+                  <h1 className={`text-2xl font-semibold leading-tight ${
+                    viewingTask.completed ? 'line-through text-gray-500' : 'text-gray-900'
+                  }`}>
+                    {viewingTask.title}
+                  </h1>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <span className="font-medium">
+                      {userData.categories.find(cat => cat.id === viewingTask.categoryId)?.name || 'Unknown'}
+                    </span>
+                    {viewingTask.dueDate && (
+                      <>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {formatSmartDate(new Date(viewingTask.dueDate))}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Description Section */}
+            {viewingTask.description && (
+              <div className="px-6 pb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div 
+                    className="prose prose-sm max-w-none text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: viewingTask.description }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Details Section */}
+            <div className="px-6 pb-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Task Details</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Status */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-500">Status</label>
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                      viewingTask.completed 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {viewingTask.completed ? (
+                        <>
+                          <CheckSquare className="w-3 h-3" />
+                          <span>Completed</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3" />
+                          <span>Pending</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-500">Created</label>
+                    <div className="text-sm text-gray-700">
+                      {new Date(viewingTask.created).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Due Date - Full Width if Present */}
+                {viewingTask.dueDate && (
+                  <div className="space-y-1 pt-2 border-t border-gray-100">
+                    <label className="text-xs font-medium text-gray-500">Due Date</label>
+                                         <div className="flex items-center gap-2 text-sm text-gray-700">
+                       <Calendar className="w-4 h-4 text-gray-400" />
+                       <span className="font-medium">
+                         {formatSmartDate(new Date(viewingTask.dueDate))}
+                       </span>
+                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 };
 
 interface TaskItemProps {
   task: Task;
-  isEditing: boolean;
-  editTitle: string;
-  editDescription: string;
-  onEditTitleChange: (value: string) => void;
-  onEditDescriptionChange: (value: string) => void;
   onToggleComplete: () => void;
-  onStartPomodoro: () => void;
+  onView: () => void;
   onEdit: () => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
-  canStartPomodoro: boolean;
-  showTime?: boolean;
+  onStartPomodoro: () => void;
+  onDelete: () => void;
 }
 
-// Pomodoro Progress Circle Component
-const PomodoroProgress: React.FC<{ 
-  isRunning: boolean; 
-  timeLeft: number; 
-  totalTime: number; 
-  onToggle: () => void;
-}> = ({ isRunning, timeLeft, totalTime, onToggle }) => {
-  const progress = ((totalTime - timeLeft) / totalTime) * 100;
-  const radius = 12;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">
-      <div className="relative w-6 h-6">
-        <svg className="w-6 h-6 transform -rotate-90" viewBox="0 0 28 28">
-          <circle
-            cx="14"
-            cy="14"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="transparent"
-            className="text-red-200"
-          />
-          <circle
-            cx="14"
-            cy="14"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="text-red-500 transition-all duration-300"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs font-bold text-red-600">🍅</span>
-        </div>
-      </div>
-      <span className="text-xs font-medium text-red-700">
-        {formatTime(timeLeft)}
-      </span>
-      <button
-        onClick={onToggle}
-        className="ml-1 p-1 hover:bg-red-100 rounded transition-colors"
-      >
-        {isRunning ? (
-          <Pause className="w-3 h-3 text-red-600" />
-        ) : (
-          <Play className="w-3 h-3 text-red-600" />
-        )}
-      </button>
-    </div>
-  );
-};
 
 const TaskItem: React.FC<TaskItemProps> = ({
   task,
-  isEditing,
-  editTitle,
-  editDescription,
-  onEditTitleChange,
-  onEditDescriptionChange,
   onToggleComplete,
-  onStartPomodoro,
+  onView,
   onEdit,
-  onSaveEdit,
-  onCancelEdit,
-  canStartPomodoro,
-  showTime = false,
+  onStartPomodoro,
+  onDelete,
 }) => {
+  const { userData } = useTodo();
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
   
   // Get Pomodoro timer state from context
-  const { pomodoroTimer, currentTask, pausePomodoro, resumePomodoro } = useTodo();
+  const { pomodoroTimer } = useTodo();
   const isCurrentTaskPomodoro = pomodoroTimer?.currentSession?.taskId === task.id;
-  
-  const handlePomodoroToggle = () => {
-    if (isCurrentTaskPomodoro) {
-      if (pomodoroTimer.isRunning) {
-        pausePomodoro();
-      } else {
-        resumePomodoro();
-      }
-    } else {
-      onStartPomodoro();
-    }
-  };
 
   // Minimal todo item - just title and checkbox
   return (
     <div 
-      className="group flex items-center gap-3 py-2 px-1 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-      onClick={() => onEdit()}
+      className="group flex items-center gap-3 py-2 px-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+      onClick={() => onView()}
     >
       <button
         onClick={(e) => {
@@ -914,7 +1124,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
         )}
       </button>
       
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <span className="text-sm">
+          {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
+        </span>
         <span className={`
           text-sm font-medium cursor-pointer
           ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}
@@ -923,17 +1136,76 @@ const TaskItem: React.FC<TaskItemProps> = ({
         </span>
       </div>
 
-      {/* Small indicators */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {task.dueDate && (
-          <Clock className="w-3 h-3 text-gray-400" />
-        )}
-        {completedSessions > 0 && (
-          <span className="text-xs text-gray-400">🍅{completedSessions}</span>
-        )}
-        {isCurrentTaskPomodoro && (
-          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-        )}
+      {/* Small indicators and menu */}
+      <div className="flex items-center gap-1">
+        {/* Always visible indicators */}
+        <div className="flex items-center gap-1">
+          {task.dueDate && (
+            <Clock className="w-3 h-3 text-gray-400" />
+          )}
+          {completedSessions > 0 && (
+            <span className="text-xs text-gray-400">🍅{completedSessions}</span>
+          )}
+          {isCurrentTaskPomodoro && (
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+          )}
+        </div>
+        
+        {/* Three dots menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onView();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Todo
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartPomodoro();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Play className="w-4 h-4" />
+              Start Pomodoro
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="flex items-center gap-2 text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

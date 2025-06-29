@@ -1,4 +1,3 @@
-import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,7 +18,6 @@ import React from "react"
 import { SetupWizard } from "@/components/SetupWizard"
 import { TodoProvider } from "@/contexts/TodoContext"
 import CategorySidebar from "@/components/CategorySidebar"
-import TodoPage from "@/components/TodoPage"
 import TasksPage from "@/components/TasksPage"
 import EventsPage from "@/components/EventsPage"
 import NotificationsPage from "@/components/NotificationsPage"
@@ -113,7 +111,7 @@ export default function Page() {
               return ip;
             }
           }
-        } catch (error) {
+        } catch {
           // Ignore timeout/connection errors
         }
         return null;
@@ -158,8 +156,8 @@ export default function Page() {
         checkFaceStatus();
         fetchLogs();
       }
-    } catch (error) {
-      console.log('Reconnect failed:', error);
+            } catch (err) {
+          console.log('Reconnect failed:', err);
     } finally {
       setIsReconnecting(false);
     }

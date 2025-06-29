@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
-  Calendar, Zap, Activity, Inbox, CalendarDays, User
+  Calendar, Zap, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,8 @@ import { useTodo } from '@/contexts/TodoContext';
 interface CategorySidebarProps {
   currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings';
   onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings') => void;
-      currentView?: 'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'all' | 'today' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+      currentView?: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
+  onViewChange?: (view: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageChange, currentView, onViewChange }) => {
@@ -72,32 +72,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
     return userData.tasks.filter(task => task.categoryId === categoryId && task.completed).length;
   };
 
-  const getTodayTaskCount = () => {
-    const today = new Date();
-    return userData.tasks.filter(task => {
-      if (task.completed) return false;
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      return taskDate.toDateString() === today.toDateString();
-    }).length;
-  };
 
-  const getNext7DaysTaskCount = () => {
-    const today = new Date();
-    const next7Days = new Date(today);
-    next7Days.setDate(today.getDate() + 7);
-    
-    return userData.tasks.filter(task => {
-      if (task.completed) return false;
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      return taskDate > today && taskDate <= next7Days;
-    }).length;
-  };
-
-  const getInboxTaskCount = () => {
-    return userData.tasks.filter(task => !task.completed && !task.dueDate).length;
-  };
 
   return (
     <>
@@ -208,7 +183,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
 
 
         {/* Categories - Only show when on tasks page and not on main views */}
-        {currentPage === 'tasks' && currentView && !['today', 'next7days', 'work', 'coding', 'hobby', 'personal'].includes(currentView) && (
+        {currentPage === 'tasks' && currentView && !['today', 'tomorrow', 'next7days', 'work', 'coding', 'hobby', 'personal'].includes(currentView) && (
           <SidebarGroup>
             <div className="flex items-center justify-between px-2">
               <SidebarGroupLabel>Lists</SidebarGroupLabel>
