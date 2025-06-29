@@ -85,7 +85,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       if (task.completed) return false;
       if (!task.dueDate) return false;
       const taskDate = new Date(task.dueDate);
-      return taskDate > tomorrow && taskDate <= next7Days;
+      const taskDateString = taskDate.toDateString();
+      const todayString = today.toDateString();
+      const tomorrowString = tomorrow.toDateString();
+      
+      // Task should be after tomorrow and within next 7 days
+      return taskDateString !== todayString && 
+             taskDateString !== tomorrowString && 
+             taskDate > tomorrow && 
+             taskDate <= next7Days;
     });
   };
 
@@ -101,7 +109,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
   const getTodayTaskCount = () => getTodayTasks().length;
   const getTomorrowTaskCount = () => getTomorrowTasks().length;
-  const getNext7DaysTaskCount = () => getTomorrowTasks().length + getNext7DaysTasks().length;
+  const getNext7DaysTaskCount = () => getNext7DaysTasks().length;
   const getAllTaskCount = () => getAllTasks().length;
   const getCompletedTaskCount = () => getCompletedTasks().length;
 
@@ -494,10 +502,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
             <div ref={navigationRef} className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
                 <button
                   onClick={() => onViewChange?.('all')}
-                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
                     currentView === 'all'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -516,7 +524,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('today')}
-                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
                     currentView === 'today'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -535,7 +543,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('tomorrow')}
-                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
                     currentView === 'tomorrow'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -554,7 +562,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('next7days')}
-                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
                     currentView === 'next7days'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -573,7 +581,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('completed')}
-                  className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
                     currentView === 'completed'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'

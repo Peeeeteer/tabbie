@@ -2,4 +2,4 @@ Todo Page
 - Decide better way to add and delete catogires
 -> There was something if all is deleted reset, but this bad and need to complety redo this
 
-- Add a little more space for the tabs, as next 7 days, gets weird as in break line 
+- Be able to drag todos around, like placing the listing to first and such
