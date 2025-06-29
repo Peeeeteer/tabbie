@@ -518,52 +518,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId);
   };
 
-<<<<<<< HEAD
-  const renderTasksByCategory = (tasks: Task[], emptyMessage: string = "No tasks yet") => {
-    if (tasks.length === 0) {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-3xl mb-3">✨</div>
-            <p className="text-gray-500">{emptyMessage}</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Group tasks by category
-    const categorizedTasks = userData.categories.map(category => ({
-      category,
-      tasks: tasks.filter(task => task.categoryId === category.id)
-    })).filter(group => group.tasks.length > 0);
-
-    const uncategorizedTasks = tasks.filter(task => !task.categoryId);
-
-    return (
-      <div className="space-y-6">
-        {/* Tasks by Category */}
-        {categorizedTasks.map(({ category, tasks: categoryTasks }) => (
-          <div key={category.id}>
-            {renderTaskSection(`${category.icon} ${category.name}`, categoryTasks, undefined, categoryTasks.length)}
-          </div>
-        ))}
-        
-        {/* Tasks without Category */}
-        {uncategorizedTasks.length > 0 && (
-          <div>
-            {renderTaskSection('📝 No Category', uncategorizedTasks, undefined, uncategorizedTasks.length)}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderAllTasksByCategory = () => {
-    return renderTasksByCategory(getAllTasks(), "No tasks yet");
-  };
-
-  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number) => (
-=======
   const renderNext7DaysWithCrossDrag = () => {
     const todayTasks = getTodayTasks();
     const tomorrowTasks = getTomorrowTasks();
@@ -697,7 +651,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   };
 
   const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string) => (
->>>>>>> todo/draggable-tasks-rearange
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -778,72 +731,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const renderContent = () => {
     switch (currentView) {
       case 'all':
-<<<<<<< HEAD
-        return renderAllTasksByCategory();
-      
-      case 'today':
-        return renderTasksByCategory(getTodayTasks(), "No tasks for today");
-      
-      case 'tomorrow':
-        return renderTasksByCategory(getTomorrowTasks(), "No tasks for tomorrow");
-      
-      case 'next7days':
-        const todayTasks = getTodayTasks();
-        const tomorrowTasks = getTomorrowTasks();
-        const next7DaysTasks = getNext7DaysTasks();
-        const allNext7DaysTasks = [...todayTasks, ...tomorrowTasks, ...next7DaysTasks];
-        
-        if (allNext7DaysTasks.length === 0) {
-          return (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl mb-3">✨</div>
-                <p className="text-gray-500">No tasks in the next 7 days</p>
-              </div>
-            </div>
-          );
-        }
-        
-        return (
-          <div className="space-y-8">
-            {/* Today Section */}
-            {todayTasks.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5" />
-                  Today
-                </h2>
-                {renderTasksByCategory(todayTasks, "No tasks for today")}
-              </div>
-            )}
-            
-            {/* Tomorrow Section */}
-            {tomorrowTasks.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5" />
-                  Tomorrow
-                </h2>
-                {renderTasksByCategory(tomorrowTasks, "No tasks for tomorrow")}
-              </div>
-            )}
-            
-            {/* Next 7 Days Section */}
-            {next7DaysTasks.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Later This Week
-                </h2>
-                {renderTasksByCategory(next7DaysTasks, "No other tasks this week")}
-              </div>
-            )}
-          </div>
-        );
-      
-      case 'completed':
-        return renderTasksByCategory(getCompletedTasks(), "No completed tasks");
-=======
         return renderTaskSection('All Tasks', getAllTasks(), undefined, getAllTaskCount(), true, 'all');
       
       case 'today':
@@ -865,7 +752,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       
       case 'completed':
         return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), true, 'completed');
->>>>>>> todo/draggable-tasks-rearange
       
       case 'work':
         return renderCategoryTasks('work', '💼', 'Work');
