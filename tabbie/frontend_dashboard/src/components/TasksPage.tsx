@@ -39,7 +39,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
-  const [taskCategory, setTaskCategory] = useState<string>('work');
+  const [taskCategory, setTaskCategory] = useState<string | undefined>('work');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [isViewPanelOpen, setIsViewPanelOpen] = useState(false);
@@ -49,7 +49,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
-  const [editCategory, setEditCategory] = useState<string>('work');
+  const [editCategory, setEditCategory] = useState<string | undefined>('work');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const createPanelRef = React.useRef<HTMLDivElement>(null);
   const editPanelRef = React.useRef<HTMLDivElement>(null);
@@ -159,7 +159,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
     // Auto-create task when user starts typing
     if (value.trim() && !autoCreatedTaskId) {
-      const categoryId = taskCategory || userData.categories[0]?.id || 'work';
+      const categoryId = taskCategory || userData.categories[0]?.id;
       const newTaskId = addTask(value.trim(), categoryId, '', undefined);
       setAutoCreatedTaskId(newTaskId);
     } else if (!value.trim() && autoCreatedTaskId) {
@@ -186,7 +186,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       
       // If no specific category provided, use the selected category from the form
       if (!categoryId) {
-        categoryId = taskCategory || userData.categories[0]?.id || 'work';
+        categoryId = taskCategory || userData.categories[0]?.id;
       }
       
       const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate);
@@ -195,7 +195,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         setNewTaskTitle('');
         setNewTaskDescription('');
         setNewTaskDueDate(undefined);
-        setTaskCategory('work');
+        setTaskCategory(userData.categories[0]?.id);
         setIsCreatePanelOpen(false);
         setAutoCreatedTaskId(null);
       }
@@ -220,7 +220,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         setNewTaskTitle('');
         setNewTaskDescription('');
         setNewTaskDueDate(undefined);
-        setTaskCategory('work');
+        setTaskCategory(userData.categories[0]?.id);
         setAutoCreatedTaskId(null);
       } else {
         // Create new task normally
@@ -261,7 +261,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     setEditTitle('');
     setEditDescription('');
     setEditDueDate(undefined);
-    setEditCategory('work');
+    setEditCategory(userData.categories[0]?.id);
     setIsEditPanelOpen(false);
   };
 
@@ -376,9 +376,60 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return getCategoryTasksByType(categoryType).length;
   };
 
+  const getTasksWithoutCategory = () => {
+    return userData.tasks.filter(task => !task.completed && !task.categoryId);
+  };
+
+  const getTasksWithoutCategoryCount = () => {
+    return getTasksWithoutCategory().length;
+  };
+
   const renderCategoryTasks = (categoryId: string, icon: string, name: string) => {
     const tasks = getCategoryTasksByType(categoryId);
     return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length);
+  };
+
+  const renderTasksByCategory = (tasks: Task[], emptyMessage: string = "No tasks yet") => {
+    if (tasks.length === 0) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-3xl mb-3">✨</div>
+            <p className="text-gray-500">{emptyMessage}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Group tasks by category
+    const categorizedTasks = userData.categories.map(category => ({
+      category,
+      tasks: tasks.filter(task => task.categoryId === category.id)
+    })).filter(group => group.tasks.length > 0);
+
+    const uncategorizedTasks = tasks.filter(task => !task.categoryId);
+
+    return (
+      <div className="space-y-6">
+        {/* Tasks by Category */}
+        {categorizedTasks.map(({ category, tasks: categoryTasks }) => (
+          <div key={category.id}>
+            {renderTaskSection(`${category.icon} ${category.name}`, categoryTasks, undefined, categoryTasks.length)}
+          </div>
+        ))}
+        
+        {/* Tasks without Category */}
+        {uncategorizedTasks.length > 0 && (
+          <div>
+            {renderTaskSection('📝 No Category', uncategorizedTasks, undefined, uncategorizedTasks.length)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderAllTasksByCategory = () => {
+    return renderTasksByCategory(getAllTasks(), "No tasks yet");
   };
 
   const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number) => (
@@ -427,33 +478,70 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const renderContent = () => {
     switch (currentView) {
       case 'all':
-        return renderTaskSection('All Tasks', getAllTasks(), undefined, getAllTaskCount());
+        return renderAllTasksByCategory();
       
       case 'today':
-        return (
-          <div>
-            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount())}
-          </div>
-        );
+        return renderTasksByCategory(getTodayTasks(), "No tasks for today");
       
       case 'tomorrow':
-        return (
-          <div>
-            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount())}
-          </div>
-        );
+        return renderTasksByCategory(getTomorrowTasks(), "No tasks for tomorrow");
       
       case 'next7days':
+        const todayTasks = getTodayTasks();
+        const tomorrowTasks = getTomorrowTasks();
+        const next7DaysTasks = getNext7DaysTasks();
+        const allNext7DaysTasks = [...todayTasks, ...tomorrowTasks, ...next7DaysTasks];
+        
+        if (allNext7DaysTasks.length === 0) {
+          return (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-3xl mb-3">✨</div>
+                <p className="text-gray-500">No tasks in the next 7 days</p>
+              </div>
+            </div>
+          );
+        }
+        
         return (
-          <div>
-            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount())}
-            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTasks().length)}
-            {renderTaskSection('Next 7 Days', getNext7DaysTasks(), undefined, getNext7DaysTasks().length)}
+          <div className="space-y-8">
+            {/* Today Section */}
+            {todayTasks.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5" />
+                  Today
+                </h2>
+                {renderTasksByCategory(todayTasks, "No tasks for today")}
+              </div>
+            )}
+            
+            {/* Tomorrow Section */}
+            {tomorrowTasks.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5" />
+                  Tomorrow
+                </h2>
+                {renderTasksByCategory(tomorrowTasks, "No tasks for tomorrow")}
+              </div>
+            )}
+            
+            {/* Next 7 Days Section */}
+            {next7DaysTasks.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Later This Week
+                </h2>
+                {renderTasksByCategory(next7DaysTasks, "No other tasks this week")}
+              </div>
+            )}
           </div>
         );
       
       case 'completed':
-        return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount());
+        return renderTasksByCategory(getCompletedTasks(), "No completed tasks");
       
       case 'work':
         return renderCategoryTasks('work', '💼', 'Work');
@@ -502,10 +590,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
             <div ref={navigationRef} className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-6">
                 <button
                   onClick={() => onViewChange?.('all')}
-                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     currentView === 'all'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -524,7 +612,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('today')}
-                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     currentView === 'today'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -543,7 +631,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('tomorrow')}
-                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     currentView === 'tomorrow'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -562,7 +650,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('next7days')}
-                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     currentView === 'next7days'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -581,7 +669,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
                 <button
                   onClick={() => onViewChange?.('completed')}
-                  className={`pb-3 px-0.5 border-b-2 font-medium text-sm transition-colors ${
+                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     currentView === 'completed'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -720,11 +808,17 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
               )}
             </div>
             {userData.categories.length > 0 ? (
-              <Select value={taskCategory} onValueChange={setTaskCategory}>
+              <Select value={taskCategory || 'no-category'} onValueChange={(value) => setTaskCategory(value === 'no-category' ? undefined : value)}>
                 <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="no-category">
+                    <div className="flex items-center gap-2">
+                      <span>📝</span>
+                      <span>No Category</span>
+                    </div>
+                  </SelectItem>
                   {userData.categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
@@ -831,14 +925,20 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
               )}
             </div>
             {userData.categories.length > 0 ? (
-              <Select value={editCategory} onValueChange={(value) => {
-                setEditCategory(value);
+              <Select value={editCategory || 'no-category'} onValueChange={(value) => {
+                setEditCategory(value === 'no-category' ? undefined : value);
                 scheduleAutoSave();
               }}>
                 <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="no-category">
+                    <div className="flex items-center gap-2">
+                      <span>📝</span>
+                      <span>No Category</span>
+                    </div>
+                  </SelectItem>
                   {userData.categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">

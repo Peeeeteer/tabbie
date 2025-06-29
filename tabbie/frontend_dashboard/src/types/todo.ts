@@ -10,7 +10,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  categoryId: string;
+  categoryId?: string;
   completed: boolean;
   priority: 'low' | 'medium' | 'high';
   dueDate?: Date;
