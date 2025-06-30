@@ -2,4 +2,23 @@ Todo Page
 - Decide better way to add and delete catogires
 -> There was something if all is deleted reset, but this bad and need to complety redo this
 
-- Be able to drag todos around, like placing the listing to first and such
+- The create task tab is now over and doesnt push the actual todos
+
+- Under individual task, we see how many pomodors (long we have tracked and tried to do it), like spend 3h doing this
+
+- Update colors for need to do, sooner, late and such? (Make page responsive)
+
+
+- This todo has steps button? When pressed we devide into task into like 5 other, with description still
+and htis updates also in teh pomodoro with the tasks cycles
+
+- In the task description, we add pomodoros and how many finished and such and progress and things, with connections for each
+
+
+- Imoprove the smoothness/animation of when rearranging the todos and hovering while dragging, so that yea its smoother and cooler
+
+--
+
+
+2.
+Also could the transition of the tasks from one place to another be even smoother and cooler feeling, where it kinda slides down

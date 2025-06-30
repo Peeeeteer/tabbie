@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, List, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
@@ -19,15 +19,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+  import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+  } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
@@ -41,8 +42,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 interface TasksPageProps {
-  currentView: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+  currentView: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
+  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
 }
 
 const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
@@ -67,6 +68,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [autoCreatedTaskId, setAutoCreatedTaskId] = useState<string | null>(null);
+  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+  const [isUnscheduledCollapsed, setIsUnscheduledCollapsed] = useState(false);
+  const [isTomorrowCollapsed, setIsTomorrowCollapsed] = useState(false);
+  const [isNext7DaysCollapsed, setIsNext7DaysCollapsed] = useState(false);
+  const [isTodayCollapsed, setIsTodayCollapsed] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
@@ -96,8 +102,26 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       if (task.completed) return false;
       if (!task.dueDate) return false;
       const taskDate = new Date(task.dueDate);
-      return taskDate.toDateString() === today.toDateString();
-    }).sort((a, b) => a.order - b.order);
+      const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      // Include today's tasks AND overdue tasks (due date is before today)
+      return taskDateOnly.getTime() <= todayOnly.getTime();
+    }).sort((a, b) => {
+      // Sort overdue tasks first (by due date ascending), then today's tasks
+      const aDate = new Date(a.dueDate!);
+      const bDate = new Date(b.dueDate!);
+      const aDiff = aDate.getTime() - today.getTime();
+      const bDiff = bDate.getTime() - today.getTime();
+      
+      // If both are overdue or both are today, sort by order
+      if ((aDiff < 0 && bDiff < 0) || (aDiff >= 0 && bDiff >= 0)) {
+        return a.order - b.order;
+      }
+      
+      // Overdue tasks come first
+      return aDiff < 0 ? -1 : 1;
+    });
   };
 
   const getTomorrowTasks = () => {
@@ -279,7 +303,17 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     // Don't close create panel if it's open - user might want to keep creating
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = userData.tasks.find(t => t.id === event.active.id);
+    setActiveDragTask(task || null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragTask(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragTask(null);
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -312,19 +346,18 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           newDueDate.setDate(newDueDate.getDate() + 3); // Default to 3 days from now
           newDueDate.setHours(23, 59, 59, 999);
           break;
+        case 'unscheduled':
+          newDueDate = undefined; // Remove due date to make it unscheduled
+          break;
       }
 
-      if (newDueDate) {
-        updateTask(draggedTask.id, { dueDate: newDueDate });
-      }
+      // Update task with new due date (or remove it for unscheduled)
+      updateTask(draggedTask.id, { dueDate: newDueDate });
     } else {
       // Same section reordering
       let filteredTasks: Task[] = [];
       
       switch (currentView) {
-        case 'all':
-          filteredTasks = getAllTasks();
-          break;
         case 'today':
           filteredTasks = getTodayTasks();
           break;
@@ -332,7 +365,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           filteredTasks = getTomorrowTasks();
           break;
         case 'next7days':
-          filteredTasks = getNext7DaysTasks();
+          filteredTasks = [...getTodayTasks(), ...getTomorrowTasks(), ...getNext7DaysTasks(), ...getUnscheduledTasks()];
           break;
         case 'completed':
           filteredTasks = getCompletedTasks();
@@ -350,7 +383,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           filteredTasks = getCategoryTasksByType('personal');
           break;
         default:
-          filteredTasks = getAllTasks();
+          filteredTasks = [...getTodayTasks(), ...getTomorrowTasks(), ...getNext7DaysTasks(), ...getUnscheduledTasks()];
       }
 
       const oldIndex = filteredTasks.findIndex(task => task.id === active.id);
@@ -513,6 +546,38 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return getTasksWithoutCategory().length;
   };
 
+  const getUnscheduledTasks = () => {
+    const now = new Date();
+    return userData.tasks.filter(task => {
+      if (task.completed) return false;
+      if (!task.dueDate) return true; // No due date = unscheduled
+      
+      // If due date is more than 7 days away, also consider unscheduled
+      const taskDate = new Date(task.dueDate);
+      const diffTime = taskDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 7;
+    }).sort((a, b) => {
+      // Sort by creation date (newest first) to help with large lists
+      return new Date(b.created).getTime() - new Date(a.created).getTime();
+    });
+  };
+
+  const getUnscheduledTaskCount = () => {
+    return getUnscheduledTasks().length;
+  };
+
+  const getOverdueTasks = () => {
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return userData.tasks.filter(task => {
+      if (task.completed) return false;
+      if (!task.dueDate) return false;
+      const taskDate = new Date(task.dueDate);
+      const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+      return taskDateOnly.getTime() < todayOnly.getTime();
+    });
+  };
+
   const renderCategoryTasks = (categoryId: string, icon: string, name: string) => {
     const tasks = getCategoryTasksByType(categoryId);
     return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId);
@@ -522,28 +587,81 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     const todayTasks = getTodayTasks();
     const tomorrowTasks = getTomorrowTasks();
     const next7DaysTasks = getNext7DaysTasks();
-    const allTasks = [...todayTasks, ...tomorrowTasks, ...next7DaysTasks];
+    const unscheduledTasks = getUnscheduledTasks();
+    const overdueTasks = getOverdueTasks();
 
     return (
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        <SortableContext
-          items={allTasks.map(task => task.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-8">
-            {/* Today Section */}
-            <DroppableSection section="today" className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+        <div className="space-y-8">
+          {/* Today Section */}
+          <DroppableSection section="today" className="mb-8" isDragging={!!activeDragTask}>
+            <div className={`flex items-center justify-between mb-4 rounded-lg p-2 transition-all duration-200 ${
+              activeDragTask && isTodayCollapsed 
+                ? 'bg-gray-50 border border-dashed border-gray-300 group-data-[is-over=true]:bg-gray-100 group-data-[is-over=true]:border-gray-400' 
+                : ''
+            }`}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsTodayCollapsed(!isTodayCollapsed)}
+                  className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                >
+                  {isTodayCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  )}
                   <h3 className="font-semibold text-lg text-gray-800">Today</h3>
                   {todayTasks.length > 0 && (
-                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{todayTasks.length}</span>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {todayTasks.length}{overdueTasks.length > 0 && (
+                        <span className="text-orange-600 ml-1">({overdueTasks.length} overdue)</span>
+                      )}
+                    </span>
                   )}
-                </div>
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isTodayCollapsed && overdueTasks.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Move all overdue tasks to tomorrow
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      tomorrow.setHours(23, 59, 59, 999);
+                      overdueTasks.forEach(task => {
+                        updateTask(task.id, { dueDate: tomorrow });
+                      });
+                    }}
+                    className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:border-orange-300"
+                  >
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Reschedule All Overdue
+                  </Button>
+                )}
+                {!isTodayCollapsed && todayTasks.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Unassign all today tasks (remove due dates)
+                      todayTasks.forEach(task => {
+                        updateTask(task.id, { dueDate: undefined });
+                      });
+                    }}
+                    className="h-7 px-2 text-xs text-gray-600 hover:text-red-600 hover:border-red-300"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Unassign All
+                  </Button>
+                )}
                 <div className="text-sm text-gray-500">
                   {today.toLocaleDateString('en-US', { 
                     weekday: 'short', 
@@ -552,37 +670,84 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   })}
                 </div>
               </div>
-              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
-                {todayTasks.map((task) => (
-                  <SortableTaskItem
-                    key={task.id}
-                    task={task}
-                    onToggleComplete={() => toggleTaskComplete(task.id)}
-                    onView={() => handleViewTask(task)}
-                    onEdit={() => handleEditTask(task)}
-                    onStartPomodoro={() => startPomodoro(task)}
-                    onDelete={() => deleteTask(task.id)}
-                    isDraggable={true}
-                    section="today"
-                  />
-                ))}
-                {todayTasks.length === 0 && (
+            </div>
+            
+
+
+            {!isTodayCollapsed && (
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent rounded-lg p-2 transition-colors group-data-[is-over=true]:bg-blue-50 group-data-[is-over=true]:border-blue-400 group-data-[dragging=true]:border-gray-300">
+                <SortableContext
+                  items={todayTasks.map(task => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {todayTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onView={() => handleViewTask(task)}
+                      onEdit={() => handleEditTask(task)}
+                      onStartPomodoro={() => startPomodoro(task)}
+                      onDelete={() => deleteTask(task.id)}
+                      isDraggable={true}
+                      section="today"
+                    />
+                  ))}
+                </SortableContext>
+                {todayTasks.length === 0 && !activeDragTask && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">No tasks scheduled for today</p>
+                  </div>
+                )}
+                {todayTasks.length === 0 && activeDragTask && (
                   <div className="text-center py-6 text-gray-400">
                     <p className="text-sm text-gray-500">Drop tasks here for today</p>
                   </div>
                 )}
               </div>
-            </DroppableSection>
+            )}
+          </DroppableSection>
 
-            {/* Tomorrow Section */}
-            <DroppableSection section="tomorrow" className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+          {/* Tomorrow Section */}
+          <DroppableSection section="tomorrow" className="mb-8" isDragging={!!activeDragTask}>
+            <div className={`flex items-center justify-between mb-4 rounded-lg p-2 transition-all duration-200 ${
+              activeDragTask && isTomorrowCollapsed 
+                ? 'bg-gray-50 border border-dashed border-gray-300 group-data-[is-over=true]:bg-gray-100 group-data-[is-over=true]:border-gray-400' 
+                : ''
+            }`}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsTomorrowCollapsed(!isTomorrowCollapsed)}
+                  className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                >
+                  {isTomorrowCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  )}
                   <h3 className="font-semibold text-lg text-gray-800">Tomorrow</h3>
                   {tomorrowTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{tomorrowTasks.length}</span>
                   )}
-                </div>
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isTomorrowCollapsed && tomorrowTasks.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Unassign all tomorrow tasks (remove due dates)
+                      tomorrowTasks.forEach(task => {
+                        updateTask(task.id, { dueDate: undefined });
+                      });
+                    }}
+                    className="h-7 px-2 text-xs text-gray-600 hover:text-red-600 hover:border-red-300"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Unassign All
+                  </Button>
+                )}
                 <div className="text-sm text-gray-500">
                   {tomorrow.toLocaleDateString('en-US', { 
                     weekday: 'short', 
@@ -591,61 +756,190 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   })}
                 </div>
               </div>
-              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
-                {tomorrowTasks.map((task) => (
-                  <SortableTaskItem
-                    key={task.id}
-                    task={task}
-                    onToggleComplete={() => toggleTaskComplete(task.id)}
-                    onView={() => handleViewTask(task)}
-                    onEdit={() => handleEditTask(task)}
-                    onStartPomodoro={() => startPomodoro(task)}
-                    onDelete={() => deleteTask(task.id)}
-                    isDraggable={true}
-                    section="tomorrow"
-                  />
-                ))}
-                {tomorrowTasks.length === 0 && (
+            </div>
+            
+
+
+            {!isTomorrowCollapsed && (
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent rounded-lg p-2 transition-colors group-data-[is-over=true]:bg-blue-50 group-data-[is-over=true]:border-blue-400 group-data-[dragging=true]:border-gray-300">
+                <SortableContext
+                  items={tomorrowTasks.map(task => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {tomorrowTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onView={() => handleViewTask(task)}
+                      onEdit={() => handleEditTask(task)}
+                      onStartPomodoro={() => startPomodoro(task)}
+                      onDelete={() => deleteTask(task.id)}
+                      isDraggable={true}
+                      section="tomorrow"
+                    />
+                  ))}
+                </SortableContext>
+                {tomorrowTasks.length === 0 && !activeDragTask && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">No tasks scheduled for tomorrow</p>
+                  </div>
+                )}
+                {tomorrowTasks.length === 0 && activeDragTask && (
                   <div className="text-center py-6 text-gray-400">
                     <p className="text-sm text-gray-500">Drop tasks here for tomorrow</p>
                   </div>
                 )}
               </div>
-            </DroppableSection>
+            )}
+          </DroppableSection>
 
-            {/* Next 7 Days Section */}
-            <DroppableSection section="next7days" className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+          {/* Next 7 Days Section */}
+          <DroppableSection section="next7days" className="mb-8" isDragging={!!activeDragTask}>
+            <div className={`flex items-center justify-between mb-4 rounded-lg p-2 transition-all duration-200 ${
+              activeDragTask && isNext7DaysCollapsed 
+                ? 'bg-gray-50 border border-dashed border-gray-300 group-data-[is-over=true]:bg-gray-100 group-data-[is-over=true]:border-gray-400' 
+                : ''
+            }`}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsNext7DaysCollapsed(!isNext7DaysCollapsed)}
+                  className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                >
+                  {isNext7DaysCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  )}
                   <h3 className="font-semibold text-lg text-gray-800">Next 7 Days</h3>
                   {next7DaysTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{next7DaysTasks.length}</span>
                   )}
-                </div>
+                </button>
               </div>
-              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent hover:border-blue-300 rounded-lg p-2 transition-colors">
-                {next7DaysTasks.map((task) => (
-                  <SortableTaskItem
-                    key={task.id}
-                    task={task}
-                    onToggleComplete={() => toggleTaskComplete(task.id)}
-                    onView={() => handleViewTask(task)}
-                    onEdit={() => handleEditTask(task)}
-                    onStartPomodoro={() => startPomodoro(task)}
-                    onDelete={() => deleteTask(task.id)}
-                    isDraggable={true}
-                    section="next7days"
-                  />
-                ))}
-                {next7DaysTasks.length === 0 && (
+              <div className="flex items-center gap-3">
+                {!isNext7DaysCollapsed && next7DaysTasks.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Unassign all next7days tasks (remove due dates)
+                      next7DaysTasks.forEach(task => {
+                        updateTask(task.id, { dueDate: undefined });
+                      });
+                    }}
+                    className="h-7 px-2 text-xs text-gray-600 hover:text-red-600 hover:border-red-300"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Unassign All
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+
+
+            {!isNext7DaysCollapsed && (
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent rounded-lg p-2 transition-colors group-data-[is-over=true]:bg-blue-50 group-data-[is-over=true]:border-blue-400 group-data-[dragging=true]:border-gray-300">
+                <SortableContext
+                  items={next7DaysTasks.map(task => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {next7DaysTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onView={() => handleViewTask(task)}
+                      onEdit={() => handleEditTask(task)}
+                      onStartPomodoro={() => startPomodoro(task)}
+                      onDelete={() => deleteTask(task.id)}
+                      isDraggable={true}
+                      section="next7days"
+                    />
+                  ))}
+                </SortableContext>
+                {next7DaysTasks.length === 0 && !activeDragTask && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">No tasks scheduled for next 7 days</p>
+                  </div>
+                )}
+                {next7DaysTasks.length === 0 && activeDragTask && (
                   <div className="text-center py-6 text-gray-400">
                     <p className="text-sm text-gray-500">Drop tasks here for later this week</p>
                   </div>
                 )}
               </div>
-            </DroppableSection>
-          </div>
-        </SortableContext>
+            )}
+          </DroppableSection>
+
+          {/* Unscheduled Section */}
+          <DroppableSection section="unscheduled" className="mb-8" isDragging={!!activeDragTask}>
+                        <div className={`flex items-center justify-between mb-4 rounded-lg p-2 transition-all duration-200 ${
+              activeDragTask && isUnscheduledCollapsed 
+                ? 'bg-gray-50 border border-dashed border-gray-300 group-data-[is-over=true]:bg-gray-100 group-data-[is-over=true]:border-gray-400' 
+                : ''
+            }`}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsUnscheduledCollapsed(!isUnscheduledCollapsed)}
+                  className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                >
+                  {isUnscheduledCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  )}
+                  <h3 className="font-semibold text-lg text-gray-800">Unscheduled</h3>
+                  {unscheduledTasks.length > 0 && (
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{unscheduledTasks.length}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+            
+
+
+            {!isUnscheduledCollapsed && (
+              <div className="space-y-1 min-h-[60px] border-2 border-dashed border-transparent rounded-lg p-2 transition-colors group-data-[is-over=true]:bg-blue-50 group-data-[is-over=true]:border-blue-400 group-data-[dragging=true]:border-gray-300">
+                <SortableContext
+                  items={unscheduledTasks.map(task => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {unscheduledTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onView={() => handleViewTask(task)}
+                      onEdit={() => handleEditTask(task)}
+                      onStartPomodoro={() => startPomodoro(task)}
+                      onDelete={() => deleteTask(task.id)}
+                      isDraggable={true}
+                      section="unscheduled"
+                    />
+                  ))}
+                </SortableContext>
+                {unscheduledTasks.length === 0 && !activeDragTask && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">No unscheduled tasks</p>
+                  </div>
+                )}
+                {unscheduledTasks.length === 0 && activeDragTask && (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm text-gray-500">Drop tasks here to unschedule</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </DroppableSection>
+        </div>
+        
+        <DragOverlay>
+          {activeDragTask ? (
+            <DragOverlayTaskItem task={activeDragTask} />
+          ) : null}
+        </DragOverlay>
       </DndContext>
     );
   };
@@ -675,7 +969,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <SortableContext
             items={tasks.map(task => task.id)}
@@ -703,36 +999,39 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
               )}
             </div>
           </SortableContext>
+          
+          <DragOverlay>
+            {activeDragTask ? (
+              <DragOverlayTaskItem task={activeDragTask} />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       ) : (
-        <div className="space-y-1">
-          {tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              onToggleComplete={() => toggleTaskComplete(task.id)}
-              onView={() => handleViewTask(task)}
-              onEdit={() => handleEditTask(task)}
-              onStartPomodoro={() => startPomodoro(task)}
-              onDelete={() => deleteTask(task.id)}
-            />
-          ))}
-          {tasks.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
-              <div className="text-3xl mb-3">✨</div>
-              <p className="text-gray-500">No tasks {title.toLowerCase()}</p>
-            </div>
-          )}
-        </div>
+      <div className="space-y-1">
+        {tasks.map((task) => (
+          <TaskItem
+            key={task.id}
+            task={task}
+            onToggleComplete={() => toggleTaskComplete(task.id)}
+            onView={() => handleViewTask(task)}
+            onEdit={() => handleEditTask(task)}
+            onStartPomodoro={() => startPomodoro(task)}
+            onDelete={() => deleteTask(task.id)}
+          />
+        ))}
+        {tasks.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            <div className="text-3xl mb-3">✨</div>
+            <p className="text-gray-500">No tasks {title.toLowerCase()}</p>
+          </div>
+        )}
+      </div>
       )}
     </div>
   );
 
   const renderContent = () => {
     switch (currentView) {
-      case 'all':
-        return renderTaskSection('All Tasks', getAllTasks(), undefined, getAllTaskCount(), true, 'all');
-      
       case 'today':
         return (
           <div>
@@ -751,7 +1050,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         return renderNext7DaysWithCrossDrag();
       
       case 'completed':
-        return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), true, 'completed');
+        return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed');
       
       case 'work':
         return renderCategoryTasks('work', '💼', 'Work');
@@ -766,7 +1065,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         return renderCategoryTasks('personal', '🏠', 'Personal');
       
       default:
-        return <div>Select a view</div>;
+        return renderNext7DaysWithCrossDrag();
     }
   };
 
@@ -774,10 +1073,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
 
   const getViewTitle = () => {
     switch (currentView) {
-      case 'all': return 'All Tasks';
       case 'today': return 'Today';
       case 'tomorrow': return 'Tomorrow';
-      case 'next7days': return 'Next 7 Days';
+      case 'next7days': return 'Overview';
       case 'completed': return 'Completed';
       case 'work': return 'Work Tasks';
       case 'coding': return 'Coding Tasks';
@@ -801,20 +1099,21 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             {/* View Navigation Tabs - Aligned with Sidebar */}
             <div ref={navigationRef} className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
               <div className="flex items-center space-x-6">
+
                 <button
-                  onClick={() => onViewChange?.('all')}
+                  onClick={() => onViewChange?.('next7days')}
                   className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'all'
+                    currentView === 'next7days'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <List className="w-4 h-4" />
-                    All
-                    {getAllTaskCount() > 0 && (
+                    <Calendar className="w-4 h-4" />
+                    Overview
+                    {(getTodayTaskCount() + getTomorrowTaskCount() + getNext7DaysTaskCount() + getUnscheduledTaskCount()) > 0 && (
                       <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                        {getAllTaskCount()}
+                        {getTodayTaskCount() + getTomorrowTaskCount() + getNext7DaysTaskCount() + getUnscheduledTaskCount()}
                       </span>
                     )}
                   </div>
@@ -853,25 +1152,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                     {getTomorrowTaskCount() > 0 && (
                       <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
                         {getTomorrowTaskCount()}
-                      </span>
-                    )}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => onViewChange?.('next7days')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'next7days'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Next 7 Days
-                    {getNext7DaysTaskCount() > 0 && (
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                        {getNext7DaysTaskCount()}
                       </span>
                     )}
                   </div>
@@ -1409,8 +1689,9 @@ const DroppableSection: React.FC<{
   children: React.ReactNode; 
   section: string; 
   className?: string;
-}> = ({ children, section, className = "" }) => {
-  const { setNodeRef } = useDroppable({
+  isDragging?: boolean;
+}> = ({ children, section, className = "", isDragging = false }) => {
+  const { setNodeRef, isOver } = useDroppable({
     id: `droppable-${section}`,
     data: {
       section: section,
@@ -1418,8 +1699,40 @@ const DroppableSection: React.FC<{
   });
 
   return (
-    <div ref={setNodeRef} className={className}>
+    <div ref={setNodeRef} className={`${className} group`} data-is-over={isOver} data-dragging={isDragging}>
       {children}
+    </div>
+  );
+};
+
+const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
+  const { userData } = useTodo();
+  const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+  
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 bg-white shadow-lg rounded-lg border border-gray-200 cursor-grabbing transform">
+      <div className="flex-shrink-0 p-1">
+        <GripVertical className="w-4 h-4 text-gray-400" />
+      </div>
+      <div className="flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300"></div>
+      
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <span className="text-sm">
+          {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
+        </span>
+        <span className="text-sm font-medium text-gray-900">
+          {task.title}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {task.dueDate && (
+          <Clock className="w-3 h-3 text-gray-400" />
+        )}
+        {completedSessions > 0 && (
+          <span className="text-xs text-gray-400">🍅{completedSessions}</span>
+        )}
+      </div>
     </div>
   );
 };
@@ -1488,17 +1801,44 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onDelete,
   dragHandle,
 }) => {
-  const { userData } = useTodo();
+  const { userData, updateTask } = useTodo();
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
   
   // Get Pomodoro timer state from context
   const { pomodoroTimer } = useTodo();
   const isCurrentTaskPomodoro = pomodoroTimer?.currentSession?.taskId === task.id;
 
+  // Check if task is overdue
+  const isOverdue = React.useMemo(() => {
+    if (!task.dueDate || task.completed) return false;
+    const today = new Date();
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const taskDate = new Date(task.dueDate);
+    const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+    return taskDateOnly.getTime() < todayOnly.getTime();
+  }, [task.dueDate, task.completed]);
+
+  const handleMoveToToday = () => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    updateTask(task.id, { dueDate: today });
+  };
+
+  const handleMoveToTomorrow = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 59, 999);
+    updateTask(task.id, { dueDate: tomorrow });
+  };
+
   // Minimal todo item - just title and checkbox
   return (
     <div 
-      className="group flex items-center gap-3 py-2 px-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+      className={`group flex items-center gap-3 py-2 px-3 rounded-lg transition-colors cursor-pointer border ${
+        isOverdue 
+          ? 'bg-orange-50 hover:bg-orange-100 border-orange-200 hover:border-orange-300' 
+          : 'bg-gray-50 hover:bg-blue-50 border-transparent hover:border-blue-200'
+      }`}
       onClick={() => onView()}
     >
       {dragHandle}
@@ -1528,7 +1868,12 @@ const TaskItem: React.FC<TaskItemProps> = ({
         </span>
         <span className={`
           text-sm font-medium cursor-pointer
-          ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}
+          ${task.completed 
+            ? 'line-through text-gray-500' 
+            : isOverdue 
+              ? 'text-orange-800' 
+              : 'text-gray-900'
+          }
         `}>
           {task.title}
         </span>
@@ -1538,7 +1883,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
       <div className="flex items-center gap-1">
         {/* Always visible indicators */}
         <div className="flex items-center gap-1">
-          {task.dueDate && (
+          {isOverdue && (
+            <div className="flex items-center gap-1 text-orange-600">
+              <Clock className="w-3 h-3 fill-current" />
+              <span className="text-xs font-medium">!</span>
+            </div>
+          )}
+          {task.dueDate && !isOverdue && (
             <Clock className="w-3 h-3 text-gray-400" />
           )}
           {completedSessions > 0 && (
@@ -1561,7 +1912,32 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <MoreVertical className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-44">
+            {isOverdue && (
+              <>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMoveToToday();
+                  }}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Move to Today
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMoveToTomorrow();
+                  }}
+                  className="flex items-center gap-2 text-green-600 hover:text-green-700"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Move to Tomorrow
+                </DropdownMenuItem>
+                <div className="border-t my-1"></div>
+              </>
+            )}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();

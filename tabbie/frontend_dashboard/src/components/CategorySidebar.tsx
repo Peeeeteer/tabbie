@@ -20,8 +20,8 @@ import { useTodo } from '@/contexts/TodoContext';
 interface CategorySidebarProps {
   currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings';
   onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings') => void;
-      currentView?: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'all' | 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+      currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
+  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageChange, currentView, onViewChange }) => {
@@ -109,7 +109,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
               <SidebarMenuButton 
                 onClick={() => {
                   onPageChange('tasks');
-                  onViewChange?.('all');
+                  onViewChange?.('next7days');
                 }}
                 isActive={currentPage === 'tasks'}
               >
