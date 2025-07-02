@@ -1249,6 +1249,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       setIsCreatePanelOpen(true);
                       setIsViewPanelOpen(false);
                       setViewingTask(null);
+                      
+                      // Auto-select category based on current view
+                      if (['work', 'coding', 'hobby', 'personal'].includes(currentView)) {
+                        setTaskCategory(currentView);
+                      }
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
                   >
@@ -1911,12 +1916,40 @@ const TaskItem: React.FC<TaskItemProps> = ({
         {/* Always visible indicators */}
         <div className="flex items-center gap-1">
           {isOverdue && (
-            <div className="flex items-center gap-1 text-orange-600">
-              <Clock className="w-3 h-3 fill-current" />
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 text-orange-600 cursor-help">
+                  <Clock className="w-3 h-3 fill-current" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Overdue: {new Date(task.dueDate!).toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
           {task.dueDate && !isOverdue && (
-            <Clock className="w-3 h-3 text-gray-400" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Clock className="w-3 h-3 text-gray-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Due: {new Date(task.dueDate).toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
           {completedSessions > 0 && (
             <span className="text-xs text-gray-400">🍅{completedSessions}</span>
