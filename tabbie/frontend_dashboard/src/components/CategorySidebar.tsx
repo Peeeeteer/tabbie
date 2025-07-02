@@ -242,58 +242,26 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Gamification Preview Card */}
+        {/* Gamification Hint */}
         <SidebarGroup>
-          <div className="mx-2 mb-2">
-            <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200/50 rounded-lg p-3 group hover:from-blue-100 hover:to-purple-100 transition-all duration-300">
-              {/* Coming Soon Badge */}
-              <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
-                Soon
-              </div>
-              
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-3 h-3 text-white" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">Upgrade Tabbie</div>
-                  <div className="text-xs text-gray-600">Earn XP • Unlock features</div>
-                </div>
-              </div>
-              
-              {/* XP Progress */}
-              <div className="mb-3">
-                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                  <span>Experience Points</span>
-                  <span>0 / 100 XP</span>
-                </div>
-                <div className="w-full bg-white/60 rounded-full h-2 shadow-inner">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full shadow-sm" style={{ width: '0%' }}></div>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="relative mx-2 bg-gray-50 border border-gray-200 rounded-lg p-2.5 group hover:bg-blue-50 hover:border-blue-200 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-700">Upgrade Tabbie</div>
+                      <div className="text-xs text-gray-500">0 XP • Coming soon</div>
+                    </div>
+                  </div>
+                  <div className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                    Soon
+                  </div>
                 </div>
               </div>
-              
-              {/* Preview Features */}
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-gray-700 mb-1">Coming Features:</div>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
-                  <span>Custom Tabbie animations</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
-                  <span>New robot head designs</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <div className="w-1 h-1 bg-green-400 rounded-full"></div>
-                  <span>Achievement badges</span>
-                </div>
-              </div>
-              
-              {/* Subtle hover effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-purple-400/0 to-blue-400/0 group-hover:via-purple-400/5 rounded-lg transition-all duration-300"></div>
-            </div>
-          </div>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarGroup>
 
         {/* Enhanced Categories Section - Always visible on tasks page */}
