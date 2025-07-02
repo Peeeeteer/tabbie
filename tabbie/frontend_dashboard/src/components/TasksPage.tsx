@@ -1834,6 +1834,36 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const { pomodoroTimer } = useTodo();
   const isCurrentTaskPomodoro = pomodoroTimer?.currentSession?.taskId === task.id;
 
+  // Simple smart date formatter
+  const getSmartDateText = (date: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    const timeStr = date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    if (targetDate.getTime() === today.getTime()) {
+      return `Today by ${timeStr}`;
+    } else if (targetDate.getTime() === tomorrow.getTime()) {
+      return `Tomorrow by ${timeStr}`;
+    } else if (targetDate.getTime() < today.getTime()) {
+      return `Overdue since ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    } else {
+      const daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff <= 7) {
+        return `${date.toLocaleDateString('en-US', { weekday: 'long' })} by ${timeStr}`;
+      } else {
+        return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} by ${timeStr}`;
+      }
+    }
+  };
+
   // Check if task is overdue
   const isOverdue = React.useMemo(() => {
     if (!task.dueDate || task.completed) return false;
@@ -1923,14 +1953,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Overdue: {new Date(task.dueDate!).toLocaleDateString('en-US', { 
-                  weekday: 'short', 
-                  month: 'short', 
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })}</p>
+                <p>{getSmartDateText(new Date(task.dueDate!))}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1940,14 +1963,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <Clock className="w-3 h-3 text-gray-400 cursor-help" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Due: {new Date(task.dueDate).toLocaleDateString('en-US', { 
-                  weekday: 'short', 
-                  month: 'short', 
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })}</p>
+                <p>{getSmartDateText(new Date(task.dueDate))}</p>
               </TooltipContent>
             </Tooltip>
           )}
