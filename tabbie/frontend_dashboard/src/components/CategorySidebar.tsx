@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Edit2, Palette, MoreHorizontal
+  Edit2, Palette, MoreHorizontal, Star, Trophy, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,9 +139,22 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               T
             </div>
-            <div>
+            <div className="flex-1">
               <div className="font-semibold text-sm">Tabbie</div>
               <div className="text-xs text-muted-foreground">Your AI Assistant</div>
+            </div>
+          </div>
+          {/* XP Progress Hint */}
+          <div className="mt-2 px-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Star className="w-3 h-3" />
+                XP Progress
+              </span>
+              <span className="text-muted-foreground">Coming Soon</span>
+            </div>
+            <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5 opacity-50">
+              <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '0%' }}></div>
             </div>
           </div>
         </div>
@@ -237,6 +250,41 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Time Tracking</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Gamification Hints Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2">
+            <Sparkles className="w-3 h-3" />
+            Rewards
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                disabled
+                className="opacity-60 cursor-not-allowed"
+              >
+                <Trophy className="w-4 h-4" />
+                <span>Upgrade Tabbie</span>
+                <span className="ml-auto text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
+                  Soon
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                disabled
+                className="opacity-60 cursor-not-allowed"
+              >
+                <Star className="w-4 h-4" />
+                <span>Achievements</span>
+                <span className="ml-auto text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
+                  Soon
+                </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

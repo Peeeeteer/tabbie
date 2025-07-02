@@ -1921,6 +1921,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {completedSessions > 0 && (
             <span className="text-xs text-gray-400">🍅{completedSessions}</span>
           )}
+          {task.completed && (
+            <span className="text-xs text-green-600 opacity-60">+XP</span>
+          )}
           {isCurrentTaskPomodoro && (
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           )}
