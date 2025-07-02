@@ -242,30 +242,58 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Gamification Hints Section */}
+        {/* Gamification Preview Card */}
         <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                disabled
-                className="opacity-60 cursor-not-allowed"
-              >
-                <Trophy className="w-4 h-4" />
-                <div className="flex-1 flex flex-col">
-                  <span className="text-sm">Upgrade Tabbie</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 bg-gray-200 rounded-full h-1 opacity-50">
-                      <div className="bg-blue-600 h-1 rounded-full" style={{ width: '0%' }}></div>
-                    </div>
-                    <span className="text-xs text-muted-foreground">0 XP</span>
-                  </div>
+          <div className="mx-2 mb-2">
+            <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200/50 rounded-lg p-3 group hover:from-blue-100 hover:to-purple-100 transition-all duration-300">
+              {/* Coming Soon Badge */}
+              <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
+                Soon
+              </div>
+              
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+                  <Trophy className="w-3 h-3 text-white" />
                 </div>
-                <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
-                  Soon
-                </span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">Upgrade Tabbie</div>
+                  <div className="text-xs text-gray-600">Earn XP • Unlock features</div>
+                </div>
+              </div>
+              
+              {/* XP Progress */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                  <span>Experience Points</span>
+                  <span>0 / 100 XP</span>
+                </div>
+                <div className="w-full bg-white/60 rounded-full h-2 shadow-inner">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full shadow-sm" style={{ width: '0%' }}></div>
+                </div>
+              </div>
+              
+              {/* Preview Features */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-gray-700 mb-1">Coming Features:</div>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
+                  <span>Custom Tabbie animations</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+                  <span>New robot head designs</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                  <span>Achievement badges</span>
+                </div>
+              </div>
+              
+              {/* Subtle hover effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-purple-400/0 to-blue-400/0 group-hover:via-purple-400/5 rounded-lg transition-all duration-300"></div>
+            </div>
+          </div>
         </SidebarGroup>
 
         {/* Enhanced Categories Section - Always visible on tasks page */}
