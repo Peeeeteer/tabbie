@@ -21,6 +21,7 @@ import CategorySidebar from "@/components/CategorySidebar"
 import TasksPage from "@/components/TasksPage"
 import EventsPage from "@/components/EventsPage"
 import NotificationsPage from "@/components/NotificationsPage"
+import DashboardPage from "@/components/DashboardPage"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings'>('dashboard');
@@ -382,7 +383,7 @@ export default function Page() {
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {currentPage === 'dashboard' ? 'Control Panel' :
+                    {currentPage === 'dashboard' ? 'Dashboard' :
                      currentPage === 'tasks' ? 'Tasks' :
                      currentPage === 'reminders' ? 'Reminders' :
                      currentPage === 'events' ? 'Events' :
@@ -390,7 +391,7 @@ export default function Page() {
                      currentPage === 'pomodoro' ? 'Pomodoro Timer' :
                      currentPage === 'calendar' ? 'Calendar' :
                      currentPage === 'timetracking' ? 'Time Tracking' :
-                     currentPage === 'settings' ? 'Settings' : 'Control Panel'}
+                     currentPage === 'settings' ? 'Settings' : 'Dashboard'}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -398,7 +399,22 @@ export default function Page() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {currentPage === 'tasks' ? (
+          {currentPage === 'dashboard' ? (
+            <DashboardPage 
+              currentFace={currentFace}
+              isLoading={isLoading}
+              esp32Connected={esp32Connected}
+              esp32URL={esp32URL}
+              isScanning={isScanning}
+              isReconnecting={isReconnecting}
+              isHealthChecking={isHealthChecking}
+              logs={logs}
+              logsLoading={logsLoading}
+              handleFaceChange={handleFaceChange}
+              handleReconnect={handleReconnect}
+              fetchLogs={fetchLogs}
+            />
+          ) : currentPage === 'tasks' ? (
             <TasksPage currentView={currentView} onViewChange={setCurrentView} />
           ) : currentPage === 'reminders' ? (
             <div className="p-8 text-center">

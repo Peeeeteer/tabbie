@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Edit2, Palette, MoreHorizontal, Trophy
+  Palette, MoreHorizontal, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
@@ -38,7 +37,7 @@ interface CategorySidebarProps {
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
 }
 
-const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageChange, currentView, onViewChange }) => {
+const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageChange, onViewChange }) => {
   const {
     userData,
     selectedCategoryId,
@@ -116,14 +115,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
       task.completed && 
       task.updated && 
       new Date(task.updated) >= twoWeeksAgo
-    ).length;
-  };
-
-  const getAllCompletedCount = (categoryId: string) => {
-    // Get all completed tasks for historical analysis/AI context
-    return userData.tasks.filter(task => 
-      task.categoryId === categoryId && 
-      task.completed
     ).length;
   };
 
