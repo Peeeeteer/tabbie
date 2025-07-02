@@ -1,8 +1,5 @@
 Todo Page
-- Decide better way to add and delete catogires
--> There was something if all is deleted reset, but this bad and need to complety redo this
-
-- The create task tab is now over and doesnt push the actual todos
+os
 
 - Under individual task, we see how many pomodors (long we have tracked and tried to do it), like spend 3h doing this
 
@@ -18,7 +15,6 @@ and htis updates also in teh pomodoro with the tasks cycles
 - Imoprove the smoothness/animation of when rearranging the todos and hovering while dragging, so that yea its smoother and cooler
 
 --
-
 
 2.
 Also could the transition of the tasks from one place to another be even smoother and cooler feeling, where it kinda slides down

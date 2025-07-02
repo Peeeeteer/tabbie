@@ -19,6 +19,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
   import {
     DndContext,
     closestCenter,
@@ -1086,7 +1092,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   };
 
   return (
-    <div className="flex h-full bg-white relative">
+    <TooltipProvider>
+      <div className="flex h-full bg-white relative">
       {/* Main Content Area - Always has margin for consistent sizing */}
       <div className="flex-1 flex flex-col h-full mr-[576px]">
         {/* Header with View Navigation */}
@@ -1169,9 +1176,16 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                     <CheckSquare className="w-4 h-4" />
                     Completed
                     {getCompletedTaskCount() > 0 && (
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                        {getCompletedTaskCount()}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs cursor-help">
+                            {getCompletedTaskCount()}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getCompletedTaskCount()} completed in last 2 weeks</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </button>
@@ -1667,6 +1681,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       </div>
 
     </div>
+    </TooltipProvider>
   );
 };
 
@@ -1717,9 +1732,15 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
       <div className="flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300"></div>
       
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="text-sm">
-          {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm">
+            {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
+          </span>
+          <div 
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+            style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
+          />
+        </div>
         <span className="text-sm font-medium text-gray-900">
           {task.title}
         </span>
@@ -1863,9 +1884,15 @@ const TaskItem: React.FC<TaskItemProps> = ({
       </button>
       
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="text-sm">
-          {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm">
+            {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
+          </span>
+          <div 
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+            style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
+          />
+        </div>
         <span className={`
           text-sm font-medium cursor-pointer
           ${task.completed 
@@ -1886,7 +1913,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {isOverdue && (
             <div className="flex items-center gap-1 text-orange-600">
               <Clock className="w-3 h-3 fill-current" />
-              <span className="text-xs font-medium">!</span>
             </div>
           )}
           {task.dueDate && !isOverdue && (
@@ -1906,7 +1932,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-blue-100"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="w-3 h-3" />

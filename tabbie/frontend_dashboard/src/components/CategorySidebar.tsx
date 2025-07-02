@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
-  Calendar, Zap, Activity
+  Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
+  Edit2, Palette, MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useTodo } from '@/contexts/TodoContext';
 
 interface CategorySidebarProps {
@@ -33,25 +47,43 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
     deleteCategory,
     currentTask,
     pomodoroTimer,
+    resetCategoriesToDefault,
   } = useTodo();
 
+  // Enhanced state management
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📝');
+  const [newCategoryColor, setNewCategoryColor] = useState('');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [categoriesCollapsed, setCategoriesCollapsed] = useState(false);
+
 
   const categoryColors = [
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16',
+    '#6366F1', '#14B8A6', '#F97316', '#EF4444', '#A855F7', '#0EA5E9', '#F43F5E', '#65A30D',
   ];
 
-  const categoryIcons = ['📝', '💼', '💻', '🎨', '🏠', '📚', '🎯', '⚡', '🔧', '🎵', '🍎', '✨'];
+  const categoryIcons = ['📝', '💼', '💻', '🎨', '🏠', '📚', '🎯', '⚡', '🔧', '🎵', '🍎', '✨', '🚀', '💡', '🎮', '🏃'];
+
+  // Smart default color selection
+  const getNextColor = () => {
+    const usedColors = userData.categories.map(cat => cat.color);
+    const availableColors = categoryColors.filter(color => !usedColors.includes(color));
+    return availableColors[0] || categoryColors[0];
+  };
 
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
-      const randomColor = categoryColors[Math.floor(Math.random() * categoryColors.length)];
-      addCategory(newCategoryName.trim(), randomColor, newCategoryIcon);
+      const color = newCategoryColor || getNextColor();
+      addCategory(newCategoryName.trim(), color, newCategoryIcon);
+      
+      // Reset form
       setNewCategoryName('');
       setNewCategoryIcon('📝');
+      setNewCategoryColor('');
       setIsAddingCategory(false);
+      setShowAdvancedOptions(false);
     }
   };
 
@@ -61,21 +93,46 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
     } else if (e.key === 'Escape') {
       setIsAddingCategory(false);
       setNewCategoryName('');
+      setNewCategoryIcon('📝');
+      setNewCategoryColor('');
+      setShowAdvancedOptions(false);
     }
   };
+
+
 
   const getTaskCount = (categoryId: string) => {
     return userData.tasks.filter(task => task.categoryId === categoryId && !task.completed).length;
   };
 
   const getCompletedCount = (categoryId: string) => {
-    return userData.tasks.filter(task => task.categoryId === categoryId && task.completed).length;
+    // Only display completed tasks from last 14 days for clean UI
+    // All completed tasks are still stored in userData.tasks for historical analysis
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    return userData.tasks.filter(task => 
+      task.categoryId === categoryId && 
+      task.completed && 
+      task.updated && 
+      new Date(task.updated) >= twoWeeksAgo
+    ).length;
   };
 
+  const getAllCompletedCount = (categoryId: string) => {
+    // Get all completed tasks for historical analysis/AI context
+    return userData.tasks.filter(task => 
+      task.categoryId === categoryId && 
+      task.completed
+    ).length;
+  };
 
+  const getTotalTaskCount = () => {
+    return userData.tasks.filter(task => !task.completed).length;
+  };
 
   return (
-    <>
+    <TooltipProvider>
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-4">
           <div className="flex items-center gap-2">
@@ -115,6 +172,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
               >
                 <CheckSquare className="w-4 h-4" />
                 <span>Tasks</span>
+                {getTotalTaskCount() > 0 && (
+                  <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                    {getTotalTaskCount()}
+                  </span>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
             
@@ -180,109 +242,250 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
           </SidebarMenu>
         </SidebarGroup>
 
-
-
-        {/* Categories - Only show when on tasks page and not on main views */}
-        {currentPage === 'tasks' && currentView && !['today', 'tomorrow', 'next7days', 'work', 'coding', 'hobby', 'personal'].includes(currentView) && (
+        {/* Enhanced Categories Section - Always visible on tasks page */}
+        {currentPage === 'tasks' && (
           <SidebarGroup>
             <div className="flex items-center justify-between px-2">
-              <SidebarGroupLabel>Lists</SidebarGroupLabel>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAddingCategory(true)}
-                className="h-6 w-6 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCategoriesCollapsed(!categoriesCollapsed)}
+                  className="flex items-center gap-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded p-1 transition-colors"
+                >
+                  {categoriesCollapsed ? (
+                    <ChevronRight className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                  <SidebarGroupLabel className="cursor-pointer">Categories</SidebarGroupLabel>
+                </button>
+                {userData.categories.length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {userData.categories.length}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-1">
+                {userData.categories.length === 0 ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetCategoriesToDefault}
+                    className="h-6 text-xs px-2 hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Quick Start
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAddingCategory(true)}
+                    className="h-7 w-7 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             
-            <SidebarMenu>
-              {/* Add Category Input */}
-              {isAddingCategory && (
-                <SidebarMenuItem>
-                  <div className="px-2 py-1 space-y-2">
-                    <div className="flex gap-1">
-                      {categoryIcons.slice(0, 6).map(icon => (
-                        <button
-                          key={icon}
-                          onClick={() => setNewCategoryIcon(icon)}
-                          className={`w-6 h-6 text-xs rounded border ${
-                            newCategoryIcon === icon
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          {icon}
-                        </button>
-                      ))}
-                    </div>
-                    <Input
-                      placeholder="List name"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      className="h-8 text-sm"
-                      autoFocus
-                    />
-                    <div className="flex gap-1">
-                      <Button size="sm" onClick={handleAddCategory} className="h-6 text-xs px-2">
-                        Add
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => {
-                          setIsAddingCategory(false);
-                          setNewCategoryName('');
-                        }}
-                        className="h-6 text-xs px-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </SidebarMenuItem>
-              )}
+            {!categoriesCollapsed && (
+              <SidebarMenu>
+                {/* Enhanced Add Category Section */}
+                {isAddingCategory && (
+                  <SidebarMenuItem>
+                    <div className="px-3 py-3 space-y-3 bg-sidebar-accent/30 rounded-lg mx-2 border border-sidebar-border">
+                      {/* Category Name Input */}
+                      <div className="space-y-1">
+                        <Input
+                          placeholder="Category name (e.g., Work, Personal)"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          onKeyDown={handleKeyPress}
+                          className="h-8 text-sm border-sidebar-border focus:border-blue-500"
+                          autoFocus
+                        />
+                      </div>
 
-              {/* Category List */}
-              {userData.categories.map((category) => {
-                const taskCount = getTaskCount(category.id);
-                const completedCount = getCompletedCount(category.id);
-                
-                return (
-                  <SidebarMenuItem key={category.id}>
-                    <div className="flex items-center group">
-                      <SidebarMenuButton
-                        onClick={() => {
-                          setSelectedCategory(category.id);
-                        }}
-                        isActive={selectedCategoryId === category.id}
-                        className="flex-1"
-                      >
-                        <div className="w-4 h-4 flex items-center justify-center text-sm">
-                          {category.icon}
+                      {/* Icon Selection - Always visible */}
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground">Icon</div>
+                        <div className="grid grid-cols-6 gap-1">
+                          {categoryIcons.slice(0, showAdvancedOptions ? categoryIcons.length : 6).map(icon => (
+                            <button
+                              key={icon}
+                              onClick={() => setNewCategoryIcon(icon)}
+                              className={`w-7 h-7 text-sm rounded border transition-colors ${
+                                newCategoryIcon === icon
+                                  ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                  : 'border-sidebar-border hover:border-gray-300 hover:bg-sidebar-accent'
+                              }`}
+                            >
+                              {icon}
+                            </button>
+                          ))}
                         </div>
-                        <span className="flex-1">{category.name}</span>
-                        <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                          {taskCount > 0 && <span>{taskCount}</span>}
-                          {completedCount > 0 && <span className="text-green-600">+{completedCount}</span>}
+                      </div>
+
+                      {/* Progressive Disclosure for Advanced Options */}
+                      {showAdvancedOptions && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-muted-foreground">Color</div>
+                          <div className="grid grid-cols-8 gap-1">
+                            {categoryColors.map(color => (
+                              <button
+                                key={color}
+                                onClick={() => setNewCategoryColor(color)}
+                                className={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
+                                  newCategoryColor === color
+                                    ? 'border-gray-800 shadow-sm'
+                                    : 'border-gray-200'
+                                }`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </SidebarMenuButton>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-sidebar-accent text-red-600 hover:text-red-700"
-                        onClick={() => deleteCategory(category.id)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            onClick={handleAddCategory}
+                            disabled={!newCategoryName.trim()}
+                            className="h-7 text-xs px-3 bg-blue-600 hover:bg-blue-700"
+                          >
+                            Create
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              setIsAddingCategory(false);
+                              setNewCategoryName('');
+                              setNewCategoryIcon('📝');
+                              setNewCategoryColor('');
+                              setShowAdvancedOptions(false);
+                            }}
+                            className="h-7 text-xs px-2"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                          className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showAdvancedOptions ? 'Less' : 'More'}
+                          <Palette className="w-3 h-3 ml-1" />
+                        </Button>
+                      </div>
                     </div>
                   </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+                )}
+
+                {/* Empty State */}
+                {userData.categories.length === 0 && !isAddingCategory && (
+                  <SidebarMenuItem>
+                    <div className="px-3 py-4 text-center space-y-2 bg-sidebar-accent/20 rounded-lg mx-2 border border-dashed border-sidebar-border">
+                      <div className="text-2xl">📂</div>
+                      <div className="text-xs text-muted-foreground">
+                        <div className="font-medium">No categories yet</div>
+                        <div>Organize your tasks with categories</div>
+                      </div>
+                    </div>
+                  </SidebarMenuItem>
+                )}
+
+                {/* Enhanced Category List */}
+                {userData.categories.map((category) => {
+                  const taskCount = getTaskCount(category.id);
+                  const completedCount = getCompletedCount(category.id);
+                  
+                  return (
+                    <SidebarMenuItem key={category.id}>
+                      <div className="flex items-center group">
+                        <SidebarMenuButton
+                          onClick={() => {
+                            setSelectedCategory(category.id);
+                            onViewChange?.(category.id as any);
+                          }}
+                          isActive={selectedCategoryId === category.id}
+                          className="flex-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 flex items-center justify-center text-sm">
+                              {category.icon}
+                            </div>
+                            <div 
+                              className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: category.color }}
+                            />
+                          </div>
+                          <span className="flex-1">{category.name}</span>
+                          <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                            {taskCount > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded cursor-help">{taskCount}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{taskCount} active task{taskCount !== 1 ? 's' : ''}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {completedCount > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-green-600 cursor-help">+{completedCount}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{completedCount} completed in last 2 weeks</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </SidebarMenuButton>
+                        
+                        {/* Simple Delete with Dropdown */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
+                            >
+                              <MoreHorizontal className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (window.confirm(`Delete "${category.name}" category? ${taskCount > 0 ? `This will also delete ${taskCount} tasks.` : ''}`)) {
+                                  deleteCategory(category.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <AlertTriangle className="w-3 h-3 mr-2" />
+                              Delete
+                              {taskCount > 0 && (
+                                <span className="ml-auto text-xs">({taskCount} tasks)</span>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            )}
           </SidebarGroup>
         )}
 
@@ -316,7 +519,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </>
+    </TooltipProvider>
   );
 };
 
