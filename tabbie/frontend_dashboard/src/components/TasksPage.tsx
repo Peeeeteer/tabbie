@@ -1853,7 +1853,24 @@ const TaskItem: React.FC<TaskItemProps> = ({
     } else if (targetDate.getTime() === tomorrow.getTime()) {
       return `Tomorrow by ${timeStr}`;
     } else if (targetDate.getTime() < today.getTime()) {
-      return `Overdue since ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      const daysDiff = Math.ceil((today.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff === 1) {
+        return `Overdue for 1 day`;
+      } else if (daysDiff < 7) {
+        return `Overdue for ${daysDiff} days`;
+      } else if (daysDiff < 14) {
+        return `Overdue for 1 week`;
+      } else if (daysDiff < 21) {
+        return `Overdue for 2 weeks`;
+      } else if (daysDiff < 28) {
+        return `Overdue for 3 weeks`;
+      } else if (daysDiff < 60) {
+        const weeks = Math.floor(daysDiff / 7);
+        return `Overdue for ${weeks} weeks`;
+      } else {
+        const months = Math.floor(daysDiff / 30);
+        return months === 1 ? `Overdue for 1 month` : `Overdue for ${months} months`;
+      }
     } else {
       const daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff <= 7) {
