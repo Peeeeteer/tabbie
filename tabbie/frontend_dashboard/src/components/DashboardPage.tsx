@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, BarChart3, Target, Clock, CheckSquare } from 'lucide-react';
+import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +30,8 @@ interface DashboardPageProps {
   handleFaceChange: (faceType: string) => void;
   handleReconnect: () => void;
   fetchLogs: () => void;
+  onNavigateToActivity?: () => void;
+  onNavigateToTabbie?: () => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -45,6 +47,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   handleFaceChange,
   handleReconnect,
   fetchLogs,
+  onNavigateToActivity,
+  onNavigateToTabbie,
 }) => {
   const [activityData, setActivityData] = useState<DayActivity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
@@ -53,26 +57,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     month: { todos: 0, pomodoros: 0 },
     year: { todos: 0, pomodoros: 0 }
   });
+  
+  // State for month navigation on dashboard
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  
+  // State for display mode toggle
+  const [displayMode, setDisplayMode] = useState<'tasks' | 'pomodoros'>('tasks');
 
-  // Generate last 365 days of activity data
+  // Generate current month activity data for dashboard
   useEffect(() => {
-    const generateActivityData = (): DayActivity[] => {
+    const generateCurrentMonthData = (): DayActivity[] => {
       const data: DayActivity[] = [];
-      const today = new Date();
+      const year = currentMonthDate.getFullYear();
+      const month = currentMonthDate.getMonth();
       
       // Get existing activity data from localStorage
       const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
       
-      for (let i = 364; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
+      // Get first day of month and number of days
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
         const dateStr = date.toISOString().split('T')[0];
         
         const existing = existingData[dateStr] || { todos: 0, pomodoros: 0 };
         
-        // Add some sample data for demo purposes (you can remove this later)
-        const sampleTodos = i < 30 ? Math.floor(Math.random() * 8) : Math.floor(Math.random() * 5);
-        const samplePomodoros = i < 30 ? Math.floor(Math.random() * 6) : Math.floor(Math.random() * 3);
+        // Sample data for demo
+        const sampleTodos = Math.floor(Math.random() * 10);
+        const samplePomodoros = Math.floor(Math.random() * 8);
         
         data.push({
           date: dateStr,
@@ -85,83 +98,132 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       return data;
     };
 
-    const data = generateActivityData();
-    setActivityData(data);
+    const monthData = generateCurrentMonthData();
+    setActivityData(monthData);
 
-    // Calculate stats
+    // Calculate stats based on current month data and broader timeframes
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    // For broader stats, we need to get more data from localStorage
+    const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
+    const getAllDaysData = (days: number) => {
+      const data: DayActivity[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const existing = existingData[dateStr] || { todos: 0, pomodoros: 0 };
+        const sampleTodos = Math.floor(Math.random() * 5);
+        const samplePomodoros = Math.floor(Math.random() * 3);
+        data.push({
+          date: dateStr,
+          todos: existing.todos || sampleTodos,
+          pomodoros: existing.pomodoros || samplePomodoros,
+          total: (existing.todos || sampleTodos) + (existing.pomodoros || samplePomodoros)
+        });
+      }
+      return data;
+    };
+
+    const yearData = getAllDaysData(365);
     
     const newStats: ActivityStats = {
-      today: data.find(d => d.date === today) || { todos: 0, pomodoros: 0 },
-      week: data.filter(d => d.date >= weekAgo).reduce((acc, day) => ({
+      today: monthData.find(d => d.date === today) || { todos: 0, pomodoros: 0 },
+      week: yearData.filter(d => d.date >= weekAgo).reduce((acc, day) => ({
         todos: acc.todos + day.todos,
         pomodoros: acc.pomodoros + day.pomodoros
       }), { todos: 0, pomodoros: 0 }),
-      month: data.filter(d => d.date >= monthAgo).reduce((acc, day) => ({
+      month: monthData.reduce((acc, day) => ({
         todos: acc.todos + day.todos,
         pomodoros: acc.pomodoros + day.pomodoros
       }), { todos: 0, pomodoros: 0 }),
-      year: data.reduce((acc, day) => ({
+      year: yearData.reduce((acc, day) => ({
         todos: acc.todos + day.todos,
         pomodoros: acc.pomodoros + day.pomodoros
       }), { todos: 0, pomodoros: 0 })
     };
     
     setStats(newStats);
-  }, []);
+  }, [currentMonthDate]);
 
-  // Get color intensity based on activity level
-  const getActivityColor = (total: number): string => {
-    if (total === 0) return 'bg-gray-100 hover:bg-gray-200';
-    if (total <= 2) return 'bg-green-200 hover:bg-green-300';
-    if (total <= 4) return 'bg-green-400 hover:bg-green-500';
-    if (total <= 7) return 'bg-green-600 hover:bg-green-700';
-    return 'bg-green-800 hover:bg-green-900';
+  // Get color intensity for activity squares
+  const getActivityColor = (value: number): string => {
+    if (value === 0) return 'bg-gray-100 hover:bg-gray-200 text-gray-400';
+    if (value <= 2) return 'bg-green-200 hover:bg-green-300 text-green-800';
+    if (value <= 4) return 'bg-green-400 hover:bg-green-500 text-green-900';
+    if (value <= 6) return 'bg-green-600 hover:bg-green-700 text-white';
+    if (value <= 8) return 'bg-green-700 hover:bg-green-800 text-white';
+    return 'bg-green-800 hover:bg-green-900 text-white';
   };
 
   // Format date for display
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
       month: 'short', 
       day: 'numeric' 
     });
   };
 
-  // Get day of week (0 = Sunday)
-  const getDayOfWeek = (dateStr: string): number => {
-    return new Date(dateStr).getDay();
+  // Month navigation functions
+  const navigatePreviousMonth = () => {
+    const newDate = new Date(currentMonthDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentMonthDate(newDate);
   };
 
-  // Group activity data into weeks
-  const getWeeksData = () => {
-    const weeks: DayActivity[][] = [];
-    let currentWeek: DayActivity[] = [];
+  const navigateNextMonth = () => {
+    const newDate = new Date(currentMonthDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentMonthDate(newDate);
+  };
+
+  const getCurrentMonthLabel = (): string => {
+    return currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Get current month calendar layout
+  const getMonthCalendarData = () => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const firstDayOfWeek = (firstDay.getDay() + 6) % 7; // Convert to Monday=0, Tuesday=1, etc.
+    const daysInMonth = lastDay.getDate();
     
-    activityData.forEach((day, index) => {
-      if (index === 0) {
-        // Fill in empty days at the start if the year doesn't start on Sunday
-        const startDayOfWeek = getDayOfWeek(day.date);
-        for (let i = 0; i < startDayOfWeek; i++) {
-          currentWeek.push({ date: '', todos: 0, pomodoros: 0, total: 0 });
-        }
-      }
+    const weeks: (DayActivity | null)[][] = [];
+    let currentWeek: (DayActivity | null)[] = [];
+    
+    // Fill in empty days at the start
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      currentWeek.push(null);
+    }
+    
+    // Add all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayData = activityData.find(d => {
+        const date = new Date(d.date);
+        return date.getDate() === day && date.getMonth() === month && date.getFullYear() === year;
+      });
       
-      currentWeek.push(day);
+      currentWeek.push(dayData || { 
+        date: new Date(year, month, day).toISOString().split('T')[0], 
+        todos: 0, 
+        pomodoros: 0, 
+        total: 0 
+      });
       
       if (currentWeek.length === 7) {
         weeks.push([...currentWeek]);
         currentWeek = [];
       }
-    });
+    }
     
-    // Add remaining days
+    // Fill remaining days in last week
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) {
-        currentWeek.push({ date: '', todos: 0, pomodoros: 0, total: 0 });
+        currentWeek.push(null);
       }
       weeks.push(currentWeek);
     }
@@ -169,11 +231,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     return weeks;
   };
 
-  const weeks = getWeeksData();
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthWeeks = getMonthCalendarData();
+      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  return (
+    return (
     <TooltipProvider>
       <div className="space-y-6 p-6">
         {/* Header */}
@@ -187,297 +248,219 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold">{stats.today.todos + stats.today.pomodoros}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats.today.todos} tasks • {stats.today.pomodoros} pomodoros
-                </p>
-              </div>
-              <Target className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold">{stats.week.todos + stats.week.pomodoros}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats.week.todos} tasks • {stats.week.pomodoros} pomodoros
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-green-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold">{stats.month.todos + stats.month.pomodoros}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats.month.todos} tasks • {stats.month.pomodoros} pomodoros
-                </p>
-              </div>
-              <CheckSquare className="h-8 w-8 text-purple-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">This Year</p>
-                <p className="text-2xl font-bold">{stats.year.todos + stats.year.pomodoros}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats.year.todos} tasks • {stats.year.pomodoros} pomodoros
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-500" />
-            </div>
-          </div>
-        </div>
-
-        {/* GitHub-style Activity Graph */}
-        <div className="bg-white rounded-lg border p-6 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold">Activity Overview</h2>
-            <p className="text-sm text-muted-foreground">Completed tasks and pomodoro sessions over the last year</p>
-          </div>
-
-          <div className="space-y-3">
-            {/* Month labels */}
-            <div className="flex">
-              <div className="w-8"></div> {/* Space for day labels */}
-              <div className="flex-1 flex justify-between text-xs text-muted-foreground px-1">
-                {months.map(month => (
-                  <span key={month}>{month}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Activity grid */}
-            <div className="flex">
-              {/* Day labels */}
-              <div className="flex flex-col justify-between w-8 text-xs text-muted-foreground py-1">
-                {dayLabels.filter((_, i) => i % 2 === 1).map(day => (
-                  <span key={day}>{day}</span>
-                ))}
-              </div>
-
-              {/* Activity squares */}
-              <div className="flex-1 space-y-1">
-                {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => (
-                  <div key={dayIndex} className="flex space-x-1">
-                    {weeks.map((week, weekIndex) => {
-                      const day = week[dayIndex];
-                      if (!day.date) {
-                        return (
-                          <div
-                            key={`${weekIndex}-${dayIndex}`}
-                            className="w-3 h-3 rounded-sm bg-transparent"
-                          />
-                        );
-                      }
-
-                      return (
-                        <Tooltip key={`${weekIndex}-${dayIndex}`}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={`w-3 h-3 rounded-sm transition-colors duration-200 cursor-pointer ${getActivityColor(day.total)}`}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <div className="text-sm">
-                              <div className="font-medium">{formatDate(day.date)}</div>
-                              <div>{day.todos} tasks completed</div>
-                              <div>{day.pomodoros} pomodoro sessions</div>
-                              <div className="font-medium mt-1">Total: {day.total} activities</div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Activity Overview */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg border p-3 shadow-sm">
+              <div className="mb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold">This Month</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {displayMode === 'tasks' ? stats.month.todos : stats.month.pomodoros} {displayMode}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                <span>Less</span>
-                <div className="flex space-x-1">
-                  <div className="w-3 h-3 rounded-sm bg-gray-100" />
-                  <div className="w-3 h-3 rounded-sm bg-green-200" />
-                  <div className="w-3 h-3 rounded-sm bg-green-400" />
-                  <div className="w-3 h-3 rounded-sm bg-green-600" />
-                  <div className="w-3 h-3 rounded-sm bg-green-800" />
+                  <div className="flex items-center gap-1">
+                    {/* Display Mode Toggle */}
+                    <div className="flex border rounded-md mr-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant={displayMode === 'tasks' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDisplayMode('tasks')}
+                            className="h-6 px-2 rounded-r-none"
+                          >
+                            <CheckSquare className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Show tasks completed</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant={displayMode === 'pomodoros' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDisplayMode('pomodoros')}
+                            className="h-6 px-2 rounded-l-none border-l"
+                          >
+                            <Clock className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Show pomodoros completed</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={navigatePreviousMonth}
+                      className="h-6 w-6 p-0"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-xs font-medium min-w-[80px] text-center">
+                      {getCurrentMonthLabel()}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={navigateNextMonth}
+                      className="h-6 w-6 p-0"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={onNavigateToActivity}
+                          className="h-6 w-6 p-0 ml-2"
+                        >
+                          <BarChart3 className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View full activity details</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
-                <span>More</span>
               </div>
-              
-              <div className="text-xs text-muted-foreground">
-                Total: {stats.year.todos + stats.year.pomodoros} activities this year
+
+              <div className="space-y-1">
+                {/* Day headers */}
+                <div className="grid grid-cols-7 gap-1">
+                  {dayLabels.map(day => (
+                    <div key={day} className="text-center text-xs font-medium text-muted-foreground py-0.5">
+                      {day.slice(0, 1)}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Month calendar - 50% shorter */}
+                <div className="space-y-0.5">
+                  {monthWeeks.map((week, weekIndex) => (
+                    <div key={weekIndex} className="grid grid-cols-7 gap-1">
+                      {week.map((day, dayIndex) => (
+                        <div key={dayIndex} className="aspect-[2/1]">
+                          {day ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={`w-full h-full rounded-sm transition-colors duration-200 cursor-pointer flex items-center justify-center text-xs font-semibold ${getActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros)}`}>
+                                  {displayMode === 'tasks' ? day.todos : day.pomodoros}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <div className="text-sm">
+                                  <div className="font-medium">{formatDate(day.date)}</div>
+                                  <div>{day.todos} tasks • {day.pomodoros} pomodoros</div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <div className="w-full h-full"></div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg border p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <CheckSquare className="h-5 w-5" />
-              <span>Add New Task</span>
-            </button>
-            <button className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
-              <Clock className="h-5 w-5" />
-              <span>Start Pomodoro</span>
-            </button>
-            <button className="flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
-              <BarChart3 className="h-5 w-5" />
-              <span>View Analytics</span>
-            </button>
-          </div>
-        </div>
+          {/* Right Column - Quick Stats & Actions */}
+          <div className="space-y-4">
+            {/* Quick Stats */}
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Today</span>
+                  <span className="font-medium">{stats.today.todos + stats.today.pomodoros}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">This Week</span>
+                  <span className="font-medium">{stats.week.todos + stats.week.pomodoros}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">This Month</span>
+                  <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Tabbie Life - Hardware Control Section */}
-        <div className="bg-white rounded-lg border shadow-sm">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">🤖 Tabbie Life</h2>
-            <p className="text-sm text-muted-foreground mb-6">Monitor and control your Tabbie hardware assistant</p>
-            
-            {/* Face Control */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3">Face Control</h3>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-medium">Current Face:</span>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium">
-                  {currentFace === "default" ? "📝 Default Text" : 
-                   currentFace === "focus" ? "🎯 Focus Mode" : currentFace}
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
+              <div className="space-y-3">
+                <Button 
+                  className="w-full flex items-center justify-start gap-3 h-12 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                  variant="outline"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
+                    <CheckSquare className="h-4 w-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-sm">Add Task</div>
+                    <div className="text-xs text-blue-600">Create a new to-do item</div>
+                  </div>
+                </Button>
+                
+                <Button 
+                  className="w-full flex items-center justify-start gap-3 h-12 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
+                  variant="outline"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-sm">Start Pomodoro</div>
+                    <div className="text-xs text-green-600">Begin a focus session</div>
+                  </div>
+                </Button>
+              </div>
+            </div>
+
+            {/* Quick Tabbie */}
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <h3 className="text-sm font-semibold mb-3">🤖 Quick Tabbie</h3>
+              
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  esp32Connected 
+                    ? (isHealthChecking ? 'bg-blue-500 animate-pulse' : 'bg-green-500')
+                    : (isScanning || isReconnecting)
+                      ? 'bg-yellow-500 animate-pulse' 
+                      : 'bg-red-500'
+                }`} />
+                <span className="text-sm font-medium">
+                  {esp32Connected 
+                    ? (isHealthChecking ? 'Checking...' : 'Connected')
+                    : isReconnecting
+                      ? 'Reconnecting...'
+                      : isScanning 
+                        ? 'Scanning...' 
+                        : 'Disconnected'
+                  }
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-4 max-w-md">
-                <Button 
-                  onClick={() => handleFaceChange("default")}
-                  disabled={isLoading}
-                  variant={currentFace === "default" ? "default" : "outline"}
-                  className="flex flex-col items-center gap-1 h-16"
-                >
-                  <span className="text-lg">📝</span>
-                  <span className="text-xs">Default</span>
-                </Button>
-                <Button 
-                  onClick={() => handleFaceChange("focus")}
-                  disabled={isLoading}
-                  variant={currentFace === "focus" ? "default" : "outline"}
-                  className="flex flex-col items-center gap-1 h-16 bg-purple-100 hover:bg-purple-200 text-purple-800"
-                >
-                  <span className="text-lg">🎯</span>
-                  <span className="text-xs">Focus</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Connection Status */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3">Connection Status</h3>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full ${
-                    esp32Connected 
-                      ? (isHealthChecking ? 'bg-blue-500 animate-pulse' : 'bg-green-500')
-                      : (isScanning || isReconnecting)
-                        ? 'bg-yellow-500 animate-pulse' 
-                        : 'bg-red-500'
-                  }`} />
-                  <div>
-                    <div className="text-sm font-medium">
-                      Status: {
-                        esp32Connected 
-                          ? (isHealthChecking ? 'Checking...' : 'Connected')
-                          : isReconnecting
-                            ? 'Reconnecting...'
-                            : isScanning 
-                              ? 'Scanning...' 
-                              : 'Disconnected'
-                      }
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      ESP32: {esp32URL || 
-                        (isReconnecting ? "Attempting to reconnect..." : 
-                         isScanning ? "Scanning network..." : 
-                         "Not found - click Reconnect to retry")}
-                    </div>
-                  </div>
-                </div>
-                {!esp32Connected && !isScanning && !isReconnecting && (
-                  <Button 
-                    onClick={handleReconnect}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    🔄 Reconnect
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Serial Monitor */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-medium">Serial Monitor</h3>
-                <Button 
-                  onClick={fetchLogs} 
-                  disabled={logsLoading}
-                  variant="ghost" 
-                  size="sm"
-                  className="h-8 px-3 text-xs"
-                >
-                  {logsLoading ? "..." : "↻ Refresh"}
-                </Button>
-              </div>
-              <div className="h-64 overflow-y-auto bg-slate-950 text-slate-100 p-4 rounded-lg">
-                {logs.length > 0 ? (
-                  logs.map((log, index) => (
-                    <div key={index} className="text-xs font-mono mb-1 leading-relaxed">
-                      <span className="text-slate-400 mr-2">›</span>
-                      <span className={
-                        log.includes("WiFi Connected Successfully") || log.includes("Web server started") 
-                          ? "text-green-400" 
-                          : log.includes("Happy face") || log.includes("Default animation")
-                          ? "text-blue-400"
-                          : log.includes("Sad face")
-                          ? "text-orange-400"
-                          : log.includes("Focus face")
-                          ? "text-purple-400"
-                          : log.includes("Failed") || log.includes("Error") || log.includes("❌")
-                          ? "text-red-400"
-                          : log.includes("✅")
-                          ? "text-green-400"
-                          : "text-slate-300"
-                      }>
-                        {log}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-slate-400 text-xs font-mono flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="mb-2">📡</div>
-                      <div>Waiting for ESP32 logs...</div>
-                      <div className="text-xs mt-1">Make sure Tabbie is powered on</div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full text-xs"
+                onClick={onNavigateToTabbie}
+              >
+                View Details →
+              </Button>
             </div>
           </div>
         </div>

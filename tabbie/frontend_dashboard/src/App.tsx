@@ -22,9 +22,11 @@ import TasksPage from "@/components/TasksPage"
 import EventsPage from "@/components/EventsPage"
 import NotificationsPage from "@/components/NotificationsPage"
 import DashboardPage from "@/components/DashboardPage"
+import ActivityPage from "@/components/ActivityPage"
+import YourTabbiePage from "@/components/YourTabbiePage"
 
 export default function Page() {
-  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal'>('next7days');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -36,6 +38,32 @@ export default function Page() {
   const [showSetupWizard, setShowSetupWizard] = React.useState(false);
   const [isHealthChecking, setIsHealthChecking] = React.useState(false);
   const [isReconnecting, setIsReconnecting] = React.useState(false);
+
+  // Calculate activity stats for sidebar (memoized for stability)
+  const activityStats = React.useMemo(() => {
+    const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
+    let totalXP = 0;
+    let totalPomodoros = 0;
+
+    // Get data for the last year
+    for (let i = 364; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayData = existingData[dateStr] || { todos: 0, pomodoros: 0 };
+      
+      // Stable sample data based on date (for demo purposes)
+      const seed = dateStr.split('-').reduce((a, b) => a + parseInt(b), 0);
+      const sampleTodos = (seed * 7) % 5 + 1;
+      const samplePomodoros = (seed * 3) % 3 + 1;
+      
+      totalXP += (dayData.todos || sampleTodos) + (dayData.pomodoros || samplePomodoros);
+      totalPomodoros += dayData.pomodoros || samplePomodoros;
+    }
+
+    return { totalXP, totalPomodoros };
+  }, []); // Empty dependency array means this only calculates once
 
   // Smart ESP32 Auto-Discovery
   const discoverESP32 = async () => {
@@ -366,6 +394,7 @@ export default function Page() {
             onPageChange={setCurrentPage}
             currentView={currentView}
             onViewChange={setCurrentView}
+            activityStats={activityStats}
           />
         </Sidebar>
         <SidebarInset>
@@ -384,12 +413,14 @@ export default function Page() {
                 <BreadcrumbItem>
                   <BreadcrumbPage>
                     {currentPage === 'dashboard' ? 'Dashboard' :
+                     currentPage === 'yourtabbie' ? 'Your Tabbie' :
                      currentPage === 'tasks' ? 'Tasks' :
                      currentPage === 'reminders' ? 'Reminders' :
                      currentPage === 'events' ? 'Events' :
                      currentPage === 'notifications' ? 'Notifications' :
                      currentPage === 'pomodoro' ? 'Pomodoro Timer' :
                      currentPage === 'calendar' ? 'Calendar' :
+                     currentPage === 'activity' ? 'Activity' :
                      currentPage === 'timetracking' ? 'Time Tracking' :
                      currentPage === 'settings' ? 'Settings' : 'Dashboard'}
                   </BreadcrumbPage>
@@ -401,6 +432,23 @@ export default function Page() {
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {currentPage === 'dashboard' ? (
             <DashboardPage 
+              currentFace={currentFace}
+              isLoading={isLoading}
+              esp32Connected={esp32Connected}
+              esp32URL={esp32URL}
+              isScanning={isScanning}
+              isReconnecting={isReconnecting}
+              isHealthChecking={isHealthChecking}
+              logs={logs}
+              logsLoading={logsLoading}
+              handleFaceChange={handleFaceChange}
+              handleReconnect={handleReconnect}
+              fetchLogs={fetchLogs}
+              onNavigateToActivity={() => setCurrentPage('activity')}
+              onNavigateToTabbie={() => setCurrentPage('yourtabbie')}
+            />
+          ) : currentPage === 'yourtabbie' ? (
+            <YourTabbiePage 
               currentFace={currentFace}
               isLoading={isLoading}
               esp32Connected={esp32Connected}
@@ -435,6 +483,8 @@ export default function Page() {
               <h2 className="text-2xl font-bold mb-4">📅 Calendar</h2>
               <p className="text-muted-foreground">View your schedule and plan your day with Tabbie</p>
             </div>
+          ) : currentPage === 'activity' ? (
+            <ActivityPage />
           ) : currentPage === 'timetracking' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📊 Time Tracking</h2>

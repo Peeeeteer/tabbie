@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Palette, MoreHorizontal, Trophy
+  Palette, MoreHorizontal, Trophy, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,13 +31,23 @@ import {
 import { useTodo } from '@/contexts/TodoContext';
 
 interface CategorySidebarProps {
-  currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings';
-  onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'timetracking' | 'settings') => void;
+  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings';
+  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
       currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+  activityStats?: {
+    totalXP: number;
+    totalPomodoros: number;
+  };
 }
 
-const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageChange, onViewChange }) => {
+const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
+  currentPage, 
+  onPageChange, 
+  currentView,
+  onViewChange,
+  activityStats
+}) => {
   const {
     userData,
     selectedCategoryId,
@@ -125,14 +135,24 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
   return (
     <TooltipProvider>
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 px-2 py-4 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md transition-colors"
+          onClick={() => onPageChange('activity')}
+        >
+          <div className="flex items-center gap-2 flex-1">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               T
             </div>
             <div className="flex-1">
               <div className="font-semibold text-sm">Tabbie</div>
               <div className="text-xs text-muted-foreground">Your AI Assistant</div>
+              {activityStats && (
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                  <span>{activityStats.totalXP} XP</span>
+                  <span>•</span>
+                  <span>{activityStats.totalPomodoros} 🍅</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -150,6 +170,16 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
               >
                 <Monitor className="w-4 h-4" />
                 <span>Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={() => onPageChange('yourtabbie')}
+                isActive={currentPage === 'yourtabbie'}
+              >
+                <Wrench className="w-4 h-4" />
+                <span>Your Tabbie</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             
@@ -218,6 +248,16 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({ currentPage, onPageCh
               >
                 <Calendar className="w-4 h-4" />
                 <span>Calendar</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={() => onPageChange('activity')}
+                isActive={currentPage === 'activity'}
+              >
+                <Activity className="w-4 h-4" />
+                <span>Activity</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             

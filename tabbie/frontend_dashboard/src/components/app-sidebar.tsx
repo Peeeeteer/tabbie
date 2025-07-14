@@ -195,28 +195,54 @@ const data = {
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onSetupWizard?: () => void;
+  onNavigateToTabbie?: () => void;
 }
 
-export function AppSidebar({ onSetupWizard, ...props }: AppSidebarProps) {
-  // Add setup wizard to settings items
+export function AppSidebar({ onSetupWizard, onNavigateToTabbie, ...props }: AppSidebarProps) {
+  // Add setup wizard to settings items and Your Tabbie navigation
   const dataWithSetup = {
     ...data,
-    navMain: data.navMain.map(item => {
-      if (item.title === "Settings") {
-        return {
-          ...item,
-          items: [
-            {
-              title: "🛠️ ESP32 Setup",
-              url: "#",
-              onClick: onSetupWizard,
-            },
-            ...item.items,
-          ]
-        };
-      }
-      return item;
-    })
+    navMain: [
+      ...data.navMain.slice(0, 1), // Dashboard
+      {
+        title: "Your Tabbie",
+        url: "#",
+        icon: Wrench,
+        items: [
+          {
+            title: "Hardware Control",
+            url: "#",
+            onClick: onNavigateToTabbie,
+          },
+          {
+            title: "Face Control",
+            url: "#",
+            onClick: onNavigateToTabbie,
+          },
+          {
+            title: "Connection Status",
+            url: "#",
+            onClick: onNavigateToTabbie,
+          },
+        ],
+      },
+      ...data.navMain.slice(1).map(item => {
+        if (item.title === "Settings") {
+          return {
+            ...item,
+            items: [
+              {
+                title: "🛠️ ESP32 Setup",
+                url: "#",
+                onClick: onSetupWizard,
+              },
+              ...item.items,
+            ]
+          };
+        }
+        return item;
+      })
+    ]
   };
 
   return (
