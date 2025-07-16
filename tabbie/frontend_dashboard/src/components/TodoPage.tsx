@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Play, Pause, Square, CheckSquare, Clock, Filter, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
 import { useTodo } from '@/contexts/TodoContext';
 import type { Task } from '@/types/todo';
 import {
@@ -24,7 +25,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-const TodoPage: React.FC = () => {
+interface TodoPageProps {
+  onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+}
+
+const TodoPage: React.FC<TodoPageProps> = ({ onPageChange }) => {
   const {
     userData,
     selectedCategoryId,
@@ -32,6 +37,7 @@ const TodoPage: React.FC = () => {
     pomodoroTimer,
     setSelectedCategory,
     addTask,
+    updateTask,
     toggleTaskComplete,
     deleteTask,
     startPomodoro,
@@ -64,8 +70,18 @@ const TodoPage: React.FC = () => {
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() && selectedCategoryId) {
-      addTask(newTaskTitle.trim(), selectedCategoryId);
+      addTask(newTaskTitle.trim(), selectedCategoryId, '', undefined, 3);
       setNewTaskTitle('');
+    }
+  };
+
+  const handleStartPomodoro = (task: Task) => {
+    // Start the pomodoro directly
+    startPomodoro(task);
+    
+    // Navigate to pomodoro page
+    if (onPageChange) {
+      onPageChange('pomodoro');
     }
   };
 
@@ -235,7 +251,7 @@ const TodoPage: React.FC = () => {
                     task={task}
                     onToggleComplete={() => toggleTaskComplete(task.id)}
                     onDelete={() => deleteTask(task.id)}
-                    onStartPomodoro={() => startPomodoro(task)}
+                    onStartPomodoro={() => handleStartPomodoro(task)}
                     isCurrentTask={currentTask?.id === task.id}
                     canStartPomodoro={!pomodoroTimer.isRunning}
                     isDraggable={true}
@@ -252,7 +268,7 @@ const TodoPage: React.FC = () => {
                 task={task}
                 onToggleComplete={() => toggleTaskComplete(task.id)}
                 onDelete={() => deleteTask(task.id)}
-                onStartPomodoro={() => startPomodoro(task)}
+                onStartPomodoro={() => handleStartPomodoro(task)}
                 isCurrentTask={currentTask?.id === task.id}
                 canStartPomodoro={!pomodoroTimer.isRunning}
               />
@@ -382,8 +398,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
           
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
             <span>Priority: {task.priority}</span>
-            {completedSessions > 0 && (
-              <span>🍅 {completedSessions} pomodoros</span>
+            {(completedSessions > 0 || task.estimatedPomodoros) && (
+              <span>🍅 {completedSessions}/{task.estimatedPomodoros || 3} pomodoros</span>
             )}
             <span>Created: {task.created.toLocaleDateString()}</span>
           </div>
@@ -413,6 +429,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
           </div>
         )}
       </div>
+
+      {/* Pomodoro Selection Dialog */}
+      {/* This dialog is no longer needed as pomodoro starts directly */}
     </div>
   );
 };

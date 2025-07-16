@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { UserData, Category, Task, PomodoroSession } from '@/types/todo';
+import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
 import { DEFAULT_CATEGORIES } from '@/types/todo';
 import { loadUserData, saveUserData, generateId } from '@/utils/storage';
 
@@ -22,7 +22,7 @@ interface TodoContextType {
   resetCategoriesToDefault: () => void;
   
   // Task methods
-  addTask: (title: string, categoryId?: string, description?: string, dueDate?: Date) => string;
+  addTask: (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number) => string;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskComplete: (taskId: string) => void;
@@ -128,7 +128,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task methods
-  const addTask = (title: string, categoryId?: string, description?: string, dueDate?: Date): string => {
+  const addTask = (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number): string => {
     const taskId = generateId();
     const nextOrder = Math.max(...userData.tasks.map(t => t.order), 0) + 1;
     const newTask: Task = {
@@ -142,6 +142,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updated: new Date(),
       dueDate,
       pomodoroSessions: [],
+      estimatedPomodoros: estimatedPomodoros || 3,
       order: nextOrder,
     };
     setUserData(prev => ({
@@ -173,9 +174,58 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleTaskComplete = (taskId: string) => {
-    updateTask(taskId, { 
-      completed: !userData.tasks.find(t => t.id === taskId)?.completed 
-    });
+    const task = userData.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (!task.completed) {
+      // Task is being completed - move to completedTasks
+      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+      
+      const completedTask: CompletedTask = {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        categoryId: task.categoryId,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        created: task.created,
+        completed: new Date(),
+        pomodoroSessions: task.pomodoroSessions || [],
+        estimatedPomodoros: task.estimatedPomodoros,
+        totalPomodoros: completedPomodoros,
+      };
+
+      setUserData(prev => ({
+        ...prev,
+        tasks: prev.tasks.filter(t => t.id !== taskId),
+        completedTasks: [...prev.completedTasks, completedTask],
+      }));
+    } else {
+      // Task is being uncompleted - move back to tasks
+      const completedTask = userData.completedTasks.find(t => t.id === taskId);
+      if (completedTask) {
+        const restoredTask: Task = {
+          id: completedTask.id,
+          title: completedTask.title,
+          description: completedTask.description,
+          categoryId: completedTask.categoryId,
+          completed: false,
+          priority: completedTask.priority,
+          dueDate: completedTask.dueDate,
+          created: completedTask.created,
+          updated: new Date(),
+          pomodoroSessions: completedTask.pomodoroSessions || [],
+          estimatedPomodoros: completedTask.estimatedPomodoros,
+          order: Math.max(...userData.tasks.map(t => t.order), 0) + 1,
+        };
+
+        setUserData(prev => ({
+          ...prev,
+          tasks: [...prev.tasks, restoredTask],
+          completedTasks: prev.completedTasks.filter(t => t.id !== taskId),
+        }));
+      }
+    }
   };
 
   const reorderTasks = (taskIds: string[]) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { useTodo } from '@/contexts/TodoContext';
 
 interface DayActivity {
   date: string;
@@ -50,6 +51,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateToActivity,
   onNavigateToTabbie,
 }) => {
+  const { userData } = useTodo();
   const [activityData, setActivityData] = useState<DayActivity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
     today: { todos: 0, pomodoros: 0 },
@@ -64,15 +66,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   // State for display mode toggle
   const [displayMode, setDisplayMode] = useState<'tasks' | 'pomodoros'>('tasks');
 
-  // Generate current month activity data for dashboard
+  // Generate activity data from real user data
   useEffect(() => {
-    const generateCurrentMonthData = (): DayActivity[] => {
+    const generateActivityData = (): DayActivity[] => {
       const data: DayActivity[] = [];
       const year = currentMonthDate.getFullYear();
       const month = currentMonthDate.getMonth();
-      
-      // Get existing activity data from localStorage
-      const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
       
       // Get first day of month and number of days
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -81,71 +80,97 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         const date = new Date(year, month, day);
         const dateStr = date.toISOString().split('T')[0];
         
-        const existing = existingData[dateStr] || { todos: 0, pomodoros: 0 };
+        // Count completed tasks for this day
+        const tasksCompletedThisDay = userData.completedTasks.filter(task => {
+          const completedDate = new Date(task.completed).toISOString().split('T')[0];
+          return completedDate === dateStr;
+        }).length;
         
-        // Sample data for demo
-        const sampleTodos = Math.floor(Math.random() * 10);
-        const samplePomodoros = Math.floor(Math.random() * 8);
+        // Count completed pomodoros for this day
+        const pomodorosCompletedThisDay = userData.pomodoroSessions.filter(session => {
+          if (!session.completed || !session.ended) return false;
+          const sessionDate = new Date(session.ended).toISOString().split('T')[0];
+          return sessionDate === dateStr;
+        }).length;
         
         data.push({
           date: dateStr,
-          todos: existing.todos || sampleTodos,
-          pomodoros: existing.pomodoros || samplePomodoros,
-          total: (existing.todos || sampleTodos) + (existing.pomodoros || samplePomodoros)
+          todos: tasksCompletedThisDay,
+          pomodoros: pomodorosCompletedThisDay,
+          total: tasksCompletedThisDay + pomodorosCompletedThisDay
         });
       }
       
       return data;
     };
 
-    const monthData = generateCurrentMonthData();
+    const monthData = generateActivityData();
     setActivityData(monthData);
 
-    // Calculate stats based on current month data and broader timeframes
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    // For broader stats, we need to get more data from localStorage
-    const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
-    const getAllDaysData = (days: number) => {
-      const data: DayActivity[] = [];
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        const existing = existingData[dateStr] || { todos: 0, pomodoros: 0 };
-        const sampleTodos = Math.floor(Math.random() * 5);
-        const samplePomodoros = Math.floor(Math.random() * 3);
-        data.push({
-          date: dateStr,
-          todos: existing.todos || sampleTodos,
-          pomodoros: existing.pomodoros || samplePomodoros,
-          total: (existing.todos || sampleTodos) + (existing.pomodoros || samplePomodoros)
-        });
-      }
-      return data;
-    };
+    // Calculate real stats based on actual data
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
-    const yearData = getAllDaysData(365);
+    // Today's stats
+    const todayTasks = userData.completedTasks.filter(task => {
+      const completedDate = new Date(task.completed).toISOString().split('T')[0];
+      return completedDate === today;
+    }).length;
+
+    const todayPomodoros = userData.pomodoroSessions.filter(session => {
+      if (!session.completed || !session.ended) return false;
+      const sessionDate = new Date(session.ended).toISOString().split('T')[0];
+      return sessionDate === today;
+    }).length;
+
+    // Week's stats
+    const weekTasks = userData.completedTasks.filter(task => {
+      const completedDate = new Date(task.completed);
+      return completedDate >= weekAgo;
+    }).length;
+
+    const weekPomodoros = userData.pomodoroSessions.filter(session => {
+      if (!session.completed || !session.ended) return false;
+      const sessionDate = new Date(session.ended);
+      return sessionDate >= weekAgo;
+    }).length;
+
+    // Month's stats
+    const monthTasks = userData.completedTasks.filter(task => {
+      const completedDate = new Date(task.completed);
+      return completedDate >= monthAgo;
+    }).length;
+
+    const monthPomodoros = userData.pomodoroSessions.filter(session => {
+      if (!session.completed || !session.ended) return false;
+      const sessionDate = new Date(session.ended);
+      return sessionDate >= monthAgo;
+    }).length;
+
+    // Year's stats
+    const yearTasks = userData.completedTasks.filter(task => {
+      const completedDate = new Date(task.completed);
+      return completedDate >= yearAgo;
+    }).length;
+
+    const yearPomodoros = userData.pomodoroSessions.filter(session => {
+      if (!session.completed || !session.ended) return false;
+      const sessionDate = new Date(session.ended);
+      return sessionDate >= yearAgo;
+    }).length;
     
     const newStats: ActivityStats = {
-      today: monthData.find(d => d.date === today) || { todos: 0, pomodoros: 0 },
-      week: yearData.filter(d => d.date >= weekAgo).reduce((acc, day) => ({
-        todos: acc.todos + day.todos,
-        pomodoros: acc.pomodoros + day.pomodoros
-      }), { todos: 0, pomodoros: 0 }),
-      month: monthData.reduce((acc, day) => ({
-        todos: acc.todos + day.todos,
-        pomodoros: acc.pomodoros + day.pomodoros
-      }), { todos: 0, pomodoros: 0 }),
-      year: yearData.reduce((acc, day) => ({
-        todos: acc.todos + day.todos,
-        pomodoros: acc.pomodoros + day.pomodoros
-      }), { todos: 0, pomodoros: 0 })
+      today: { todos: todayTasks, pomodoros: todayPomodoros },
+      week: { todos: weekTasks, pomodoros: weekPomodoros },
+      month: { todos: monthTasks, pomodoros: monthPomodoros },
+      year: { todos: yearTasks, pomodoros: yearPomodoros }
     };
     
     setStats(newStats);
-  }, [currentMonthDate]);
+  }, [currentMonthDate, userData.completedTasks, userData.pomodoroSessions]);
 
   // Get color intensity for activity squares
   const getActivityColor = (value: number): string => {
@@ -232,7 +257,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   const monthWeeks = getMonthCalendarData();
-      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  // Helper function to check if a date is today
+  const isToday = (dateStr: string): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return dateStr === today;
+  };
 
     return (
     <TooltipProvider>
@@ -353,13 +384,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                           {day ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className={`w-full h-full rounded-sm transition-colors duration-200 cursor-pointer flex items-center justify-center text-xs font-semibold ${getActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros)}`}>
+                                <div className={`w-full h-full rounded-sm transition-colors duration-200 cursor-pointer flex items-center justify-center text-xs font-semibold relative ${getActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros)}`}>
                                   {displayMode === 'tasks' ? day.todos : day.pomodoros}
+                                  {isToday(day.date) && (
+                                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-white shadow-sm">
+                                    </div>
+                                  )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top">
                                 <div className="text-sm">
-                                  <div className="font-medium">{formatDate(day.date)}</div>
+                                  <div className="font-medium">
+                                    {isToday(day.date) ? 'Today • ' : ''}{formatDate(day.date)}
+                                  </div>
                                   <div>{day.todos} tasks • {day.pomodoros} pomodoros</div>
                                 </div>
                               </TooltipContent>

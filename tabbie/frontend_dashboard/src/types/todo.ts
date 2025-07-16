@@ -21,6 +21,20 @@ export interface Task {
   order: number;
 }
 
+export interface CompletedTask {
+  id: string;
+  title: string;
+  description?: string;
+  categoryId?: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: Date;
+  created: Date;
+  completed: Date;
+  pomodoroSessions: PomodoroSession[];
+  estimatedPomodoros?: number;
+  totalPomodoros: number; // actual completed pomodoros
+}
+
 export interface PomodoroSession {
   id: string;
   taskId: string;
@@ -34,6 +48,7 @@ export interface PomodoroSession {
 export interface UserData {
   categories: Category[];
   tasks: Task[];
+  completedTasks: CompletedTask[];
   pomodoroSessions: PomodoroSession[];
   settings: {
     workDuration: number; // minutes
@@ -77,9 +92,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
+  workDuration: 30,
+  shortBreakDuration: 10,
+  longBreakDuration: 10,
   sessionsUntilLongBreak: 4,
   autoStartBreaks: false,
   autoStartPomodoros: false,

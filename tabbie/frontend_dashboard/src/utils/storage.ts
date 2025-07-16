@@ -1,4 +1,4 @@
-import type { UserData, Category, Task, PomodoroSession } from '@/types/todo';
+import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '@/types/todo';
 
 const STORAGE_KEY = 'tabbie_user_data';
@@ -28,6 +28,7 @@ export const loadUserData = (): UserData => {
       return {
         categories: parsed.categories || DEFAULT_CATEGORIES,
         tasks,
+        completedTasks: parsed.completedTasks || [],
         pomodoroSessions: parsed.pomodoroSessions || [],
         settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       };
@@ -40,6 +41,7 @@ export const loadUserData = (): UserData => {
   return {
     categories: DEFAULT_CATEGORIES,
     tasks: [],
+    completedTasks: [],
     pomodoroSessions: [],
     settings: DEFAULT_SETTINGS,
   };
@@ -112,6 +114,19 @@ export const savePomodoroSession = (session: PomodoroSession): void => {
 export const updateSettings = (settings: Partial<UserData['settings']>): void => {
   const userData = loadUserData();
   userData.settings = { ...userData.settings, ...settings };
+  saveUserData(userData);
+};
+
+export const saveCompletedTask = (completedTask: CompletedTask): void => {
+  const userData = loadUserData();
+  const existingIndex = userData.completedTasks.findIndex(t => t.id === completedTask.id);
+  
+  if (existingIndex >= 0) {
+    userData.completedTasks[existingIndex] = completedTask;
+  } else {
+    userData.completedTasks.push(completedTask);
+  }
+  
   saveUserData(userData);
 };
 

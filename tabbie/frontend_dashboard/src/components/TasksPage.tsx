@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
   import {
     DndContext,
     closestCenter,
@@ -50,9 +52,10 @@ import { CSS } from '@dnd-kit/utilities';
 interface TasksPageProps {
   currentView: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+  onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
 }
 
-const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
+const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPageChange }) => {
   const {
     userData,
     addTask,
@@ -67,6 +70,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
+  const [newTaskEstimatedPomodoros, setNewTaskEstimatedPomodoros] = useState<number>(3);
   const [taskCategory, setTaskCategory] = useState<string | undefined>('work');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
@@ -82,8 +86,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
+  const [editEstimatedPomodoros, setEditEstimatedPomodoros] = useState<number>(3);
   const [editCategory, setEditCategory] = useState<string | undefined>('work');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+
   const createPanelRef = React.useRef<HTMLDivElement>(null);
   const editPanelRef = React.useRef<HTMLDivElement>(null);
   const viewPanelRef = React.useRef<HTMLDivElement>(null);
@@ -219,7 +225,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     // Auto-create task when user starts typing
     if (value.trim() && !autoCreatedTaskId) {
       const categoryId = taskCategory || userData.categories[0]?.id;
-      const newTaskId = addTask(value.trim(), categoryId, '', undefined);
+      const newTaskId = addTask(value.trim(), categoryId, '', undefined, newTaskEstimatedPomodoros);
       setAutoCreatedTaskId(newTaskId);
     } else if (!value.trim() && autoCreatedTaskId) {
       // Delete auto-created task if user clears the title
@@ -248,12 +254,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         categoryId = taskCategory || userData.categories[0]?.id;
       }
       
-      const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate);
+      const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate, newTaskEstimatedPomodoros);
       
       if (!autoCreate) {
         setNewTaskTitle('');
         setNewTaskDescription('');
         setNewTaskDueDate(undefined);
+        setNewTaskEstimatedPomodoros(3);
         setTaskCategory(userData.categories[0]?.id);
         setIsCreatePanelOpen(false);
         setAutoCreatedTaskId(null);
@@ -274,11 +281,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
           description: newTaskDescription,
           dueDate: newTaskDueDate || dueDate,
           categoryId: taskCategory,
+          estimatedPomodoros: newTaskEstimatedPomodoros,
         });
         setIsCreatePanelOpen(false);
         setNewTaskTitle('');
         setNewTaskDescription('');
         setNewTaskDueDate(undefined);
+        setNewTaskEstimatedPomodoros(3);
         setTaskCategory(userData.categories[0]?.id);
         setAutoCreatedTaskId(null);
       } else {
@@ -303,10 +312,23 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     setEditTitle(task.title);
     setEditDescription(task.description || '');
     setEditDueDate(task.dueDate);
+    setEditEstimatedPomodoros(task.estimatedPomodoros || 3);
     setEditCategory(task.categoryId);
     setIsEditPanelOpen(true);
     setIsViewPanelOpen(false);
     // Don't close create panel if it's open - user might want to keep creating
+  };
+
+
+
+  const handleStartPomodoro = (task: Task) => {
+    // Start the pomodoro directly
+    startPomodoro(task);
+    
+    // Navigate to pomodoro page
+    if (onPageChange) {
+      onPageChange('pomodoro');
+    }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -425,6 +447,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         description: editDescription,
         dueDate: editDueDate,
         categoryId: editCategory,
+        estimatedPomodoros: editEstimatedPomodoros,
       });
     }
   };
@@ -476,7 +499,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
     return popoverSelectors.some(selector => target.closest(selector));
   };
 
-  // Update auto-created task when due date, description, or category changes
+  // Update auto-created task when due date, description, category, or estimated pomodoros changes
   React.useEffect(() => {
     if (autoCreatedTaskId && newTaskTitle.trim()) {
       updateTask(autoCreatedTaskId, {
@@ -484,9 +507,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
         description: newTaskDescription,
         dueDate: newTaskDueDate,
         categoryId: taskCategory,
+        estimatedPomodoros: newTaskEstimatedPomodoros,
       });
     }
-  }, [autoCreatedTaskId, newTaskDescription, newTaskDueDate, taskCategory]);
+  }, [autoCreatedTaskId, newTaskDescription, newTaskDueDate, taskCategory, newTaskEstimatedPomodoros]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -693,7 +717,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       onToggleComplete={() => toggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
-                      onStartPomodoro={() => startPomodoro(task)}
+                      onStartPomodoro={() => handleStartPomodoro(task)}
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="today"
@@ -779,7 +803,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       onToggleComplete={() => toggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
-                      onStartPomodoro={() => startPomodoro(task)}
+                      onStartPomodoro={() => handleStartPomodoro(task)}
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="tomorrow"
@@ -858,7 +882,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       onToggleComplete={() => toggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
-                      onStartPomodoro={() => startPomodoro(task)}
+                      onStartPomodoro={() => handleStartPomodoro(task)}
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="next7days"
@@ -919,7 +943,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                       onToggleComplete={() => toggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
-                      onStartPomodoro={() => startPomodoro(task)}
+                      onStartPomodoro={() => handleStartPomodoro(task)}
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="unscheduled"
@@ -991,7 +1015,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   onToggleComplete={() => toggleTaskComplete(task.id)}
                   onView={() => handleViewTask(task)}
                   onEdit={() => handleEditTask(task)}
-                  onStartPomodoro={() => startPomodoro(task)}
+                  onStartPomodoro={() => handleStartPomodoro(task)}
                   onDelete={() => deleteTask(task.id)}
                   isDraggable={true}
                   section={section}
@@ -1021,7 +1045,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             onToggleComplete={() => toggleTaskComplete(task.id)}
             onView={() => handleViewTask(task)}
             onEdit={() => handleEditTask(task)}
-            onStartPomodoro={() => startPomodoro(task)}
+            onStartPomodoro={() => handleStartPomodoro(task)}
             onDelete={() => deleteTask(task.id)}
           />
         ))}
@@ -1380,6 +1404,33 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             />
           </div>
 
+          {/* Estimated Pomodoros */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <span className="text-2xl">🍅</span>
+                <div className="flex-1">
+                  <Slider
+                    value={[newTaskEstimatedPomodoros]}
+                    onValueChange={(value) => setNewTaskEstimatedPomodoros(value[0])}
+                    min={1}
+                    max={15}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+                <span className="min-w-[3rem] text-center font-semibold text-blue-600">
+                  {newTaskEstimatedPomodoros}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Approximately {newTaskEstimatedPomodoros * 30} minutes of focused work
+              </div>
+            </div>
+          </div>
+
           {/* Instructions */}
           <div className="pt-6">
             <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
@@ -1508,6 +1559,36 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             />
           </div>
 
+          {/* Estimated Pomodoros */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <span className="text-2xl">🍅</span>
+                <div className="flex-1">
+                  <Slider
+                    value={[editEstimatedPomodoros]}
+                    onValueChange={(value) => {
+                      setEditEstimatedPomodoros(value[0]);
+                      scheduleAutoSave();
+                    }}
+                    min={1}
+                    max={15}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+                <span className="min-w-[3rem] text-center font-semibold text-blue-600">
+                  {editEstimatedPomodoros}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Approximately {editEstimatedPomodoros * 30} minutes of focused work
+              </div>
+            </div>
+          </div>
+
           {/* Auto-save indicator */}
           <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
             ✨ Changes are automatically saved as you type
@@ -1555,7 +1636,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => viewingTask && startPomodoro(viewingTask)}
+              onClick={() => viewingTask && handleStartPomodoro(viewingTask)}
               className="font-medium"
             >
               <Play className="w-4 h-4 mr-2" />
@@ -1667,6 +1748,30 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
                   </div>
                 </div>
 
+                {/* Pomodoro Progress - Full Width */}
+                <div className="space-y-1 pt-2 border-t border-gray-100">
+                  <label className="text-xs font-medium text-gray-500">Pomodoro Progress</label>
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🍅</span>
+                      <span className="font-medium text-gray-700">
+                        {viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0} / {viewingTask.estimatedPomodoros || 3}
+                      </span>
+                    </div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
+                    </span>
+                  </div>
+                </div>
+
                 {/* Due Date - Full Width if Present */}
                 {viewingTask.dueDate && (
                   <div className="space-y-1 pt-2 border-t border-gray-100">
@@ -1686,6 +1791,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange }) => {
       </div>
 
     </div>
+
+
+
     </TooltipProvider>
   );
 };
@@ -1755,8 +1863,8 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
         {task.dueDate && (
           <Clock className="w-3 h-3 text-gray-400" />
         )}
-        {completedSessions > 0 && (
-          <span className="text-xs text-gray-400">🍅{completedSessions}</span>
+        {(completedSessions > 0 || task.estimatedPomodoros) && (
+          <span className="text-xs text-gray-600">🍅{completedSessions}/{task.estimatedPomodoros || 3}</span>
         )}
       </div>
     </div>
@@ -1984,8 +2092,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
               </TooltipContent>
             </Tooltip>
           )}
-          {completedSessions > 0 && (
-            <span className="text-xs text-gray-400">🍅{completedSessions}</span>
+          {(completedSessions > 0 || task.estimatedPomodoros) && (
+            <span className="text-xs text-gray-600 font-medium">
+              🍅 {completedSessions}/{task.estimatedPomodoros || 3}
+            </span>
           )}
           {task.completed && (
             <span className="text-xs text-green-600 opacity-60">+XP</span>

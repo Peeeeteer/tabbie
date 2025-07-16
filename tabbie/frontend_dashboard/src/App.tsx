@@ -24,6 +24,7 @@ import NotificationsPage from "@/components/NotificationsPage"
 import DashboardPage from "@/components/DashboardPage"
 import ActivityPage from "@/components/ActivityPage"
 import YourTabbiePage from "@/components/YourTabbiePage"
+import PomodoroPage from "@/components/PomodoroPage"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings'>('dashboard');
@@ -463,7 +464,7 @@ export default function Page() {
               fetchLogs={fetchLogs}
             />
           ) : currentPage === 'tasks' ? (
-            <TasksPage currentView={currentView} onViewChange={setCurrentView} />
+            <TasksPage currentView={currentView} onViewChange={setCurrentView} onPageChange={setCurrentPage} />
           ) : currentPage === 'reminders' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">🔔 Reminders</h2>
@@ -474,10 +475,7 @@ export default function Page() {
           ) : currentPage === 'notifications' ? (
             <NotificationsPage />
           ) : currentPage === 'pomodoro' ? (
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold mb-4">🍅 Pomodoro Timer</h2>
-              <p className="text-muted-foreground">Start focused work sessions with Tabbie's guidance!</p>
-            </div>
+            <PomodoroPage />
           ) : currentPage === 'calendar' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📅 Calendar</h2>
