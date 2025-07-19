@@ -64,7 +64,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   
   // State for display mode toggle
-  const [displayMode, setDisplayMode] = useState<'tasks' | 'pomodoros'>('tasks');
+  const [displayMode, setDisplayMode] = useState<'tasks' | 'pomodoros'>('pomodoros');
 
   // Generate activity data from real user data
   useEffect(() => {

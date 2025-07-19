@@ -15,6 +15,8 @@ const PomodoroPage: React.FC = () => {
     stopPomodoro,
     startPomodoro,
     updateTask,
+    startNextSession,
+    completeWorkSession,
   } = useTodo();
 
   const [showTaskSelection, setShowTaskSelection] = useState(false);
@@ -33,10 +35,15 @@ const PomodoroPage: React.FC = () => {
     ? ((totalDuration - pomodoroTimer.timeLeft) / totalDuration) * 100
     : 100;
 
+  // Check if work session is overdue (past scheduled time)
+  const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
+
   const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const absSeconds = Math.abs(seconds);
+    const minutes = Math.floor(absSeconds / 60);
+    const remainingSeconds = absSeconds % 60;
+    const timeStr = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return seconds < 0 ? `+${timeStr}` : timeStr;
   };
 
   const handleStartPomodoroWithTask = () => {
@@ -62,6 +69,10 @@ const PomodoroPage: React.FC = () => {
   const completedSessions = currentTask?.pomodoroSessions?.filter(s => s.completed).length || 0;
   const estimatedSessions = currentTask?.estimatedPomodoros || 3;
   const currentSessionNumber = completedSessions + 1;
+
+  // Check if task is completely done
+  const completedWorkSessions = currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
+  const isTaskComplete = completedWorkSessions >= estimatedSessions;
 
   // Generate progress bars data
   const generateProgressBars = () => {
@@ -119,7 +130,10 @@ const PomodoroPage: React.FC = () => {
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={pomodoroTimer.sessionType === 'work' ? "rgb(239 68 68)" : "rgb(34 197 94)"}
+            stroke={
+              isWorkOverdue ? "rgb(249 115 22)" : // orange for overdue
+              pomodoroTimer.sessionType === 'work' ? "rgb(239 68 68)" : "rgb(34 197 94)"
+            }
             strokeWidth="8"
             fill="none"
             strokeLinecap="round"
@@ -135,16 +149,18 @@ const PomodoroPage: React.FC = () => {
             {formatTime(pomodoroTimer.timeLeft)}
           </div>
           <div className={`text-lg font-medium ${
+            isWorkOverdue ? 'text-orange-600' : 
             pomodoroTimer.sessionType === 'work' ? 'text-red-600' : 'text-green-600'
           }`}>
-            {pomodoroTimer.sessionType === 'work' ? '🍅 Focus Time' : '☕ Break Time'}
+            {isWorkOverdue ? '⏰ Take brake' : 
+             pomodoroTimer.sessionType === 'work' ? '🍅 Focus Time' : '☕ Break Time'}
           </div>
         </div>
       </div>
     );
   };
 
-  if (!currentTask || !pomodoroTimer.currentSession) {
+  if (!currentTask || (!pomodoroTimer.currentSession && !pomodoroTimer.justCompleted)) {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header matching dashboard style */}
@@ -294,6 +310,148 @@ const PomodoroPage: React.FC = () => {
     );
   }
 
+  // Show completion state
+  if (pomodoroTimer.justCompleted && currentTask) {
+    const wasWorkSession = pomodoroTimer.sessionType === 'work';
+    const nextSessionType = wasWorkSession ? 'break' : 'work';
+    
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header matching dashboard style */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-6xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🍅</span>
+                  <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Completion Content */}
+        <div className="max-w-2xl mx-auto px-6 py-12">
+          <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+            
+            {/* Completion Icon and Message */}
+            <div className="text-6xl mb-4">
+              {wasWorkSession ? '🎉' : '☕'}
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {wasWorkSession ? 'Great Work!' : 'Break Complete!'}
+            </h2>
+            
+            <p className="text-gray-600 mb-6">
+              {wasWorkSession 
+                ? `You completed a ${userData.settings.workDuration}-minute focus session on "${currentTask.title}"`
+                : `Your ${userData.settings.shortBreakDuration}-minute break is over`
+              }
+            </p>
+
+            {/* Progress Display */}
+            <div className="mb-8">
+              <div className="flex items-center gap-1 mb-2 justify-center">
+                {progressBars.map((bar, index) => (
+                  <div
+                    key={index}
+                    className={`h-3 rounded-sm transition-all duration-300 ${
+                      bar.type === 'work' ? 'flex-1 max-w-16' : 'w-4'
+                    } ${
+                      bar.isCompleted
+                        ? bar.type === 'work'
+                          ? 'bg-red-500'
+                          : 'bg-green-500'
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="text-sm text-gray-500">
+                {completedWorkSessions} of {estimatedSessions} pomodoros completed
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {isTaskComplete ? (
+              <div className="space-y-4">
+                <div className="text-lg font-medium text-green-600 mb-4">
+                  🎉 Task Completed! All pomodoros finished.
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <Button 
+                    onClick={() => window.history.back()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Back to Tasks
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      // Start a new pomodoro for the same task
+                      startPomodoro(currentTask);
+                    }}
+                  >
+                    Continue Working
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-500 mb-4">
+                  {wasWorkSession 
+                    ? `Next: ${userData.settings.shortBreakDuration}-minute break`
+                    : `Next: ${userData.settings.workDuration}-minute work session`
+                  }
+                </div>
+                
+                <div className="flex gap-3 justify-center">
+                  <Button 
+                    onClick={startNextSession}
+                    className={`${
+                      wasWorkSession 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-red-600 hover:bg-red-700'
+                    } text-white px-8`}
+                  >
+                    {wasWorkSession ? (
+                      <>
+                        <Coffee className="w-4 h-4 mr-2" />
+                        Start Break
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Continue Working
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.history.back()}
+                  >
+                    Back to Tasks
+                  </Button>
+                </div>
+                
+                <div className="text-xs text-gray-400 mt-4">
+                  Next session will start automatically in a few seconds
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header matching dashboard style */}
@@ -386,35 +544,59 @@ const PomodoroPage: React.FC = () => {
 
               {/* Controls */}
               <div className="flex items-center justify-center gap-4">
-                {pomodoroTimer.isRunning ? (
-                  <Button 
-                    onClick={pausePomodoro}
-                    size="lg"
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-8"
-                  >
-                    <Pause className="w-5 h-5 mr-2" />
-                    Pause
-                  </Button>
+                {isWorkOverdue ? (
+                  <>
+                    <Button 
+                      onClick={completeWorkSession}
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                    >
+                      <Coffee className="w-5 h-5 mr-2" />
+                      Take Break
+                    </Button>
+                    <Button 
+                      onClick={stopPomodoro}
+                      variant="outline"
+                      size="lg"
+                      className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Square className="w-5 h-5 mr-2" />
+                      Stop
+                    </Button>
+                  </>
                 ) : (
-                  <Button 
-                    onClick={resumePomodoro}
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700 text-white px-8"
-                  >
-                    <Play className="w-5 h-5 mr-2" />
-                    Resume
-                  </Button>
+                  <>
+                    {pomodoroTimer.isRunning ? (
+                      <Button 
+                        onClick={pausePomodoro}
+                        size="lg"
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+                      >
+                        <Pause className="w-5 h-5 mr-2" />
+                        Pause
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={resumePomodoro}
+                        size="lg"
+                        className="bg-green-600 hover:bg-green-700 text-white px-8"
+                      >
+                        <Play className="w-5 h-5 mr-2" />
+                        Resume
+                      </Button>
+                    )}
+                    
+                    <Button 
+                      onClick={stopPomodoro}
+                      variant="outline"
+                      size="lg"
+                      className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Square className="w-5 h-5 mr-2" />
+                      Stop
+                    </Button>
+                  </>
                 )}
-                
-                <Button 
-                  onClick={stopPomodoro}
-                  variant="outline"
-                  size="lg"
-                  className="px-8 border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <Square className="w-5 h-5 mr-2" />
-                  Stop
-                </Button>
               </div>
             </div>
           </div>
@@ -428,7 +610,8 @@ const PomodoroPage: React.FC = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Type</span>
                   <span className="font-medium">
-                    {pomodoroTimer.sessionType === 'work' ? '🍅 Work' : '☕ Break'}
+                    {isWorkOverdue ? '⏰ Work (Overdue)' :
+                     pomodoroTimer.sessionType === 'work' ? '🍅 Work' : '☕ Break'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -441,7 +624,9 @@ const PomodoroPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Progress</span>
-                  <span className="font-medium">{progress.toFixed(0)}%</span>
+                  <span className="font-medium">
+                    {isWorkOverdue ? 'Overdue' : `${progress.toFixed(0)}%`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -470,7 +655,15 @@ const PomodoroPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border p-4">
               <h3 className="text-sm font-semibold mb-3">💡 Focus Tips</h3>
               <div className="space-y-2 text-xs text-gray-600">
-                {pomodoroTimer.sessionType === 'work' ? (
+                {isWorkOverdue ? (
+                  <>
+                    <p className="text-orange-600 font-medium">⏰ Session is overdue!</p>
+                    <p>• You've worked longer than planned</p>
+                    <p>• Consider taking a break to stay fresh</p>
+                    <p>• Click "Take Break" when ready</p>
+                    <p>• Or continue if you're in the flow</p>
+                  </>
+                ) : pomodoroTimer.sessionType === 'work' ? (
                   <>
                     <p>• Close unnecessary tabs and apps</p>
                     <p>• Turn off notifications</p>

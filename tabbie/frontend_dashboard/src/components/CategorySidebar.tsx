@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Palette, MoreHorizontal, Trophy, Wrench
+  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ interface CategorySidebarProps {
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
   currentPage, 
   onPageChange, 
-  currentView,
+  currentView: _currentView,
   onViewChange,
   activityStats
 }) => {
@@ -57,6 +57,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     currentTask,
     pomodoroTimer,
     resetCategoriesToDefault,
+    pausePomodoro,
+    resumePomodoro,
+    stopPomodoro,
   } = useTodo();
 
   // Enhanced state management
@@ -66,6 +69,18 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   const [newCategoryColor, setNewCategoryColor] = useState('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(false);
+
+  // Helper function to format time
+  const formatTime = (seconds: number): string => {
+    const absSeconds = Math.abs(seconds);
+    const minutes = Math.floor(absSeconds / 60);
+    const remainingSeconds = absSeconds % 60;
+    const timeStr = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return seconds < 0 ? `+${timeStr}` : timeStr;
+  };
+
+  // Check if work session is overdue
+  const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
 
 
   const categoryColors = [
@@ -546,16 +561,75 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
         {(currentTask || pomodoroTimer.currentSession) && (
           <SidebarGroup>
             <SidebarGroupLabel>Current Session</SidebarGroupLabel>
-            <div className="px-2 py-2 bg-blue-50 rounded-lg mx-2">
-              <div className="text-xs font-medium text-blue-900 mb-1">
-                🍅 {currentTask?.title || 'Pomodoro'}
+            <div className="px-3 py-3 bg-blue-50 rounded-lg mx-2">
+              <div 
+                className="text-xs font-medium text-blue-900 mb-2 cursor-pointer hover:text-blue-700 transition-colors"
+                onClick={() => onPageChange('pomodoro')}
+                title="Click to view full pomodoro timer"
+              >
+                {isWorkOverdue ? '⏰' : pomodoroTimer.sessionType === 'work' ? '🍅' : '☕'} {currentTask?.title || 'Pomodoro'}
               </div>
-              <div className="text-xs text-blue-700">
-                {pomodoroTimer.isRunning ? 'Running' : 'Paused'} • {
-                  Math.floor(pomodoroTimer.timeLeft / 60)
-                }:{
-                  (pomodoroTimer.timeLeft % 60).toString().padStart(2, '0')
-                }
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-blue-700">
+                  <div className={`font-mono font-bold ${isWorkOverdue ? 'text-orange-600' : ''}`}>
+                    {formatTime(pomodoroTimer.timeLeft)}
+                  </div>
+                  <div className="mt-1">
+                    {isWorkOverdue ? 'Take brake' : 
+                     pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  {pomodoroTimer.isRunning ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={pausePomodoro}
+                          className="h-6 w-6 p-0 text-blue-700 hover:bg-blue-200"
+                        >
+                          <Pause className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Pause Timer</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={resumePomodoro}
+                          className="h-6 w-6 p-0 text-blue-700 hover:bg-blue-200"
+                        >
+                          <Play className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Resume Timer</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={stopPomodoro}
+                        className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                      >
+                        <Square className="w-3 h-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Stop Session</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </SidebarGroup>

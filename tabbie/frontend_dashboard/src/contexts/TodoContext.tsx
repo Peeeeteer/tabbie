@@ -12,6 +12,7 @@ interface TodoContextType {
     timeLeft: number; // in seconds
     currentSession: PomodoroSession | null;
     sessionType: 'work' | 'shortBreak' | 'longBreak';
+    justCompleted: boolean; // New field to show completion state
   };
   
   // Category methods
@@ -34,6 +35,8 @@ interface TodoContextType {
   resumePomodoro: () => void;
   stopPomodoro: () => void;
   completePomodoro: () => void;
+  completeWorkSession: () => void; // New method to manually complete work sessions
+  startNextSession: () => void; // New method for manual next session start
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
@@ -55,6 +58,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     timeLeft: 0,
     currentSession: null as PomodoroSession | null,
     sessionType: 'work' as 'work' | 'shortBreak' | 'longBreak',
+    justCompleted: false,
   });
 
   // Save to localStorage whenever userData changes
@@ -62,24 +66,95 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveUserData(userData);
   }, [userData]);
 
+  // Update browser tab title during pomodoro sessions
+  useEffect(() => {
+    if (pomodoroTimer.currentSession && currentTask) {
+      const minutes = Math.floor(pomodoroTimer.timeLeft / 60);
+      const seconds = pomodoroTimer.timeLeft % 60;
+      const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      const emoji = pomodoroTimer.sessionType === 'work' ? '🍅' : '☕';
+      const sessionName = pomodoroTimer.sessionType === 'work' ? 'Focus' : 'Break';
+      
+      document.title = `${emoji} ${timeStr} - ${sessionName} | ${currentTask.title} | Tabbie`;
+    } else {
+      document.title = 'Tabbie Dashboard';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.title = 'Tabbie Dashboard';
+    };
+  }, [pomodoroTimer.timeLeft, pomodoroTimer.sessionType, currentTask, pomodoroTimer.currentSession]);
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      // Create a simple beep sound using Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // Frequency in Hz
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Could not play notification sound:', error);
+    }
+  };
+
+  // Show browser notification
+  const showNotification = (title: string, body: string, icon?: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: icon || '/favicon.ico',
+        tag: 'pomodoro-notification'
+      });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: icon || '/favicon.ico',
+            tag: 'pomodoro-notification'
+          });
+        }
+      });
+    }
+  };
+
   // Pomodoro timer countdown effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (pomodoroTimer.isRunning && pomodoroTimer.timeLeft > 0) {
+    if (pomodoroTimer.isRunning) {
       interval = setInterval(() => {
-        setPomodoroTimer(prev => ({
-          ...prev,
-          timeLeft: prev.timeLeft - 1,
-        }));
+        setPomodoroTimer(prev => {
+          const newTimeLeft = prev.timeLeft - 1;
+          
+          // Auto-complete only break sessions when they reach 0
+          if (newTimeLeft === 0 && prev.sessionType === 'shortBreak') {
+            setTimeout(() => completePomodoro(), 0);
+          }
+          
+          return {
+            ...prev,
+            timeLeft: newTimeLeft,
+          };
+        });
       }, 1000);
-    } else if (pomodoroTimer.isRunning && pomodoroTimer.timeLeft === 0) {
-      // Timer finished
-      completePomodoro();
     }
 
     return () => clearInterval(interval);
-  }, [pomodoroTimer.isRunning, pomodoroTimer.timeLeft]);
+  }, [pomodoroTimer.isRunning]);
 
   // Category methods
   const addCategory = (name: string, color: string, icon: string) => {
@@ -90,6 +165,92 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       icon,
       created: new Date(),
     };
+
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setUserData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(task =>
+        task.id === taskId ? { ...task, ...updates, updated: new Date() } : task
+      ),
+    }));
+  };
+
+  const deleteTask = (taskId: string) => {
+    setUserData(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(task => task.id !== taskId),
+      pomodoroSessions: prev.pomodoroSessions.filter(session => session.taskId !== taskId),
+    }));
+    if (currentTask?.id === taskId) {
+      setCurrentTask(null);
+      stopPomodoro();
+    }
+  };
+
+  const toggleTaskComplete = (taskId: string) => {
+    const task = userData.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (!task.completed) {
+      // Task is being completed - move to completedTasks
+      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+      
+      const completedTask: CompletedTask = {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        categoryId: task.categoryId,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        created: task.created,
+        completed: new Date(),
+        pomodoroSessions: task.pomodoroSessions || [],
+        estimatedPomodoros: task.estimatedPomodoros,
+        totalPomodoros: completedPomodoros,
+      };
+
+      setUserData(prev => ({
+        ...prev,
+        tasks: prev.tasks.filter(t => t.id !== taskId),
+        completedTasks: [...prev.completedTasks, completedTask],
+      }));
+    } else {
+      // Task is being uncompleted - move back to tasks
+      const completedTask = userData.completedTasks.find(t => t.id === taskId);
+      if (completedTask) {
+        const restoredTask: Task = {
+          id: completedTask.id,
+          title: completedTask.title,
+          description: completedTask.description,
+          categoryId: completedTask.categoryId,
+          completed: false,
+          priority: completedTask.priority,
+          dueDate: completedTask.dueDate,
+          created: completedTask.created,
+          updated: new Date(),
+          pomodoroSessions: completedTask.pomodoroSessions || [],
+          estimatedPomodoros: completedTask.estimatedPomodoros,
+          order: Math.max(...userData.tasks.map(t => t.order), 0) + 1,
+        };
+
+        setUserData(prev => ({
+          ...prev,
+          tasks: [...prev.tasks, restoredTask],
+          completedTasks: prev.completedTasks.filter(t => t.id !== taskId),
+        }));
+      }
+    }
+  };
+
+  const reorderTasks = (taskIds: string[]) => {
+    setUserData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(task => {
+        const newOrder = taskIds.indexOf(task.id);
+        return newOrder >= 0 ? { ...task, order: newOrder, updated: new Date() } : task;
+      }),
+    }));
+  };
     setUserData(prev => ({
       ...prev,
       categories: [...prev.categories, newCategory],
@@ -255,6 +416,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       timeLeft: userData.settings.workDuration * 60, // convert to seconds
       currentSession: session,
       sessionType: 'work',
+      justCompleted: false,
     });
   };
 
@@ -285,8 +447,64 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       timeLeft: 0,
       currentSession: null,
       sessionType: 'work',
+      justCompleted: false,
     });
     setCurrentTask(null);
+  };
+
+  const startNextSession = () => {
+    if (!currentTask) return;
+
+    const completedSessions = currentTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
+    const isLastSession = completedSessions >= (currentTask.estimatedPomodoros || 3);
+    
+    if (pomodoroTimer.sessionType === 'work' && !isLastSession) {
+      // Start break after work session
+      const breakSession: PomodoroSession = {
+        id: generateId(),
+        taskId: currentTask.id,
+        started: new Date(),
+        duration: userData.settings.shortBreakDuration,
+        completed: false,
+        type: 'shortBreak',
+      };
+
+      setPomodoroTimer({
+        isRunning: true,
+        timeLeft: userData.settings.shortBreakDuration * 60,
+        currentSession: breakSession,
+        sessionType: 'shortBreak',
+        justCompleted: false,
+      });
+    } else if (pomodoroTimer.sessionType === 'shortBreak') {
+      // Start next work session after break
+      const workSession: PomodoroSession = {
+        id: generateId(),
+        taskId: currentTask.id,
+        started: new Date(),
+        duration: userData.settings.workDuration,
+        completed: false,
+        type: 'work',
+      };
+
+      setPomodoroTimer({
+        isRunning: true,
+        timeLeft: userData.settings.workDuration * 60,
+        currentSession: workSession,
+        sessionType: 'work',
+        justCompleted: false,
+      });
+    } else {
+      // Task is completed
+      setPomodoroTimer({
+        isRunning: false,
+        timeLeft: 0,
+        currentSession: null,
+        sessionType: 'work',
+        justCompleted: false,
+      });
+      setCurrentTask(null);
+    }
   };
 
   const completePomodoro = () => {
@@ -309,17 +527,63 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pomodoroSessions: [...currentTask.pomodoroSessions, completedSession],
         });
       }
-    }
 
-    setPomodoroTimer({
-      isRunning: false,
-      timeLeft: 0,
-      currentSession: null,
-      sessionType: 'work',
-    });
-    
-    // Keep current task for potential next session
-    // setCurrentTask(null); // Don't clear, user might want to start another session
+      // Play notification sound and show notification
+      playNotificationSound();
+      
+      if (pomodoroTimer.sessionType === 'work') {
+        showNotification(
+          '🍅 Pomodoro Complete!', 
+          `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. Time for a break!`
+        );
+      } else {
+        showNotification(
+          '☕ Break Complete!', 
+          'Break time is over. Ready to get back to work?'
+        );
+      }
+
+      // Check if this was the last session
+      const completedWorkSessions = (currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) + 
+                                   (pomodoroTimer.sessionType === 'work' ? 1 : 0);
+      const isLastSession = completedWorkSessions >= (currentTask?.estimatedPomodoros || 3);
+
+      if (pomodoroTimer.sessionType === 'work' && isLastSession) {
+        // Task completed!
+        showNotification(
+          '🎉 Task Complete!', 
+          `Congratulations! You completed all pomodoros for "${currentTask?.title}"`
+        );
+        
+        setPomodoroTimer({
+          isRunning: false,
+          timeLeft: 0,
+          currentSession: null,
+          sessionType: 'work',
+          justCompleted: true,
+        });
+        // Don't clear currentTask yet, keep it for display
+      } else {
+        // Set to completed state, will auto-start next session after 3 seconds
+        setPomodoroTimer(prev => ({
+          ...prev,
+          isRunning: false,
+          timeLeft: 0,
+          justCompleted: true,
+        }));
+
+        // Auto-start next session after a short delay
+        setTimeout(() => {
+          startNextSession();
+        }, 3000);
+      }
+    }
+  };
+
+  const completeWorkSession = () => {
+    if (pomodoroTimer.sessionType === 'work' && pomodoroTimer.currentSession) {
+      completePomodoro();
+    }
   };
 
   const value: TodoContextType = {
@@ -345,6 +609,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resumePomodoro,
     stopPomodoro,
     completePomodoro,
+    completeWorkSession,
+    startNextSession,
   };
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>;
