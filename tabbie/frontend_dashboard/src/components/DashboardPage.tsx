@@ -88,7 +88,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         
         // Count completed pomodoros for this day
         const pomodorosCompletedThisDay = userData.pomodoroSessions.filter(session => {
-          if (!session.completed || !session.ended) return false;
+          if (!session.completed || !session.ended || session.type !== 'work') return false;
           const sessionDate = new Date(session.ended).toISOString().split('T')[0];
           return sessionDate === dateStr;
         }).length;
@@ -121,7 +121,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }).length;
 
     const todayPomodoros = userData.pomodoroSessions.filter(session => {
-      if (!session.completed || !session.ended) return false;
+      if (!session.completed || !session.ended || session.type !== 'work') return false;
       const sessionDate = new Date(session.ended).toISOString().split('T')[0];
       return sessionDate === today;
     }).length;
@@ -133,7 +133,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }).length;
 
     const weekPomodoros = userData.pomodoroSessions.filter(session => {
-      if (!session.completed || !session.ended) return false;
+      if (!session.completed || !session.ended || session.type !== 'work') return false;
       const sessionDate = new Date(session.ended);
       return sessionDate >= weekAgo;
     }).length;
@@ -145,7 +145,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }).length;
 
     const monthPomodoros = userData.pomodoroSessions.filter(session => {
-      if (!session.completed || !session.ended) return false;
+      if (!session.completed || !session.ended || session.type !== 'work') return false;
       const sessionDate = new Date(session.ended);
       return sessionDate >= monthAgo;
     }).length;
@@ -157,7 +157,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }).length;
 
     const yearPomodoros = userData.pomodoroSessions.filter(session => {
-      if (!session.completed || !session.ended) return false;
+      if (!session.completed || !session.ended || session.type !== 'work') return false;
       const sessionDate = new Date(session.ended);
       return sessionDate >= yearAgo;
     }).length;

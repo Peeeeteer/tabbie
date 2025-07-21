@@ -1815,7 +1815,7 @@ const DroppableSection: React.FC<{
 
 const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
   const { userData } = useTodo();
-  const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+  const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   
   return (
     <div className="flex items-center gap-3 py-2 px-3 bg-white shadow-lg rounded-lg border border-gray-200 cursor-grabbing transform">
@@ -1916,7 +1916,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   dragHandle,
 }) => {
   const { userData, updateTask } = useTodo();
-  const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+  const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   
   // Get Pomodoro timer state from context
   const { pomodoroTimer } = useTodo();

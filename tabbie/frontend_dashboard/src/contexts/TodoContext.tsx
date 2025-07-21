@@ -381,7 +381,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!task.completed) {
       // Task is being completed - move to completedTasks
-      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
       
       const completedTask: CompletedTask = {
         id: task.id,
@@ -528,7 +528,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!task.completed) {
       // Task is being completed - move to completedTasks
-      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
       
       const completedTask: CompletedTask = {
         id: task.id,

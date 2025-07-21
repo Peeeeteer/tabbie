@@ -234,7 +234,7 @@ const PomodoroPage: React.FC = () => {
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {availableTasks.map((task) => {
                         const category = userData.categories.find(c => c.id === task.categoryId);
-                        const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+                        const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
                         const totalEstimated = task.estimatedPomodoros || 3;
                         
                         return (

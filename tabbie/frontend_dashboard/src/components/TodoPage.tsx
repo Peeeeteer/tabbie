@@ -358,7 +358,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
     }
   };
 
-  const completedSessions = task.pomodoroSessions?.filter(s => s.completed).length || 0;
+          const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
 
   return (
     <div className={`
