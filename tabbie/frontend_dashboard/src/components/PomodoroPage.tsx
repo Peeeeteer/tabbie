@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee } from 'lucide-react';
+import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { useTodo } from '@/contexts/TodoContext';
+import { debugPomodoroState } from '@/utils/storage';
+import { testPomodoroPersistence, testPageRefreshScenario } from '@/utils/pomodoro-persistence-test';
 
 const PomodoroPage: React.FC = () => {
   const {
@@ -17,7 +19,22 @@ const PomodoroPage: React.FC = () => {
     updateTask,
     startNextSession,
     completeWorkSession,
+    skipBreak,
   } = useTodo();
+
+  // Test sound function
+  const testSound = () => {
+    try {
+      console.log('🔊 Testing sound...');
+      const audio = new Audio('/sound.mp3');
+      audio.volume = 0.7;
+      audio.play().catch(error => {
+        console.log('🔊 Test sound failed:', error);
+      });
+    } catch (error) {
+      console.log('🔊 Test sound error:', error);
+    }
+  };
 
   const [showTaskSelection, setShowTaskSelection] = useState(false);
   const [selectedTaskForPomodoro, setSelectedTaskForPomodoro] = useState<string>('');
@@ -35,7 +52,7 @@ const PomodoroPage: React.FC = () => {
     ? ((totalDuration - pomodoroTimer.timeLeft) / totalDuration) * 100
     : 100;
 
-  // Check if work session is overdue (past scheduled time)
+  // Check if work session is overdue (past scheduled time) - only work sessions can be overdue
   const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
 
   const formatTime = (seconds: number): string => {
@@ -66,36 +83,37 @@ const PomodoroPage: React.FC = () => {
   };
 
   // Calculate session info
-  const completedSessions = currentTask?.pomodoroSessions?.filter(s => s.completed).length || 0;
+  const completedWorkSessions = currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   const estimatedSessions = currentTask?.estimatedPomodoros || 3;
-  const currentSessionNumber = completedSessions + 1;
+  
+  // Calculate current session number (work sessions only)
+  const currentSessionNumber = completedWorkSessions + 1;
 
   // Check if task is completely done
-  const completedWorkSessions = currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   const isTaskComplete = completedWorkSessions >= estimatedSessions;
 
-  // Generate progress bars data
+  // Generate progress bars data - work sessions and breaks
   const generateProgressBars = () => {
     if (!currentTask) return [];
     
     const bars = [];
-    const totalSessions = estimatedSessions;
+    const totalWorkSessions = estimatedSessions;
     
-    for (let i = 0; i < totalSessions; i++) {
+    for (let i = 0; i < totalWorkSessions; i++) {
       // Work session
       bars.push({
         type: 'work',
-        isCompleted: i < completedSessions,
-        isCurrent: i === completedSessions && pomodoroTimer.sessionType === 'work',
+        isCompleted: i < completedWorkSessions,
+        isCurrent: i === completedWorkSessions && pomodoroTimer.sessionType === 'work',
         index: i
       });
       
       // Break session (except after the last work session)
-      if (i < totalSessions - 1) {
+      if (i < totalWorkSessions - 1) {
         bars.push({
           type: 'break',
-          isCompleted: i < completedSessions,
-          isCurrent: i === completedSessions - 1 && pomodoroTimer.sessionType !== 'work',
+          isCompleted: i < completedWorkSessions,
+          isCurrent: i === completedWorkSessions - 1 && pomodoroTimer.sessionType === 'shortBreak',
           index: i
         });
       }
@@ -166,15 +184,25 @@ const PomodoroPage: React.FC = () => {
         {/* Header matching dashboard style */}
         <div className="bg-white shadow-sm border-b">
           <div className="max-w-6xl mx-auto px-6 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🍅</span>
-                <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🍅</span>
+                  <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
+                </div>
               </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={debugPomodoroState}
+                title="Debug persistence state"
+              >
+                <Bug className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -331,6 +359,14 @@ const PomodoroPage: React.FC = () => {
                   <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
                 </div>
               </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={debugPomodoroState}
+                title="Debug persistence state"
+              >
+                <Bug className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -433,6 +469,17 @@ const PomodoroPage: React.FC = () => {
                     )}
                   </Button>
                   
+                  {!wasWorkSession && (
+                    <Button 
+                      onClick={skipBreak}
+                      variant="outline"
+                      className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Skip Break
+                    </Button>
+                  )}
+                  
                   <Button 
                     variant="outline"
                     onClick={() => window.history.back()}
@@ -457,21 +504,60 @@ const PomodoroPage: React.FC = () => {
       {/* Header matching dashboard style */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🍅</span>
-                <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
+                      <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🍅</span>
+                  <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  Work Session {currentSessionNumber} of {estimatedSessions}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={debugPomodoroState}
+                    title="Debug persistence state"
+                  >
+                    <Bug className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={testPomodoroPersistence}
+                    title="Test persistence"
+                    className="text-xs"
+                  >
+                    Test
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={testPageRefreshScenario}
+                    title="Test page refresh"
+                    className="text-xs"
+                  >
+                    Refresh
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={testSound}
+                    title="Test sound"
+                    className="text-xs"
+                  >
+                    🔊
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="text-sm text-gray-600">
-              Session {currentSessionNumber} of {estimatedSessions}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -585,7 +671,18 @@ const PomodoroPage: React.FC = () => {
                         Resume
                       </Button>
                     )}
-                    
+                    {/* Skip Break button for break sessions */}
+                    {pomodoroTimer.sessionType === 'shortBreak' && (
+                      <Button
+                        onClick={skipBreak}
+                        size="lg"
+                        variant="outline"
+                        className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                      >
+                        <Play className="w-5 h-5 mr-2" />
+                        Skip Break
+                      </Button>
+                    )}
                     <Button 
                       onClick={stopPomodoro}
                       variant="outline"
@@ -637,16 +734,16 @@ const PomodoroPage: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Completed</span>
-                  <span className="font-medium">{completedSessions} / {estimatedSessions}</span>
+                  <span className="font-medium">{completedWorkSessions} / {estimatedSessions}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-red-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((completedSessions / estimatedSessions) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((completedWorkSessions / estimatedSessions) * 100, 100)}%` }}
                   />
                 </div>
                 <div className="text-xs text-gray-500">
-                  {Math.max(0, estimatedSessions - completedSessions)} sessions remaining
+                  {Math.max(0, estimatedSessions - completedWorkSessions)} sessions remaining
                 </div>
               </div>
             </div>

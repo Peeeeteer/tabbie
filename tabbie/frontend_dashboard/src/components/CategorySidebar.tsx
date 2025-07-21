@@ -33,8 +33,8 @@ import { useTodo } from '@/contexts/TodoContext';
 interface CategorySidebarProps {
   currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings';
   onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
-      currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+      currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
+  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
     totalXP: number;
     totalPomodoros: number;
@@ -483,7 +483,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                             setSelectedCategory(category.id);
                             onViewChange?.(category.id as any);
                           }}
-                          isActive={selectedCategoryId === category.id}
+                          isActive={_currentView === category.id}
                           className="flex-1"
                         >
                           <div className="flex items-center gap-2">

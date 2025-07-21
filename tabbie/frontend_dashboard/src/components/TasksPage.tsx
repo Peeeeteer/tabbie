@@ -50,8 +50,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 interface TasksPageProps {
-  currentView: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal';
-  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal') => void;
+  currentView: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
+  onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
 }
 
@@ -89,6 +89,16 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [editEstimatedPomodoros, setEditEstimatedPomodoros] = useState<number>(3);
   const [editCategory, setEditCategory] = useState<string | undefined>('work');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Function to reset the create task form
+  const resetCreateTaskForm = () => {
+    setNewTaskTitle('');
+    setNewTaskDescription('');
+    setNewTaskDueDate(undefined);
+    setNewTaskEstimatedPomodoros(3);
+    setTaskCategory(undefined);
+    setAutoCreatedTaskId(null);
+  };
 
   const createPanelRef = React.useRef<HTMLDivElement>(null);
   const editPanelRef = React.useRef<HTMLDivElement>(null);
@@ -257,13 +267,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate, newTaskEstimatedPomodoros);
       
       if (!autoCreate) {
-        setNewTaskTitle('');
-        setNewTaskDescription('');
-        setNewTaskDueDate(undefined);
-        setNewTaskEstimatedPomodoros(3);
-        setTaskCategory(userData.categories[0]?.id);
+        resetCreateTaskForm();
         setIsCreatePanelOpen(false);
-        setAutoCreatedTaskId(null);
       }
       
       return newTaskId;
@@ -284,12 +289,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           estimatedPomodoros: newTaskEstimatedPomodoros,
         });
         setIsCreatePanelOpen(false);
-        setNewTaskTitle('');
-        setNewTaskDescription('');
-        setNewTaskDueDate(undefined);
-        setNewTaskEstimatedPomodoros(3);
-        setTaskCategory(userData.categories[0]?.id);
-        setAutoCreatedTaskId(null);
+        resetCreateTaskForm();
       } else {
         // Create new task normally
         handleAddTask(dueDate);
@@ -297,6 +297,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     }
     if (e.key === 'Escape') {
       setIsCreatePanelOpen(false);
+      resetCreateTaskForm();
     }
   };
 
@@ -523,6 +524,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       // Close panels when clicking outside
       if (isCreatePanelOpen) {
         setIsCreatePanelOpen(false);
+        resetCreateTaskForm();
       }
       if (isEditPanelOpen) {
         handleCancelEdit();
@@ -542,6 +544,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           handleCancelEdit();
         } else if (isCreatePanelOpen) {
           setIsCreatePanelOpen(false);
+          resetCreateTaskForm();
         }
       }
     };
@@ -1061,6 +1064,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   );
 
   const renderContent = () => {
+    // Check if currentView is a category ID
+    const currentCategory = userData.categories.find(cat => cat.id === currentView);
+    
     switch (currentView) {
       case 'today':
         return (
@@ -1082,19 +1088,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       case 'completed':
         return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed');
       
-      case 'work':
-        return renderCategoryTasks('work', '💼', 'Work');
-      
-      case 'coding':
-        return renderCategoryTasks('coding', '💻', 'Coding');
-      
-      case 'hobby':
-        return renderCategoryTasks('hobby', '🎨', 'Hobby');
-      
-      case 'personal':
-        return renderCategoryTasks('personal', '🏠', 'Personal');
-      
       default:
+        // Handle dynamic categories
+        if (currentCategory) {
+          return renderCategoryTasks(currentCategory.id, currentCategory.icon, currentCategory.name);
+        }
         return renderNext7DaysWithCrossDrag();
     }
   };
@@ -1102,16 +1100,20 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
 
   const getViewTitle = () => {
+    // Check if currentView is a category ID
+    const currentCategory = userData.categories.find(cat => cat.id === currentView);
+    
     switch (currentView) {
       case 'today': return 'Today';
       case 'tomorrow': return 'Tomorrow';
       case 'next7days': return 'Overview';
       case 'completed': return 'Completed';
-      case 'work': return 'Work Tasks';
-      case 'coding': return 'Coding Tasks';
-      case 'hobby': return 'Hobby Tasks';
-      case 'personal': return 'Personal Tasks';
-      default: return 'Tasks';
+      default:
+        // Handle dynamic categories
+        if (currentCategory) {
+          return `${currentCategory.name} Tasks`;
+        }
+        return 'Tasks';
     }
   };
 
@@ -1216,66 +1218,41 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 {/* Category Dropdown and Add Task Button - Next to other tabs */}
                 <div className="pb-3 flex items-center gap-3">
-                  <Select value={['work', 'coding', 'hobby', 'personal'].includes(currentView) ? currentView : ''} onValueChange={(value) => onViewChange?.(value as 'work' | 'coding' | 'hobby' | 'personal')}>
+                  <Select 
+                    value={userData.categories.some(cat => cat.id === currentView) ? currentView : ''} 
+                    onValueChange={(value) => onViewChange?.(value as any)}
+                  >
                     <SelectTrigger className="w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                       <SelectValue placeholder="Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="work">
-                        <div className="flex items-center gap-2">
-                          <span>💼</span>
-                          <span>Work</span>
-                          {getCategoryTaskCount('work') > 0 && (
-                            <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
-                              {getCategoryTaskCount('work')}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="coding">
-                        <div className="flex items-center gap-2">
-                          <span>💻</span>
-                          <span>Coding</span>
-                          {getCategoryTaskCount('coding') > 0 && (
-                            <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
-                              {getCategoryTaskCount('coding')}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="hobby">
-                        <div className="flex items-center gap-2">
-                          <span>🎨</span>
-                          <span>Hobby</span>
-                          {getCategoryTaskCount('hobby') > 0 && (
-                            <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
-                              {getCategoryTaskCount('hobby')}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="personal">
-                        <div className="flex items-center gap-2">
-                          <span>🏠</span>
-                          <span>Personal</span>
-                          {getCategoryTaskCount('personal') > 0 && (
-                            <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
-                              {getCategoryTaskCount('personal')}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
+                      {userData.categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{category.icon}</span>
+                            <span>{category.name}</span>
+                            {getCategoryTaskCount(category.id) > 0 && (
+                              <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
+                                {getCategoryTaskCount(category.id)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
                   <Button 
                     onClick={() => {
+                      // Reset form first
+                      resetCreateTaskForm();
+                      
                       setIsCreatePanelOpen(true);
                       setIsViewPanelOpen(false);
                       setViewingTask(null);
                       
                       // Auto-select category based on current view
-                      if (['work', 'coding', 'hobby', 'personal'].includes(currentView)) {
+                      if (userData.categories.some(cat => cat.id === currentView)) {
                         setTaskCategory(currentView);
                       }
                     }}
@@ -1312,7 +1289,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => setIsCreatePanelOpen(false)}
+              onClick={() => {
+                setIsCreatePanelOpen(false);
+                resetCreateTaskForm();
+              }}
               className="text-gray-500 hover:text-gray-700"
             >
               <X className="w-5 h-5" />
@@ -1755,19 +1735,19 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🍅</span>
                       <span className="font-medium text-gray-700">
-                        {viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0} / {viewingTask.estimatedPomodoros || 3}
+                        {viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0} / {viewingTask.estimatedPomodoros || 3}
                       </span>
                     </div>
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-red-500 h-2 rounded-full transition-all duration-300"
                         style={{
-                          width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
+                          width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
                         }}
                       />
                     </div>
                     <span className="text-xs text-gray-500">
-                      {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed).length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
+                      {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
                     </span>
                   </div>
                 </div>

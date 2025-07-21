@@ -15,20 +15,22 @@ export default defineConfig({
     include: ['class-variance-authority'],
   },
   server: {
+    port: 3000,
+    host: true, // Allow external connections
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8080', // ESP32 will likely use port 8080
         changeOrigin: true,
         configure: (proxy, options) => {
-          // Fallback for when API server isn't running
+          // Fallback for when ESP32 server isn't running
           proxy.on('error', (err, req, res) => {
-            console.log('API server not available, using mock responses');
+            console.log('ESP32 server not available, using mock responses');
             if (req.url?.includes('/api/setup/upload')) {
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ success: true, message: 'Mock upload success' }));
             } else if (req.url?.includes('/api/setup/discover')) {
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ip: '192.168.2.93' })); // Mock discovered IP
+              res.end(JSON.stringify({ ip: '192.168.1.100' })); // Mock discovered ESP32 IP
             }
           });
         }

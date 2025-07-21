@@ -93,7 +93,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
 
 export const DEFAULT_SETTINGS = {
   workDuration: 30,
-  shortBreakDuration: 10,
+  shortBreakDuration: 5,
   longBreakDuration: 10,
   sessionsUntilLongBreak: 4,
   autoStartBreaks: false,

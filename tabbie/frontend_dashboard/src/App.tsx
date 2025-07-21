@@ -28,7 +28,7 @@ import PomodoroPage from "@/components/PomodoroPage"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings'>('dashboard');
-  const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | 'work' | 'coding' | 'hobby' | 'personal'>('next7days');
+  const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
   const [logs, setLogs] = React.useState<string[]>([]);

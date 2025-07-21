@@ -2,6 +2,7 @@ import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '@/types/todo';
 
 const STORAGE_KEY = 'tabbie_user_data';
+const POMODORO_STATE_KEY = 'tabbie_pomodoro_state';
 
 // Helper function to revive Date objects from JSON
 const reviveDate = (_key: string, value: unknown) => {
@@ -9,6 +10,92 @@ const reviveDate = (_key: string, value: unknown) => {
     return new Date(value);
   }
   return value;
+};
+
+// Pomodoro state interface for persistence
+export interface PomodoroState {
+  isRunning: boolean;
+  timeLeft: number; // in seconds
+  currentSession: PomodoroSession | null;
+  sessionType: 'work' | 'shortBreak' | 'longBreak';
+  justCompleted: boolean;
+  currentTaskId: string | null;
+  startedAt: number | null; // timestamp when session started
+  pausedAt: number | null; // timestamp when session was paused
+}
+
+// Load pomodoro state from localStorage
+export const loadPomodoroState = (): PomodoroState | null => {
+  try {
+    const storedState = localStorage.getItem(POMODORO_STATE_KEY);
+    if (storedState) {
+      const parsed = JSON.parse(storedState, reviveDate) as PomodoroState;
+      
+      // If there's a running session, calculate the actual time left
+      if (parsed.isRunning && parsed.startedAt && parsed.currentSession) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - parsed.startedAt) / 1000);
+        const totalDuration = parsed.currentSession.duration * 60; // convert to seconds
+        const actualTimeLeft = Math.max(0, totalDuration - elapsedSeconds);
+        
+        // If session has actually completed, mark it as not running
+        if (actualTimeLeft === 0) {
+          return {
+            ...parsed,
+            isRunning: false,
+            timeLeft: 0,
+            justCompleted: true,
+          };
+        }
+        
+        return {
+          ...parsed,
+          timeLeft: actualTimeLeft,
+        };
+      }
+      
+      // If session was paused, restore the paused time
+      if (!parsed.isRunning && parsed.pausedAt && parsed.currentSession) {
+        return parsed;
+      }
+      
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Error loading pomodoro state:', error);
+  }
+  
+  return null;
+};
+
+// Save pomodoro state to localStorage
+export const savePomodoroState = (state: PomodoroState): void => {
+  try {
+    localStorage.setItem(POMODORO_STATE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('Error saving pomodoro state:', error);
+  }
+};
+
+// Clear pomodoro state from localStorage
+export const clearPomodoroState = (): void => {
+  try {
+    localStorage.removeItem(POMODORO_STATE_KEY);
+  } catch (error) {
+    console.error('Error clearing pomodoro state:', error);
+  }
+};
+
+// Debug function to check persistence state
+export const debugPomodoroState = (): void => {
+  const savedState = loadPomodoroState();
+  const userData = loadUserData();
+  
+  console.log('=== Pomodoro State Debug ===');
+  console.log('Saved pomodoro state:', savedState);
+  console.log('User data tasks:', userData.tasks.length);
+  console.log('User data pomodoro sessions:', userData.pomodoroSessions.length);
+  console.log('===========================');
 };
 
 // Load user data from local storage
