@@ -557,25 +557,52 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
           </SidebarGroup>
         )}
 
-        {/* Current Pomodoro Session */}
+                {/* Current Pomodoro Session */}
         {(currentTask || pomodoroTimer.currentSession) && (
           <SidebarGroup>
             <SidebarGroupLabel>Current Session</SidebarGroupLabel>
-            <div className="px-3 py-3 bg-blue-50 rounded-lg mx-2">
+            <div className="px-3 py-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg mx-2 border border-blue-200 shadow-sm">
               <div 
-                className="text-xs font-medium text-blue-900 mb-2 cursor-pointer hover:text-blue-700 transition-colors"
+                className="text-sm font-semibold text-blue-900 mb-3 cursor-pointer hover:text-blue-700 transition-colors flex items-center gap-2"
                 onClick={() => onPageChange('pomodoro')}
                 title="Click to view full pomodoro timer"
               >
-                {isWorkOverdue ? '⏰' : pomodoroTimer.sessionType === 'work' ? '🍅' : '☕'} {currentTask?.title || 'Pomodoro'}
+                <span className="text-lg">
+                  {isWorkOverdue ? '⏰' : pomodoroTimer.sessionType === 'work' ? '🍅' : '☕'}
+                </span>
+                <span className="truncate">{currentTask?.title || 'Pomodoro'}</span>
               </div>
+              
+              {/* Progress Bar */}
+              {pomodoroTimer.currentSession && (
+                <div className="mb-3">
+                  <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        isWorkOverdue ? 'bg-orange-500' : 'bg-blue-500'
+                      }`}
+                      style={{ 
+                        width: `${Math.max(0, Math.min(100, 
+                          ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
+                          (pomodoroTimer.currentSession.duration * 60)) * 100
+                        ))}%` 
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {Math.round(((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
+                      (pomodoroTimer.currentSession.duration * 60)) * 100)}% complete
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
-                <div className="text-xs text-blue-700">
-                  <div className={`font-mono font-bold ${isWorkOverdue ? 'text-orange-600' : ''}`}>
+                <div className="text-sm text-blue-700">
+                  <div className={`font-mono font-bold text-lg ${isWorkOverdue ? 'text-orange-600' : 'text-blue-800'}`}>
                     {formatTime(pomodoroTimer.timeLeft)}
                   </div>
-                  <div className="mt-1">
-                    {isWorkOverdue ? 'Take brake' : 
+                  <div className="mt-1 text-xs font-medium">
+                    {isWorkOverdue ? 'Take break' : 
                      pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
                   </div>
                 </div>
@@ -588,9 +615,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={pausePomodoro}
-                          className="h-6 w-6 p-0 text-blue-700 hover:bg-blue-200"
+                          className="h-8 w-8 p-0 text-blue-700 hover:bg-blue-200"
                         >
-                          <Pause className="w-3 h-3" />
+                          <Pause className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
@@ -604,9 +631,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={resumePomodoro}
-                          className="h-6 w-6 p-0 text-blue-700 hover:bg-blue-200"
+                          className="h-8 w-8 p-0 text-blue-700 hover:bg-blue-200"
                         >
-                          <Play className="w-3 h-3" />
+                          <Play className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
@@ -620,9 +647,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                         size="sm" 
                         variant="ghost" 
                         onClick={stopPomodoro}
-                        className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                        className="h-8 w-8 p-0 text-red-600 hover:bg-red-100"
                       >
-                        <Square className="w-3 h-3" />
+                        <Square className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">

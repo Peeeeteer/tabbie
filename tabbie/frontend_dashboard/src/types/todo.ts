@@ -50,6 +50,7 @@ export interface UserData {
   tasks: Task[];
   completedTasks: CompletedTask[];
   pomodoroSessions: PomodoroSession[];
+  totalXP?: number; // Total XP earned from pomodoro sessions
   settings: {
     workDuration: number; // minutes
     shortBreakDuration: number; // minutes

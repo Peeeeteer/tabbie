@@ -40,31 +40,56 @@ export default function Page() {
   const [isHealthChecking, setIsHealthChecking] = React.useState(false);
   const [isReconnecting, setIsReconnecting] = React.useState(false);
 
-  // Calculate activity stats for sidebar (memoized for stability)
-  const activityStats = React.useMemo(() => {
-    const existingData = JSON.parse(localStorage.getItem('tabbie-activity') || '{}');
-    let totalXP = 0;
-    let totalPomodoros = 0;
+  // Activity stats state that updates when user data changes
+  const [activityStats, setActivityStats] = React.useState({ totalXP: 0, totalPomodoros: 0 });
 
-    // Get data for the last year
-    for (let i = 364; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+  // Update activity stats when user data changes
+  React.useEffect(() => {
+    const updateActivityStats = () => {
+      const userDataStr = localStorage.getItem('tabbie-user-data');
+      if (!userDataStr) {
+        setActivityStats({ totalXP: 0, totalPomodoros: 0 });
+        return;
+      }
       
-      const dayData = existingData[dateStr] || { todos: 0, pomodoros: 0 };
-      
-      // Stable sample data based on date (for demo purposes)
-      const seed = dateStr.split('-').reduce((a, b) => a + parseInt(b), 0);
-      const sampleTodos = (seed * 7) % 5 + 1;
-      const samplePomodoros = (seed * 3) % 3 + 1;
-      
-      totalXP += (dayData.todos || sampleTodos) + (dayData.pomodoros || samplePomodoros);
-      totalPomodoros += dayData.pomodoros || samplePomodoros;
-    }
+      try {
+        const userData = JSON.parse(userDataStr);
+        
+        // Calculate actual XP from user data
+        const totalXP = userData.totalXP || 0;
+        
+        // Calculate actual completed pomodoros
+        const totalPomodoros = userData.pomodoroSessions?.filter((session: any) => 
+          session.completed && session.type === 'work'
+        ).length || 0;
+        
+        setActivityStats({ totalXP, totalPomodoros });
+      } catch (error) {
+        console.error('Error parsing user data for activity stats:', error);
+        setActivityStats({ totalXP: 0, totalPomodoros: 0 });
+      }
+    };
 
-    return { totalXP, totalPomodoros };
-  }, []); // Empty dependency array means this only calculates once
+    // Update immediately
+    updateActivityStats();
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tabbie-user-data') {
+        updateActivityStats();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also update periodically to catch local changes
+    const interval = setInterval(updateActivityStats, 1000); // Update more frequently
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Smart ESP32 Auto-Discovery
   const discoverESP32 = async () => {

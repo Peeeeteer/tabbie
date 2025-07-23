@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
@@ -65,6 +65,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     startPomodoro,
     resetCategoriesToDefault,
     reorderTasks,
+    pomodoroTimer,
   } = useTodo();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -89,6 +90,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [editEstimatedPomodoros, setEditEstimatedPomodoros] = useState<number>(3);
   const [editCategory, setEditCategory] = useState<string | undefined>('work');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [completedTasksDateFilter, setCompletedTasksDateFilter] = useState<'7days' | '30days' | 'all'>('30days');
+  const [completedTasksPage, setCompletedTasksPage] = useState(1);
 
   // Function to reset the create task form
   const resetCreateTaskForm = () => {
@@ -113,26 +116,35 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     })
   );
 
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const next7Days = new Date(today);
-  next7Days.setDate(today.getDate() + 7);
+  // Timezone-aware date utilities
+  const getLocalDate = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
+
+  const getLocalDateString = (date: Date) => {
+    return new Intl.DateTimeFormat('en-CA', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    }).format(date);
+  };
+
+  const today = getLocalDate(new Date());
+  const tomorrow = getLocalDate(new Date(today.getTime() + 24 * 60 * 60 * 1000));
+  const next7Days = getLocalDate(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
 
   const getTodayTasks = () => {
     return userData.tasks.filter(task => {
       if (task.completed) return false;
       if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
-      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const taskDate = getLocalDate(new Date(task.dueDate));
       
       // Include today's tasks AND overdue tasks (due date is before today)
-      return taskDateOnly.getTime() <= todayOnly.getTime();
+      return taskDate.getTime() <= today.getTime();
     }).sort((a, b) => {
       // Sort overdue tasks first (by due date ascending), then today's tasks
-      const aDate = new Date(a.dueDate!);
-      const bDate = new Date(b.dueDate!);
+      const aDate = getLocalDate(new Date(a.dueDate!));
+      const bDate = getLocalDate(new Date(b.dueDate!));
       const aDiff = aDate.getTime() - today.getTime();
       const bDiff = bDate.getTime() - today.getTime();
       
@@ -150,8 +162,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     return userData.tasks.filter(task => {
       if (task.completed) return false;
       if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      return taskDate.toDateString() === tomorrow.toDateString();
+      const taskDate = getLocalDate(new Date(task.dueDate));
+      return taskDate.getTime() === tomorrow.getTime();
     }).sort((a, b) => a.order - b.order);
   };
 
@@ -159,16 +171,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     return userData.tasks.filter(task => {
       if (task.completed) return false;
       if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      const taskDateString = taskDate.toDateString();
-      const todayString = today.toDateString();
-      const tomorrowString = tomorrow.toDateString();
+      const taskDate = getLocalDate(new Date(task.dueDate));
       
       // Task should be after tomorrow and within next 7 days
-      return taskDateString !== todayString && 
-             taskDateString !== tomorrowString && 
-             taskDate > tomorrow && 
-             taskDate <= next7Days;
+      return taskDate.getTime() > tomorrow.getTime() && 
+             taskDate.getTime() <= next7Days.getTime();
     }).sort((a, b) => a.order - b.order);
   };
 
@@ -177,7 +184,42 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   };
 
   const getCompletedTasks = () => {
-    return userData.tasks.filter(task => task.completed).sort((a, b) => a.order - b.order);
+    const now = new Date();
+    const sevenDaysAgo = getLocalDate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+    const thirtyDaysAgo = getLocalDate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
+    
+    // Filter completed tasks based on date filter
+    let filteredTasks = userData.completedTasks;
+    if (completedTasksDateFilter === '7days') {
+      filteredTasks = userData.completedTasks.filter(task => 
+        getLocalDate(new Date(task.completed)) >= sevenDaysAgo
+      );
+    } else if (completedTasksDateFilter === '30days') {
+      filteredTasks = userData.completedTasks.filter(task => 
+        getLocalDate(new Date(task.completed)) >= thirtyDaysAgo
+      );
+    }
+    // 'all' shows all completed tasks
+    
+    // Convert CompletedTask to Task format for compatibility with existing components
+    const convertedTasks = filteredTasks.map(completedTask => ({
+      id: completedTask.id,
+      title: completedTask.title,
+      description: completedTask.description,
+      categoryId: completedTask.categoryId,
+      completed: true,
+      priority: completedTask.priority,
+      dueDate: completedTask.dueDate,
+      created: completedTask.created,
+      updated: completedTask.completed, // Use completion date as updated date
+      pomodoroSessions: completedTask.pomodoroSessions,
+      estimatedPomodoros: completedTask.estimatedPomodoros,
+      order: new Date(completedTask.completed).getTime(), // Use completion timestamp as order
+    } as Task)).sort((a, b) => b.order - a.order); // Sort by completion date, newest first
+
+    // Apply pagination for large lists
+    const ITEMS_PER_PAGE = 50;
+    return convertedTasks.slice(0, completedTasksPage * ITEMS_PER_PAGE);
   };
 
 
@@ -187,32 +229,55 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const getNext7DaysTaskCount = () => getNext7DaysTasks().length;
   const getAllTaskCount = () => getAllTasks().length;
   const getCompletedTaskCount = () => getCompletedTasks().length;
+  
+  const getTotalCompletedTasksCount = () => {
+    const now = new Date();
+    const sevenDaysAgo = getLocalDate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+    const thirtyDaysAgo = getLocalDate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
+    
+    let filteredTasks = userData.completedTasks;
+    if (completedTasksDateFilter === '7days') {
+      filteredTasks = userData.completedTasks.filter(task => 
+        getLocalDate(new Date(task.completed)) >= sevenDaysAgo
+      );
+    } else if (completedTasksDateFilter === '30days') {
+      filteredTasks = userData.completedTasks.filter(task => 
+        getLocalDate(new Date(task.completed)) >= thirtyDaysAgo
+      );
+    }
+    return filteredTasks.length;
+  };
+
+  const handleLoadMoreCompletedTasks = () => {
+    setCompletedTasksPage(prev => prev + 1);
+  };
+
+  const handleCompletedTasksDateFilterChange = (filter: '7days' | '30days' | 'all') => {
+    setCompletedTasksDateFilter(filter);
+    setCompletedTasksPage(1); // Reset pagination when filter changes
+  };
 
   const formatSmartDate = (date: Date) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const targetDate = getLocalDate(date);
     
-    const timeStr = date.toLocaleTimeString('en-US', { 
+    const timeStr = new Intl.DateTimeFormat('en-US', { 
       hour: 'numeric', 
       minute: '2-digit',
       hour12: true 
-    });
+    }).format(date);
     
     if (targetDate.getTime() === today.getTime()) {
       return `Today by ${timeStr}`;
     } else if (targetDate.getTime() === tomorrow.getTime()) {
       return `Tomorrow by ${timeStr}`;
     } else if (targetDate.getTime() < today.getTime()) {
-      return `Overdue since ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      return `Overdue since ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)}`;
     } else {
       const daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff <= 7) {
-        return `${date.toLocaleDateString('en-US', { weekday: 'long' })} by ${timeStr}`;
+        return `${new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date)} by ${timeStr}`;
       } else {
-        return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} by ${timeStr}`;
+        return `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)} by ${timeStr}`;
       }
     }
   };
@@ -1086,7 +1151,61 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         return renderNext7DaysWithCrossDrag();
       
       case 'completed':
-        return renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed');
+        return (
+          <div>
+            {/* Date Filter for Completed Tasks */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-700">Filter by completion date:</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCompletedTasksDateFilterChange('7days')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      completedTasksDateFilter === '7days'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Last 7 days
+                  </button>
+                  <button
+                    onClick={() => handleCompletedTasksDateFilterChange('30days')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      completedTasksDateFilter === '30days'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Last 30 days
+                  </button>
+                  <button
+                    onClick={() => handleCompletedTasksDateFilterChange('all')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      completedTasksDateFilter === 'all'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    All time
+                  </button>
+                </div>
+              </div>
+            </div>
+            {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed')}
+            
+            {/* Load More button for completed tasks */}
+            {getCompletedTaskCount() < getTotalCompletedTasksCount() && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={handleLoadMoreCompletedTasks}
+                  className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                >
+                  Load More ({getCompletedTaskCount()} of {getTotalCompletedTasksCount()})
+                </button>
+              </div>
+            )}
+          </div>
+        );
       
       default:
         // Handle dynamic categories
@@ -1230,6 +1349,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                         <SelectItem key={category.id} value={category.id}>
                           <div className="flex items-center gap-2">
                             <span>{category.icon}</span>
+                            <div 
+                              className="w-2 h-2 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: category.color }}
+                            />
                             <span>{category.name}</span>
                             {getCategoryTaskCount(category.id) > 0 && (
                               <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
@@ -1336,6 +1459,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         <span>{category.icon}</span>
+                        <div 
+                          className="w-2 h-2 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: category.color }}
+                        />
                         <span>{category.name}</span>
                       </div>
                     </SelectItem>
@@ -1466,7 +1593,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
             {userData.categories.length > 0 ? (
               <Select value={editCategory || 'no-category'} onValueChange={(value) => {
-                setEditCategory(value === 'no-category' ? undefined : value);
+                const newCategory = value === 'no-category' ? undefined : value;
+                setEditCategory(newCategory);
+                // Immediately save the category change
+                if (editingTask) {
+                  updateTask(editingTask.id, { categoryId: newCategory });
+                }
                 scheduleAutoSave();
               }}>
                 <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
@@ -1483,6 +1615,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         <span>{category.icon}</span>
+                        <div 
+                          className="w-2 h-2 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: category.color }}
+                        />
                         <span>{category.name}</span>
                       </div>
                     </SelectItem>
@@ -1617,10 +1753,24 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               variant="outline" 
               size="sm" 
               onClick={() => viewingTask && handleStartPomodoro(viewingTask)}
-              className="font-medium"
+              disabled={pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id}
+              className={`font-medium ${
+                pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
+                  ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed'
+                  : ''
+              }`}
             >
-              <Play className="w-4 h-4 mr-2" />
-              Pomodoro
+              {pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pomodoro Running
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Pomodoro
+                </>
+              )}
             </Button>
             <Button 
               variant="outline" 
@@ -1681,7 +1831,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div 
                     className="prose prose-sm max-w-none text-gray-700"
-                    dangerouslySetInnerHTML={{ __html: viewingTask.description }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: viewingTask.description
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+                        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+                        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+                    }}
                   />
                 </div>
               </div>
@@ -1930,11 +2085,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
     tomorrow.setDate(tomorrow.getDate() + 1);
     const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
-    const timeStr = date.toLocaleTimeString('en-US', { 
+    const timeStr = new Intl.DateTimeFormat('en-US', { 
       hour: 'numeric', 
       minute: '2-digit',
       hour12: true 
-    });
+    }).format(date);
     
     if (targetDate.getTime() === today.getTime()) {
       return `Today by ${timeStr}`;
@@ -1992,6 +2147,17 @@ const TaskItem: React.FC<TaskItemProps> = ({
     updateTask(task.id, { dueDate: tomorrow });
   };
 
+  const handleMoveToNextWeek = () => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    nextWeek.setHours(23, 59, 59, 999);
+    updateTask(task.id, { dueDate: nextWeek });
+  };
+
+  const handleRemoveDueDate = () => {
+    updateTask(task.id, { dueDate: undefined });
+  };
+
   // Minimal todo item - just title and checkbox
   return (
     <div 
@@ -2038,7 +2204,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           ${task.completed 
             ? 'line-through text-gray-500' 
             : isOverdue 
-              ? 'text-orange-800' 
+              ? 'text-orange-600' 
               : 'text-gray-900'
           }
         `}>
@@ -2053,7 +2219,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {isOverdue && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 text-orange-600 cursor-help">
+                <div className="flex items-center gap-1 text-orange-500 cursor-help">
                   <Clock className="w-3 h-3 fill-current" />
                 </div>
               </TooltipTrigger>
@@ -2098,31 +2264,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            {isOverdue && (
-              <>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMoveToToday();
-                  }}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                >
-                  <CalendarDays className="w-4 h-4" />
-                  Move to Today
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMoveToTomorrow();
-                  }}
-                  className="flex items-center gap-2 text-green-600 hover:text-green-700"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Move to Tomorrow
-                </DropdownMenuItem>
-                <div className="border-t my-1"></div>
-              </>
-            )}
+            {/* Main actions */}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -2146,12 +2288,26 @@ const TaskItem: React.FC<TaskItemProps> = ({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                onStartPomodoro();
+                if (!isCurrentTaskPomodoro) {
+                  onStartPomodoro();
+                }
               }}
-              className="flex items-center gap-2"
+              disabled={isCurrentTaskPomodoro}
+              className={`flex items-center gap-2 ${
+                isCurrentTaskPomodoro ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <Play className="w-4 h-4" />
-              Start Pomodoro
+              {isCurrentTaskPomodoro ? (
+                <>
+                  <Clock className="w-4 h-4" />
+                  Pomodoro Running
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  Start Pomodoro
+                </>
+              )}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
@@ -2162,6 +2318,50 @@ const TaskItem: React.FC<TaskItemProps> = ({
             >
               <Trash2 className="w-4 h-4" />
               Delete
+            </DropdownMenuItem>
+            
+            <div className="border-t my-1"></div>
+            
+            {/* Move to... options */}
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveToToday();
+              }}
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+            >
+              <CalendarDays className="w-4 h-4" />
+              Move to Today
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveToTomorrow();
+              }}
+              className="flex items-center gap-2 text-green-600 hover:text-green-700"
+            >
+              <Calendar className="w-4 h-4" />
+              Move to Tomorrow
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveToNextWeek();
+              }}
+              className="flex items-center gap-2 text-purple-600 hover:text-purple-700"
+            >
+              <CalendarDays className="w-4 h-4" />
+              Move to Next Week
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveDueDate();
+              }}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-700"
+            >
+              <X className="w-4 h-4" />
+              Remove Due Date
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

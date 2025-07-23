@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight, RefreshCw, RotateCcw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useTodo } from '@/contexts/TodoContext';
+import { recalculateXP, resetXP, startFreshXP } from '@/utils/storage';
 
 interface DayActivity {
   date: string;
@@ -78,18 +79,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = new Intl.DateTimeFormat('en-CA', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        }).format(date);
         
         // Count completed tasks for this day
         const tasksCompletedThisDay = userData.completedTasks.filter(task => {
-          const completedDate = new Date(task.completed).toISOString().split('T')[0];
+          const completedDate = new Intl.DateTimeFormat('en-CA', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+          }).format(new Date(task.completed));
           return completedDate === dateStr;
         }).length;
         
         // Count completed pomodoros for this day
         const pomodorosCompletedThisDay = userData.pomodoroSessions.filter(session => {
           if (!session.completed || !session.ended || session.type !== 'work') return false;
-          const sessionDate = new Date(session.ended).toISOString().split('T')[0];
+          const sessionDate = new Intl.DateTimeFormat('en-CA', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+          }).format(new Date(session.ended));
           return sessionDate === dateStr;
         }).length;
         
@@ -107,22 +120,36 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     const monthData = generateActivityData();
     setActivityData(monthData);
 
-    // Calculate real stats based on actual data
+    // Calculate real stats based on actual data with timezone-aware dates
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = new Intl.DateTimeFormat('en-CA', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    }).format(now);
+    
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
+    // Helper function to get local date string
+    const getLocalDateString = (date: Date) => {
+      return new Intl.DateTimeFormat('en-CA', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      }).format(date);
+    };
+
     // Today's stats
     const todayTasks = userData.completedTasks.filter(task => {
-      const completedDate = new Date(task.completed).toISOString().split('T')[0];
+      const completedDate = getLocalDateString(new Date(task.completed));
       return completedDate === today;
     }).length;
 
     const todayPomodoros = userData.pomodoroSessions.filter(session => {
       if (!session.completed || !session.ended || session.type !== 'work') return false;
-      const sessionDate = new Date(session.ended).toISOString().split('T')[0];
+      const sessionDate = getLocalDateString(new Date(session.ended));
       return sessionDate === today;
     }).length;
 
@@ -415,6 +442,96 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
           {/* Right Column - Quick Stats & Actions */}
           <div className="space-y-4">
+            {/* XP Stats */}
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-4 shadow-sm">
+              <h3 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⭐</span>
+                  Experience Points
+                </div>
+                                  <div className="flex gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            const newXP = recalculateXP();
+                            window.location.reload(); // Refresh to show updated XP
+                          }}
+                          className="h-6 w-6 p-0 text-purple-600 hover:bg-purple-100"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Recalculate XP</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Reset XP to 0? This will clear all pomodoro sessions.')) {
+                              resetXP();
+                              window.location.reload(); // Refresh to show updated XP
+                            }
+                          }}
+                          className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Reset XP to 0</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Start completely fresh? This will reset XP to 0 and clear ALL pomodoro data from tasks.')) {
+                              startFreshXP();
+                              window.location.reload(); // Refresh to show updated XP
+                            }
+                          }}
+                          className="h-6 w-6 p-0 text-orange-600 hover:bg-orange-100"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Start Fresh (Clear All)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+              </h3>
+              <div className="text-center mb-3">
+                <div className="text-3xl font-bold text-purple-600">
+                  {userData.totalXP || 0}
+                </div>
+                <div className="text-xs text-purple-500">Total XP Earned</div>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Today</span>
+                  <span className="font-medium">{stats.today.todos + stats.today.pomodoros}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">This Week</span>
+                  <span className="font-medium">{stats.week.todos + stats.week.pomodoros}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">This Month</span>
+                  <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Stats */}
             <div className="bg-white rounded-lg border p-4 shadow-sm">
               <h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
