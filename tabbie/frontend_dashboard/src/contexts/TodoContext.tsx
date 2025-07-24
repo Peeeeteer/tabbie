@@ -6,13 +6,15 @@ import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoro
 interface TodoContextType {
   userData: UserData;
   selectedCategoryId: string | null;
-  currentTask: Task | null;
+  currentTaskId: string | null;
   pomodoroTimer: {
     isRunning: boolean;
     timeLeft: number; // in seconds
     currentSession: PomodoroSession | null;
     sessionType: 'work' | 'shortBreak' | 'longBreak';
     justCompleted: boolean; // New field to show completion state
+    pausedAt: Date | null; // Track when paused
+    totalPausedTime: number; // Total time paused in seconds
   };
   
   // Category methods
@@ -38,6 +40,7 @@ interface TodoContextType {
   completeWorkSession: () => void; // New method to manually complete work sessions
   startNextSession: () => void; // New method for manual next session start
   skipBreak: () => void; // New method to skip break and start next work session
+  debugSetTimerTo10Seconds: () => void; // Debug function to set timer to 10 seconds
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
@@ -53,7 +56,7 @@ export const useTodo = () => {
 export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userData, setUserData] = useState<UserData>(loadUserData);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   
   // Initialize pomodoro timer with persisted state
   const [pomodoroTimer, setPomodoroTimer] = useState(() => {
@@ -65,6 +68,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession: savedState.currentSession,
         sessionType: savedState.sessionType,
         justCompleted: savedState.justCompleted,
+        pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null, // Track when paused
+        totalPausedTime: savedState.totalPausedTime || 0, // Ensure it's always a number
       };
     }
     return {
@@ -73,19 +78,26 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentSession: null as PomodoroSession | null,
       sessionType: 'work' as 'work' | 'shortBreak' | 'longBreak',
       justCompleted: false,
+      pausedAt: null as Date | null,
+      totalPausedTime: 0, // Total time paused in seconds
     };
   });
 
-  // Restore current task from saved pomodoro state after userData is loaded
+  // Helper function to get current task from userData
+  const getCurrentTask = (): Task | null => {
+    return currentTaskId ? userData.tasks.find(t => t.id === currentTaskId) || null : null;
+  };
+
+  // Restore current task ID from saved pomodoro state after userData is loaded
   useEffect(() => {
     const savedState = loadPomodoroState();
-    if (savedState?.currentTaskId && !currentTask) {
+    if (savedState?.currentTaskId && !currentTaskId) {
       const task = userData.tasks.find(t => t.id === savedState.currentTaskId);
       if (task) {
-        setCurrentTask(task);
+        setCurrentTaskId(savedState.currentTaskId);
       }
     }
-  }, [userData, currentTask]);
+  }, [userData, currentTaskId]);
 
   // Debounced save to localStorage to prevent race conditions
   useEffect(() => {
@@ -104,13 +116,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentSession: pomodoroTimer.currentSession,
       sessionType: pomodoroTimer.sessionType,
       justCompleted: pomodoroTimer.justCompleted,
-      currentTaskId: currentTask?.id || null,
+      currentTaskId: currentTaskId,
       startedAt: pomodoroTimer.isRunning && pomodoroTimer.currentSession 
         ? pomodoroTimer.currentSession.started.getTime() 
         : null,
       pausedAt: !pomodoroTimer.isRunning && pomodoroTimer.currentSession 
         ? Date.now() 
         : null,
+      totalPausedTime: pomodoroTimer.totalPausedTime,
     };
     
     // Only save if there's an active session or if we're clearing the state
@@ -119,18 +132,23 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       clearPomodoroState();
     }
-  }, [pomodoroTimer, currentTask]);
+  }, [pomodoroTimer, currentTaskId]);
 
   // Update browser tab title during pomodoro sessions
   useEffect(() => {
+    const currentTask = getCurrentTask();
     if (pomodoroTimer.currentSession && currentTask) {
-      const minutes = Math.floor(pomodoroTimer.timeLeft / 60);
-      const seconds = pomodoroTimer.timeLeft % 60;
+      // Use the same time formatting logic as PomodoroPage for consistency
+      const absSeconds = Math.abs(pomodoroTimer.timeLeft);
+      const minutes = Math.floor(absSeconds / 60);
+      const seconds = absSeconds % 60;
       const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      const formattedTime = pomodoroTimer.timeLeft < 0 ? `+${timeStr}` : timeStr;
+      
       const emoji = pomodoroTimer.sessionType === 'work' ? '🍅' : '☕';
       const sessionName = pomodoroTimer.sessionType === 'work' ? 'Focus' : 'Break';
       
-      document.title = `${emoji} ${timeStr} - ${sessionName} | ${currentTask.title} | Tabbie`;
+      document.title = `${emoji} ${formattedTime} - ${sessionName} | ${currentTask.title} | Tabbie`;
     } else {
       document.title = 'Tabbie Dashboard';
     }
@@ -139,7 +157,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       document.title = 'Tabbie Dashboard';
     };
-  }, [pomodoroTimer.timeLeft, pomodoroTimer.sessionType, currentTask, pomodoroTimer.currentSession]);
+  }, [pomodoroTimer.timeLeft, pomodoroTimer.sessionType, currentTaskId, pomodoroTimer.currentSession]);
 
   // Play notification sound
   const playNotificationSound = () => {
@@ -220,44 +238,85 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let interval: NodeJS.Timeout;
     let lastUpdate = Date.now();
+    let lastOvertimeNotification = 0; // Track last overtime notification time
     
     if (pomodoroTimer.isRunning && pomodoroTimer.currentSession) {
       interval = setInterval(() => {
         const now = Date.now();
         
-        // Calculate actual elapsed time based on session start for drift correction
+        // Calculate actual elapsed time based on session start, accounting for paused time
         const sessionElapsed = Math.floor((now - pomodoroTimer.currentSession!.started.getTime()) / 1000);
+        
+        // Ensure totalPausedTime is always a valid number
+        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime)) 
+          ? pomodoroTimer.totalPausedTime 
+          : 0;
+        
+        const effectiveElapsed = sessionElapsed - safeTotalPausedTime; // Subtract paused time
         const totalDuration = pomodoroTimer.currentSession!.duration * 60;
-        const actualTimeLeft = Math.max(0, totalDuration - sessionElapsed);
+        const actualTimeLeft = totalDuration - effectiveElapsed;
+        
+        // Ensure actualTimeLeft is a valid number
+        const safeActualTimeLeft = (typeof actualTimeLeft === 'number' && !isNaN(actualTimeLeft)) 
+          ? actualTimeLeft 
+          : 0;
         
         setPomodoroTimer(prev => {
-          // Check for overtime and play sound notification
-          if (actualTimeLeft === 0 && prev.sessionType === 'work') {
-            // Work session completed - play sound and show notification
-            playNotificationSound();
-            showNotification(
-              '🍅 Pomodoro Complete!', 
-              `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. Time for a break!`
-            );
-          } else if (actualTimeLeft === 0 && prev.sessionType === 'shortBreak') {
+          const currentTask = getCurrentTask();
+          // Check for session completion (timeLeft reaches 0)
+          // Only auto-complete break sessions, work sessions should continue into overtime
+          if (safeActualTimeLeft <= 0 && prev.timeLeft > 0 && prev.sessionType === 'shortBreak') {
             // Break completed - play sound and show notification
             playNotificationSound();
             showNotification(
               '☕ Break Complete!', 
               'Break time is over. Ready to get back to work?'
             );
-          } else if (actualTimeLeft < 0 && prev.sessionType === 'work' && prev.timeLeft >= 0) {
-            // Just went overtime - play sound notification
+            
+            // Auto-complete the break session when timer reaches 0
+            setTimeout(() => {
+              completePomodoro();
+            }, 1000); // Small delay to allow notification to show
+            
+            // Return the updated state immediately
+            return {
+              ...prev,
+              timeLeft: safeActualTimeLeft,
+              justCompleted: true, // Mark as completed immediately
+              totalPausedTime: safeTotalPausedTime, // Ensure it's safe
+            };
+          }
+          
+          // For work sessions, play sound when they first reach 0 but don't auto-complete
+          if (safeActualTimeLeft <= 0 && prev.timeLeft > 0 && prev.sessionType === 'work') {
+            // Work session completed - play sound and show notification
             playNotificationSound();
             showNotification(
-              '⏰ Session Overdue!', 
-              `Your pomodoro session has been running longer than planned. Consider taking a break!`
+              '🍅 Pomodoro Complete!', 
+              `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. You can continue working or take a break!`
             );
+          }
+          
+          // Check for overtime notifications every 5 minutes for work sessions
+          if (safeActualTimeLeft < 0 && prev.sessionType === 'work') {
+            const overtimeMinutes = Math.floor(Math.abs(safeActualTimeLeft) / 60);
+            const timeSinceLastNotification = now - lastOvertimeNotification;
+            
+            // Play sound every 5 minutes of overtime
+            if (overtimeMinutes > 0 && overtimeMinutes % 5 === 0 && timeSinceLastNotification > 4 * 60 * 1000) {
+              playNotificationSound();
+              showNotification(
+                '⏰ Still Working!', 
+                `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
+              );
+              lastOvertimeNotification = now;
+            }
           }
           
           return {
             ...prev,
-            timeLeft: actualTimeLeft,
+            timeLeft: safeActualTimeLeft,
+            totalPausedTime: safeTotalPausedTime, // Ensure it's always safe
           };
         });
         
@@ -266,7 +325,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return () => clearInterval(interval);
-  }, [pomodoroTimer.isRunning, pomodoroTimer.currentSession, currentTask]);
+  }, [pomodoroTimer.isRunning, pomodoroTimer.currentSession, currentTaskId, pomodoroTimer.totalPausedTime]);
 
   // Handle session recovery on page load
   useEffect(() => {
@@ -297,23 +356,23 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Your pomodoro session was running for too long and has been automatically stopped.'
         );
         clearPomodoroState();
-        setPomodoroTimer({
-          isRunning: false,
-          timeLeft: 0,
-          currentSession: null,
-          sessionType: 'work',
-          justCompleted: false,
-        });
-        setCurrentTask(null);
+        setPomodoroTimer(createSafePomodoroState());
+        setCurrentTaskId(null);
       } else {
-        // Restore session with correct time
-        setPomodoroTimer({
+        // Restore session with correct time and safe pause tracking
+        const safeTotalPausedTime = (typeof savedState.totalPausedTime === 'number' && !isNaN(savedState.totalPausedTime)) 
+          ? savedState.totalPausedTime 
+          : 0;
+          
+        setPomodoroTimer(createSafePomodoroState({
           isRunning: savedState.isRunning,
           timeLeft: actualTimeLeft,
           currentSession: savedState.currentSession,
           sessionType: savedState.sessionType,
           justCompleted: false,
-        });
+          pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null,
+          totalPausedTime: safeTotalPausedTime,
+        }));
       }
     }
   }, []);
@@ -376,15 +435,20 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleBeforeUnload = () => {
       if (pomodoroTimer.currentSession) {
         // Force save the current state
+        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime)) 
+          ? pomodoroTimer.totalPausedTime 
+          : 0;
+          
         const pomodoroState: PomodoroState = {
           isRunning: pomodoroTimer.isRunning,
           timeLeft: pomodoroTimer.timeLeft,
           currentSession: pomodoroTimer.currentSession,
           sessionType: pomodoroTimer.sessionType,
           justCompleted: pomodoroTimer.justCompleted,
-          currentTaskId: currentTask?.id || null,
+          currentTaskId: currentTaskId,
           startedAt: pomodoroTimer.currentSession.started.getTime(),
           pausedAt: !pomodoroTimer.isRunning ? Date.now() : null,
+          totalPausedTime: safeTotalPausedTime,
         };
         savePomodoroState(pomodoroState);
       }
@@ -392,7 +456,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [pomodoroTimer, currentTask]);
+  }, [pomodoroTimer, currentTaskId]);
 
   // Category methods
   const addCategory = (name: string, color: string, icon: string) => {
@@ -404,91 +468,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       created: new Date(),
     };
 
-  const updateTask = (taskId: string, updates: Partial<Task>) => {
-    setUserData(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(task =>
-        task.id === taskId ? { ...task, ...updates, updated: new Date() } : task
-      ),
-    }));
-  };
-
-  const deleteTask = (taskId: string) => {
-    setUserData(prev => ({
-      ...prev,
-      tasks: prev.tasks.filter(task => task.id !== taskId),
-      pomodoroSessions: prev.pomodoroSessions.filter(session => session.taskId !== taskId),
-    }));
-    if (currentTask?.id === taskId) {
-      setCurrentTask(null);
-      stopPomodoro();
-    }
-  };
-
-  const toggleTaskComplete = (taskId: string) => {
-    const task = userData.tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    if (!task.completed) {
-      // Task is being completed - move to completedTasks
-      const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
-      
-      const completedTask: CompletedTask = {
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        categoryId: task.categoryId,
-        priority: task.priority,
-        dueDate: task.dueDate,
-        created: task.created,
-        completed: new Date(),
-        pomodoroSessions: task.pomodoroSessions || [],
-        estimatedPomodoros: task.estimatedPomodoros,
-        totalPomodoros: completedPomodoros,
-      };
-
-      setUserData(prev => ({
-        ...prev,
-        tasks: prev.tasks.filter(t => t.id !== taskId),
-        completedTasks: [...prev.completedTasks, completedTask],
-      }));
-    } else {
-      // Task is being uncompleted - move back to tasks
-      const completedTask = userData.completedTasks.find(t => t.id === taskId);
-      if (completedTask) {
-        const restoredTask: Task = {
-          id: completedTask.id,
-          title: completedTask.title,
-          description: completedTask.description,
-          categoryId: completedTask.categoryId,
-          completed: false,
-          priority: completedTask.priority,
-          dueDate: completedTask.dueDate,
-          created: completedTask.created,
-          updated: new Date(),
-          pomodoroSessions: completedTask.pomodoroSessions || [],
-          estimatedPomodoros: completedTask.estimatedPomodoros,
-          order: Math.max(...userData.tasks.map(t => t.order), 0) + 1,
-        };
-
-        setUserData(prev => ({
-          ...prev,
-          tasks: [...prev.tasks, restoredTask],
-          completedTasks: prev.completedTasks.filter(t => t.id !== taskId),
-        }));
-      }
-    }
-  };
-
-  const reorderTasks = (taskIds: string[]) => {
-    setUserData(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(task => {
-        const newOrder = taskIds.indexOf(task.id);
-        return newOrder >= 0 ? { ...task, order: newOrder, updated: new Date() } : task;
-      }),
-    }));
-  };
     setUserData(prev => ({
       ...prev,
       categories: [...prev.categories, newCategory],
@@ -566,8 +545,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tasks: prev.tasks.filter(task => task.id !== taskId),
       pomodoroSessions: prev.pomodoroSessions.filter(session => session.taskId !== taskId),
     }));
-    if (currentTask?.id === taskId) {
-      setCurrentTask(null);
+    if (currentTaskId === taskId) {
+      setCurrentTaskId(null);
       stopPomodoro();
     }
   };
@@ -648,22 +627,68 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       type: 'work',
     };
 
-    setCurrentTask(task);
+    setCurrentTaskId(task.id);
     setPomodoroTimer({
       isRunning: true,
       timeLeft: userData.settings.workDuration * 60, // convert to seconds
       currentSession: session,
       sessionType: 'work',
       justCompleted: false,
+      pausedAt: null, // Reset pausedAt when starting a new session
+      totalPausedTime: 0, // Reset totalPausedTime when starting a new session
     });
   };
 
   const pausePomodoro = () => {
-    setPomodoroTimer(prev => ({ ...prev, isRunning: false }));
+    setPomodoroTimer(prev => ({ 
+      ...prev, 
+      isRunning: false,
+      pausedAt: new Date(), // Record when we paused
+    }));
+  };
+
+  // Helper function to safely reset pomodoro timer state
+  const createSafePomodoroState = (overrides: any = {}) => {
+    return {
+      isRunning: false,
+      timeLeft: 0,
+      currentSession: null,
+      sessionType: 'work' as 'work' | 'shortBreak' | 'longBreak',
+      justCompleted: false,
+      pausedAt: null,
+      totalPausedTime: 0,
+      ...overrides,
+    };
   };
 
   const resumePomodoro = () => {
-    setPomodoroTimer(prev => ({ ...prev, isRunning: true }));
+    setPomodoroTimer(prev => {
+      if (prev.pausedAt) {
+        // Calculate how long we were paused
+        const pauseDuration = Math.floor((Date.now() - prev.pausedAt.getTime()) / 1000);
+        
+        // Ensure totalPausedTime is valid before adding to it
+        const currentTotalPausedTime = (typeof prev.totalPausedTime === 'number' && !isNaN(prev.totalPausedTime)) 
+          ? prev.totalPausedTime 
+          : 0;
+        
+        const newTotalPausedTime = currentTotalPausedTime + pauseDuration;
+        
+        return {
+          ...prev,
+          isRunning: true,
+          pausedAt: null, // Clear pause time
+          totalPausedTime: newTotalPausedTime, // Add to total paused time
+        };
+      }
+      return { 
+        ...prev, 
+        isRunning: true,
+        totalPausedTime: (typeof prev.totalPausedTime === 'number' && !isNaN(prev.totalPausedTime)) 
+          ? prev.totalPausedTime 
+          : 0,
+      };
+    });
   };
 
   const stopPomodoro = () => {
@@ -687,12 +712,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionType: 'work',
       justCompleted: false,
     });
-    setCurrentTask(null);
+    setCurrentTaskId(null);
     // Clear persisted state
     clearPomodoroState();
   };
 
   const startNextSession = () => {
+    const currentTask = getCurrentTask();
     if (!currentTask) return;
 
     const completedWorkSessions = currentTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
@@ -771,7 +797,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionType: 'work',
         justCompleted: false,
       });
-      setCurrentTask(null);
+      setCurrentTaskId(null);
       clearPomodoroState();
     }
   };
@@ -816,6 +842,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Update task with completed session
+      const currentTask = getCurrentTask();
       if (currentTask) {
         updateTask(currentTask.id, {
           pomodoroSessions: [...currentTask.pomodoroSessions, completedSession],
@@ -871,12 +898,33 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const completeWorkSession = () => {
-    if (pomodoroTimer.sessionType === 'work' && pomodoroTimer.currentSession) {
+    const currentTask = getCurrentTask();
+    if (pomodoroTimer.sessionType === 'work' && pomodoroTimer.currentSession && currentTask) {
+      // Complete the current work session
       completePomodoro();
+      
+      // Start the break session immediately
+      const breakSession: PomodoroSession = {
+        id: generateId(),
+        taskId: currentTask.id,
+        started: new Date(),
+        duration: userData.settings.shortBreakDuration,
+        completed: false,
+        type: 'shortBreak',
+      };
+
+      setPomodoroTimer({
+        isRunning: true,
+        timeLeft: userData.settings.shortBreakDuration * 60,
+        currentSession: breakSession,
+        sessionType: 'shortBreak',
+        justCompleted: false,
+      });
     }
   };
 
   const skipBreak = () => {
+    const currentTask = getCurrentTask();
     if (pomodoroTimer.sessionType === 'shortBreak' && currentTask) {
       // Mark current break session as completed
       if (pomodoroTimer.currentSession) {
@@ -940,10 +988,34 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const debugSetTimerTo10Seconds = () => {
+    if (pomodoroTimer.currentSession) {
+      // Update the session start time to make it appear as if it started 10 seconds ago
+      const now = new Date();
+      const tenSecondsAgo = new Date(now.getTime() - (pomodoroTimer.currentSession.duration * 60 - 10) * 1000);
+      
+      const updatedSession = {
+        ...pomodoroTimer.currentSession,
+        started: tenSecondsAgo,
+      };
+
+      setPomodoroTimer(prev => ({
+        ...prev,
+        currentSession: updatedSession,
+        timeLeft: 10, // Set to 10 seconds
+      }));
+
+      showNotification(
+        '🔧 Debug Mode', 
+        'Timer set to 10 seconds for testing'
+      );
+    }
+  };
+
   const value: TodoContextType = {
     userData,
     selectedCategoryId,
-    currentTask,
+    currentTaskId,
     pomodoroTimer,
     
     addCategory,
@@ -966,6 +1038,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     completeWorkSession,
     startNextSession,
     skipBreak,
+    debugSetTimerTo10Seconds,
   };
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>;

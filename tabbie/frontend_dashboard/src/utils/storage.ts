@@ -22,6 +22,7 @@ export interface PomodoroState {
   currentTaskId: string | null;
   startedAt: number | null; // timestamp when session started
   pausedAt: number | null; // timestamp when session was paused
+  totalPausedTime: number; // total time paused in seconds
 }
 
 // Load pomodoro state from localStorage
@@ -30,6 +31,9 @@ export const loadPomodoroState = (): PomodoroState | null => {
     const storedState = localStorage.getItem(POMODORO_STATE_KEY);
     if (storedState) {
       const parsed = JSON.parse(storedState, reviveDate) as PomodoroState;
+      
+      // Ensure totalPausedTime is always a number
+      const safeTotalPausedTime = typeof parsed.totalPausedTime === 'number' ? parsed.totalPausedTime : 0;
       
       // If there's a running session, calculate the actual time left
       if (parsed.isRunning && parsed.startedAt && parsed.currentSession) {
@@ -45,21 +49,29 @@ export const loadPomodoroState = (): PomodoroState | null => {
             isRunning: false,
             timeLeft: 0,
             justCompleted: true,
+            totalPausedTime: safeTotalPausedTime,
           };
         }
         
         return {
           ...parsed,
           timeLeft: actualTimeLeft,
+          totalPausedTime: safeTotalPausedTime,
         };
       }
       
       // If session was paused, restore the paused time
       if (!parsed.isRunning && parsed.pausedAt && parsed.currentSession) {
-        return parsed;
+        return {
+          ...parsed,
+          totalPausedTime: safeTotalPausedTime,
+        };
       }
       
-      return parsed;
+      return {
+        ...parsed,
+        totalPausedTime: safeTotalPausedTime,
+      };
     }
   } catch (error) {
     console.error('Error loading pomodoro state:', error);
