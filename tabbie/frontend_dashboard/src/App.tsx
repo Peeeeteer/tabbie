@@ -17,8 +17,11 @@ import {
 import React from "react"
 import { SetupWizard } from "@/components/SetupWizard"
 import { TodoProvider } from "@/contexts/TodoContext"
+import { DarkModeProvider } from "@/contexts/DarkModeContext"
 import CategorySidebar from "@/components/CategorySidebar"
+import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 import TasksPage from "@/components/TasksPage"
+import SettingsPage from "@/components/SettingsPage"
 import EventsPage from "@/components/EventsPage"
 import NotificationsPage from "@/components/NotificationsPage"
 import DashboardPage from "@/components/DashboardPage"
@@ -364,8 +367,9 @@ export default function Page() {
   }, [esp32URL]); // Add esp32URL as dependency
 
   return (
-    <TodoProvider>
-      <SidebarProvider>
+    <DarkModeProvider>
+      <TodoProvider>
+        <SidebarProvider>
         <Sidebar>
           <ActivityStatsProvider>
             {(activityStats) => (
@@ -409,6 +413,7 @@ export default function Page() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {currentPage === 'dashboard' ? (
@@ -472,10 +477,7 @@ export default function Page() {
               </div>
             </div>
           ) : currentPage === 'settings' ? (
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold mb-4">⚙️ Settings</h2>
-              <p className="text-muted-foreground">Settings and configuration coming soon!</p>
-            </div>
+            <SettingsPage onPageChange={setCurrentPage} />
           ) : (
             <>
               {/* Face Control Section */}
@@ -657,7 +659,7 @@ export default function Page() {
       {/* Setup Wizard Modal */}
       {showSetupWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">
                 {esp32Connected ? 'ESP32 Status' : 'ESP32 Setup Wizard'}
@@ -680,5 +682,6 @@ export default function Page() {
       )}
       </SidebarProvider>
     </TodoProvider>
+    </DarkModeProvider>
   )
 }

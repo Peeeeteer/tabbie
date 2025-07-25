@@ -203,12 +203,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Get color intensity for activity squares
   const getActivityColor = (value: number): string => {
-    if (value === 0) return 'bg-gray-100 hover:bg-gray-200 text-gray-400';
-    if (value <= 2) return 'bg-green-200 hover:bg-green-300 text-green-800';
-    if (value <= 4) return 'bg-green-400 hover:bg-green-500 text-green-900';
-    if (value <= 6) return 'bg-green-600 hover:bg-green-700 text-white';
-    if (value <= 8) return 'bg-green-700 hover:bg-green-800 text-white';
-    return 'bg-green-800 hover:bg-green-900 text-white';
+    if (value === 0) return 'bg-muted hover:bg-muted/80 text-muted-foreground';
+    if (value <= 2) return 'bg-green-200/20 hover:bg-green-200/30 text-green-700 dark:text-green-300';
+    if (value <= 4) return 'bg-green-400/30 hover:bg-green-400/40 text-green-800 dark:text-green-200';
+    if (value <= 6) return 'bg-green-500/50 hover:bg-green-500/60 text-green-900 dark:text-green-100';
+    if (value <= 8) return 'bg-green-600/70 hover:bg-green-600/80 text-green-900 dark:text-green-50';
+    return 'bg-green-700/90 hover:bg-green-700 text-green-900 dark:text-green-50';
   };
 
   // Format date for display
@@ -312,7 +312,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Activity Overview */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border p-3 shadow-sm">
+            <div className="bg-card rounded-lg border p-3 shadow-sm">
               <div className="mb-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -445,7 +445,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           {/* Right Column - Quick Stats & Actions */}
           <div className="space-y-4">
             {/* Quick Stats */}
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
+            <div className="bg-card rounded-lg border p-4 shadow-sm">
               <h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -468,41 +468,41 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
+            <div className="bg-card rounded-lg border p-4 shadow-sm">
               <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
               <div className="space-y-3">
                 <Button 
-                  className="w-full flex items-center justify-start gap-3 h-12 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                  className="w-full flex items-center justify-start gap-3 h-12 bg-accent hover:bg-accent/80 text-accent-foreground border-accent"
                   variant="outline"
                   onClick={() => onPageChange?.('tasks')}
                 >
-                  <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
+                  <div className="flex items-center justify-center w-8 h-8 bg-accent/20 rounded-lg">
                     <CheckSquare className="h-4 w-4" />
                   </div>
                   <div className="text-left">
                     <div className="font-medium text-sm">Add Task</div>
-                    <div className="text-xs text-blue-600">Create a new to-do item</div>
+                    <div className="text-xs text-muted-foreground">Create a new to-do item</div>
                   </div>
                 </Button>
                 
                 <Button 
-                  className="w-full flex items-center justify-start gap-3 h-12 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
+                  className="w-full flex items-center justify-start gap-3 h-12 bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
                   variant="outline"
                   onClick={() => onPageChange?.('pomodoro')}
                 >
-                  <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg">
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary/20 rounded-lg">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div className="text-left">
                     <div className="font-medium text-sm">Start Pomodoro</div>
-                    <div className="text-xs text-green-600">Begin a focus session</div>
+                    <div className="text-xs text-muted-foreground">Begin a focus session</div>
                   </div>
                 </Button>
               </div>
             </div>
 
             {/* Quick Tabbie */}
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
+            <div className="bg-card rounded-lg border p-4 shadow-sm">
               <h3 className="text-sm font-semibold mb-3">🤖 Quick Tabbie</h3>
               
               <div className="flex items-center gap-2 mb-3">

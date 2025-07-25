@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTodo } from '@/contexts/TodoContext';
+import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 
 interface CategorySidebarProps {
   currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings';
@@ -724,10 +725,15 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => onPageChange('settings')}>
-              <Settings2 className="w-4 h-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
+            <div className="flex items-center justify-between w-full px-3 py-2">
+              <SidebarMenuButton onClick={() => onPageChange('settings')} className="flex-1">
+                <Settings2 className="w-4 h-4" />
+                <span>Settings</span>
+              </SidebarMenuButton>
+              <div className="ml-2">
+                <DarkModeToggle variant="switch" size="sm" showIcon={false} />
+              </div>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

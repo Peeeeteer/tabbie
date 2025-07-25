@@ -117,8 +117,8 @@ export function DateTimePicker({
         </div>
         
         {/* Quick Date Shortcuts */}
-        <div className="p-3 border-b bg-gray-50">
-          <div className="text-xs font-medium text-gray-600 mb-2">Quick Select</div>
+        <div className="p-3 border-b bg-muted/50">
+          <div className="text-xs font-medium text-muted-foreground mb-2">Quick Select</div>
           <div className="flex gap-1">
             <Button
               variant="outline"

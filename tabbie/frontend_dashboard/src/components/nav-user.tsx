@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react"
+import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 
 import {
   Avatar,
@@ -84,6 +85,15 @@ export function NavUser({
               <DropdownMenuItem>
                 <Sparkles />
                 Upgrade to Pro
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <div className="flex items-center justify-between w-full">
+                  <span>Dark Mode</span>
+                  <DarkModeToggle variant="switch" size="sm" showIcon={false} />
+                </div>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

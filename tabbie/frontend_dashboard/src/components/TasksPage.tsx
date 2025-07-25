@@ -1162,8 +1162,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     onClick={() => handleCompletedTasksDateFilterChange('7days')}
                     className={`px-3 py-1 text-xs rounded-md transition-colors ${
                       completedTasksDateFilter === '7days'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        ? 'bg-primary/20 text-primary border border-primary/30'
+                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
                     }`}
                   >
                     Last 7 days
@@ -1172,8 +1172,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     onClick={() => handleCompletedTasksDateFilterChange('30days')}
                     className={`px-3 py-1 text-xs rounded-md transition-colors ${
                       completedTasksDateFilter === '30days'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        ? 'bg-primary/20 text-primary border border-primary/30'
+                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
                     }`}
                   >
                     Last 30 days
@@ -1182,8 +1182,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     onClick={() => handleCompletedTasksDateFilterChange('all')}
                     className={`px-3 py-1 text-xs rounded-md transition-colors ${
                       completedTasksDateFilter === 'all'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        ? 'bg-primary/20 text-primary border border-primary/30'
+                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
                     }`}
                   >
                     All time
@@ -1238,14 +1238,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
   return (
     <TooltipProvider>
-      <div className="flex h-full bg-white relative">
+      <div className="flex h-full bg-background relative">
       {/* Main Content Area - Always has margin for consistent sizing */}
       <div className="flex-1 flex flex-col h-full mr-[576px]">
         {/* Header with View Navigation */}
-        <div className="bg-white border-b border-gray-200">
+        <div className="bg-card border-b border-border">
           <div className="p-6 pb-0">
             <div className="flex items-center justify-between mb-4 h-10">
-              <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{getViewTitle()}</h1>
             </div>
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
@@ -1391,7 +1391,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white">
+        <div className="flex-1 overflow-y-auto p-6 bg-background">
           {renderContent()}
         </div>
       </div>
@@ -1400,15 +1400,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={createPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
+          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
           transform transition-transform duration-300 ease-in-out z-50
           ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className="bg-white border-b border-gray-200 p-6 pb-0">
+        <div className="bg-card border-b border-border p-6 pb-0">
           <div className="flex items-center justify-between mb-4 h-10">
-            <h2 className="text-xl font-semibold text-gray-900">Create New Task</h2>
+            <h2 className="text-xl font-semibold text-foreground">Create New Task</h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1416,7 +1416,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 setIsCreatePanelOpen(false);
                 resetCreateTaskForm();
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -1540,8 +1540,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
           {/* Instructions */}
           <div className="pt-6">
-            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
-              💡 <strong>Tips:</strong> Task is created automatically as you type. Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Enter</kbd> to finish, <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Esc</kbd> to close.
+            <div className="text-xs text-muted-foreground bg-primary/10 p-3 rounded-lg border border-primary/20">
+              💡 <strong>Tips:</strong> Task is created automatically as you type. Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> to finish, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Esc</kbd> to close.
             </div>
           </div>
         </div>
@@ -1551,15 +1551,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={editPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
+          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
           transform transition-transform duration-300 ease-in-out z-50
           ${isEditPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className="bg-white border-b border-gray-200 p-6 pb-0">
+        <div className="bg-card border-b border-border p-6 pb-0">
           <div className="flex items-center justify-between mb-4 h-10">
-            <h2 className="text-xl font-semibold text-gray-900">Edit Task</h2>
+            <h2 className="text-xl font-semibold text-foreground">Edit Task</h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1716,15 +1716,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={viewPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-white border-l border-gray-200 
+          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
           transform transition-transform duration-300 ease-in-out z-50
           ${isViewPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className="bg-white border-b border-gray-200 p-6">
+        <div className="bg-card border-b border-border p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Task Details</h2>
+            <h2 className="text-xl font-semibold text-foreground">Task Details</h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1844,7 +1844,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
             {/* Details Section */}
             <div className="px-6 pb-6">
-              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                              <div className="bg-card border border-border rounded-lg p-4 space-y-4">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Task Details</h3>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -1973,7 +1973,7 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   
   return (
-    <div className="flex items-center gap-3 py-2 px-3 bg-white shadow-lg rounded-lg border border-gray-200 cursor-grabbing transform">
+            <div className="flex items-center gap-3 py-2 px-3 bg-card shadow-lg rounded-lg border border-border cursor-grabbing transform">
       <div className="flex-shrink-0 p-1">
         <GripVertical className="w-4 h-4 text-gray-400" />
       </div>
@@ -1989,7 +1989,7 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
             style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
           />
         </div>
-        <span className="text-sm font-medium text-gray-900">
+        <span className="text-sm font-medium text-foreground">
           {task.title}
         </span>
       </div>
@@ -1999,7 +1999,7 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
           <Clock className="w-3 h-3 text-gray-400" />
         )}
         {(completedSessions > 0 || task.estimatedPomodoros) && (
-          <span className="text-xs text-gray-600">🍅{completedSessions}/{task.estimatedPomodoros || 3}</span>
+          <span className="text-xs text-muted-foreground">🍅{completedSessions}/{task.estimatedPomodoros || 3}</span>
         )}
       </div>
     </div>
@@ -2163,8 +2163,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
     <div 
       className={`group flex items-center gap-3 py-2 px-3 rounded-lg transition-colors cursor-pointer border ${
         isOverdue 
-          ? 'bg-orange-50 hover:bg-orange-100 border-orange-200 hover:border-orange-300' 
-          : 'bg-gray-50 hover:bg-blue-50 border-transparent hover:border-blue-200'
+          ? 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30 hover:border-orange-500/50' 
+          : 'bg-card hover:bg-accent border-border hover:border-accent'
       }`}
       onClick={() => onView()}
     >
@@ -2202,10 +2202,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
         <span className={`
           text-sm font-medium cursor-pointer
           ${task.completed 
-            ? 'line-through text-gray-500' 
+            ? 'line-through text-muted-foreground' 
             : isOverdue 
               ? 'text-orange-600' 
-              : 'text-gray-900'
+              : 'text-foreground'
           }
         `}>
           {task.title}
@@ -2239,7 +2239,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             </Tooltip>
           )}
           {(completedSessions > 0 || task.estimatedPomodoros) && (
-            <span className="text-xs text-gray-600 font-medium">
+            <span className="text-xs text-muted-foreground font-medium">
               🍅 {completedSessions}/{task.estimatedPomodoros || 3}
             </span>
           )}
