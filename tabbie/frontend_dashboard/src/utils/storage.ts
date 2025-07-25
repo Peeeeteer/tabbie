@@ -165,11 +165,8 @@ export const loadUserData = (): UserData => {
         totalXP = 0;
       }
       
-      // For new users or if XP seems too high, start fresh at 0
-      if (totalXP > 100) {
-        console.warn(`XP value ${totalXP} seems too high for a new user, resetting to 0`);
-        totalXP = 0;
-      }
+      // Remove the problematic XP reset logic that was causing XP to disappear
+      // Users can legitimately earn more than 100 XP through normal pomodoro usage
       
       // Cap XP at a reasonable maximum to prevent abuse
       const MAX_XP = 1000000; // 1 million XP cap
@@ -197,6 +194,7 @@ export const loadUserData = (): UserData => {
     tasks: [],
     completedTasks: [],
     pomodoroSessions: [],
+    totalXP: 0,
     settings: DEFAULT_SETTINGS,
   };
 };

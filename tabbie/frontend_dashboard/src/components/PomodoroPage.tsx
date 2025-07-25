@@ -6,7 +6,11 @@ import { useTodo } from '@/contexts/TodoContext';
 import { debugPomodoroState } from '@/utils/storage';
 import { testPomodoroPersistence, testPageRefreshScenario } from '@/utils/pomodoro-persistence-test';
 
-const PomodoroPage: React.FC = () => {
+interface PomodoroPageProps {
+  onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+}
+
+const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
   const {
     userData,
     currentTaskId,
@@ -679,63 +683,80 @@ const PomodoroPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    {pomodoroTimer.isRunning ? (
-                      <Button 
-                        onClick={pausePomodoro}
-                        size="lg"
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-8"
-                      >
-                        <Pause className="w-5 h-5 mr-2" />
-                        Pause
-                      </Button>
+                    {pomodoroTimer.sessionType === 'shortBreak' ? (
+                      // Break session controls - only skip and stop
+                      <>
+                        <Button
+                          onClick={skipBreak}
+                          size="lg"
+                          variant="outline"
+                          className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                        >
+                          <SkipForward className="w-5 h-5 mr-2" />
+                          Skip Break
+                        </Button>
+                        <Button 
+                          onClick={stopPomodoro}
+                          variant="outline"
+                          size="lg"
+                          className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          Stop
+                        </Button>
+                      </>
                     ) : (
-                      <Button 
-                        onClick={resumePomodoro}
-                        size="lg"
-                        className="bg-green-600 hover:bg-green-700 text-white px-8"
-                      >
-                        <Play className="w-5 h-5 mr-2" />
-                        Resume
-                      </Button>
+                      // Work session controls - pause, resume, stop, finish
+                      <>
+                        {pomodoroTimer.isRunning ? (
+                          <Button 
+                            onClick={pausePomodoro}
+                            size="lg"
+                            className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+                          >
+                            <Pause className="w-5 h-5 mr-2" />
+                            Pause
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={resumePomodoro}
+                            size="lg"
+                            className="bg-green-600 hover:bg-green-700 text-white px-8"
+                          >
+                            <Play className="w-5 h-5 mr-2" />
+                            Resume
+                          </Button>
+                        )}
+                        <Button 
+                          onClick={stopPomodoro}
+                          variant="outline"
+                          size="lg"
+                          className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          Stop
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            if (currentTask) {
+                              // Mark the task as completed
+                              updateTask(currentTask.id, { completed: true });
+                              // Stop the pomodoro session
+                              stopPomodoro();
+                              // Navigate to tasks tab
+                              if (onPageChange) {
+                                onPageChange('tasks');
+                              }
+                            }
+                          }}
+                          size="lg"
+                          className="px-8 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckSquare className="w-5 h-5 mr-2" />
+                          Finish Task
+                        </Button>
+                      </>
                     )}
-                    {/* Skip Break button for break sessions */}
-                    {pomodoroTimer.sessionType === 'shortBreak' && (
-                      <Button
-                        onClick={skipBreak}
-                        size="lg"
-                        variant="outline"
-                        className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                      >
-                        <SkipForward className="w-5 h-5 mr-2" />
-                        Skip Break
-                      </Button>
-                    )}
-                    <Button 
-                      onClick={stopPomodoro}
-                      variant="outline"
-                      size="lg"
-                      className="px-8 border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      <Square className="w-5 h-5 mr-2" />
-                      Stop
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        if (currentTask) {
-                          // Mark the task as completed
-                          updateTask(currentTask.id, { completed: true });
-                          // Stop the pomodoro session
-                          stopPomodoro();
-                          // Navigate back to tasks
-                          window.history.back();
-                        }
-                      }}
-                      size="lg"
-                      className="px-8 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckSquare className="w-5 h-5 mr-2" />
-                      Finish Task
-                    </Button>
                   </>
                 )}
               </div>
@@ -749,12 +770,17 @@ const PomodoroPage: React.FC = () => {
               <h3 className="text-sm font-semibold mb-3">Current Session</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Type</span>
-                  <span className="font-medium">
-                    {isWorkOverdue ? '⏰ Work (Overdue)' :
-                     pomodoroTimer.sessionType === 'work' ? '🍅 Work' : '☕ Break'}
+                  <span className="text-gray-600">Category</span>
+                  <span className="font-medium text-right max-w-[150px] truncate flex items-center gap-1">
+                    {currentTask ? (
+                      <>
+                        <span>{userData.categories.find(cat => cat.id === currentTask.categoryId)?.icon || '📝'}</span>
+                        <span>{userData.categories.find(cat => cat.id === currentTask.categoryId)?.name || 'Unknown'}</span>
+                      </>
+                    ) : 'No Task'}
                   </span>
                 </div>
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Duration</span>
                   <span className="font-medium">

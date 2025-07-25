@@ -3,7 +3,7 @@ import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRi
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useTodo } from '@/contexts/TodoContext';
-import { recalculateXP, resetXP, startFreshXP } from '@/utils/storage';
+
 
 interface DayActivity {
   date: string;
@@ -34,6 +34,7 @@ interface DashboardPageProps {
   fetchLogs: () => void;
   onNavigateToActivity?: () => void;
   onNavigateToTabbie?: () => void;
+  onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -51,6 +52,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   fetchLogs,
   onNavigateToActivity,
   onNavigateToTabbie,
+  onPageChange,
 }) => {
   const { userData } = useTodo();
   const [activityData, setActivityData] = useState<DayActivity[]>([]);
@@ -442,96 +444,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
           {/* Right Column - Quick Stats & Actions */}
           <div className="space-y-4">
-            {/* XP Stats */}
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⭐</span>
-                  Experience Points
-                </div>
-                                  <div className="flex gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            const newXP = recalculateXP();
-                            window.location.reload(); // Refresh to show updated XP
-                          }}
-                          className="h-6 w-6 p-0 text-purple-600 hover:bg-purple-100"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Recalculate XP</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (confirm('Reset XP to 0? This will clear all pomodoro sessions.')) {
-                              resetXP();
-                              window.location.reload(); // Refresh to show updated XP
-                            }
-                          }}
-                          className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Reset XP to 0</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (confirm('Start completely fresh? This will reset XP to 0 and clear ALL pomodoro data from tasks.')) {
-                              startFreshXP();
-                              window.location.reload(); // Refresh to show updated XP
-                            }
-                          }}
-                          className="h-6 w-6 p-0 text-orange-600 hover:bg-orange-100"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Start Fresh (Clear All)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-              </h3>
-              <div className="text-center mb-3">
-                <div className="text-3xl font-bold text-purple-600">
-                  {userData.totalXP || 0}
-                </div>
-                <div className="text-xs text-purple-500">Total XP Earned</div>
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Today</span>
-                  <span className="font-medium">{stats.today.todos + stats.today.pomodoros}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">This Week</span>
-                  <span className="font-medium">{stats.week.todos + stats.week.pomodoros}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">This Month</span>
-                  <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
-                </div>
-              </div>
-            </div>
-
             {/* Quick Stats */}
             <div className="bg-white rounded-lg border p-4 shadow-sm">
               <h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
@@ -548,6 +460,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   <span className="text-muted-foreground">This Month</span>
                   <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
                 </div>
+                <div className="flex justify-between text-sm pt-2 border-t">
+                  <span className="text-muted-foreground">XP Earned</span>
+                  <span className="font-medium text-purple-600">{userData.totalXP || 0}</span>
+                </div>
               </div>
             </div>
 
@@ -558,6 +474,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <Button 
                   className="w-full flex items-center justify-start gap-3 h-12 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
                   variant="outline"
+                  onClick={() => onPageChange?.('tasks')}
                 >
                   <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
                     <CheckSquare className="h-4 w-4" />
@@ -571,6 +488,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <Button 
                   className="w-full flex items-center justify-start gap-3 h-12 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
                   variant="outline"
+                  onClick={() => onPageChange?.('pomodoro')}
                 >
                   <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg">
                     <Clock className="h-4 w-4" />

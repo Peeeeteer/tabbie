@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square
+  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square, Coffee, SkipForward
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +31,8 @@ import {
 import { useTodo } from '@/contexts/TodoContext';
 
 interface CategorySidebarProps {
-  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings';
-  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings';
+  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings') => void;
       currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
@@ -54,13 +54,19 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     setSelectedCategory,
     addCategory,
     deleteCategory,
-    currentTask,
+    currentTaskId,
     pomodoroTimer,
     resetCategoriesToDefault,
     pausePomodoro,
     resumePomodoro,
     stopPomodoro,
+    skipBreak,
+    startNextSession,
+    completeWorkSession,
   } = useTodo();
+
+  // Get current task from userData using currentTaskId
+  const currentTask = currentTaskId ? userData.tasks.find(t => t.id === currentTaskId) || null : null;
 
   // Enhanced state management
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -81,6 +87,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
 
   // Check if work session is overdue
   const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
+  
+  // Check if break session is overdue
+  const isBreakOverdue = pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.timeLeft < 0;
 
 
   const categoryColors = [
@@ -161,13 +170,12 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
             <div className="flex-1">
               <div className="font-semibold text-sm">Tabbie</div>
               <div className="text-xs text-muted-foreground">Your AI Assistant</div>
-              {activityStats && (
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                  <span>{activityStats.totalXP} XP</span>
-                  <span>•</span>
-                  <span>{activityStats.totalPomodoros} 🍅</span>
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                <span>{activityStats?.totalXP || 0} XP</span>
+                <span>•</span>
+                <span>{activityStats?.totalPomodoros || 0} 🍅</span>
+              </div>
+
             </div>
           </div>
         </div>
@@ -218,6 +226,20 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
             
             <SidebarMenuItem>
               <SidebarMenuButton 
+                onClick={() => onPageChange('pomodoro')}
+                isActive={currentPage === 'pomodoro'}
+              >
+                <Clock className="w-4 h-4" />
+                <span>Pomodoro</span>
+                {pomodoroTimer.isRunning && (
+                  <span className="ml-auto mr-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse">
+                  </span>
+                )}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
                 onClick={() => onPageChange('reminders')}
                 isActive={currentPage === 'reminders'}
               >
@@ -248,16 +270,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
             
             <SidebarMenuItem>
               <SidebarMenuButton 
-                onClick={() => onPageChange('pomodoro')}
-                isActive={currentPage === 'pomodoro'}
-              >
-                <Clock className="w-4 h-4" />
-                <span>Pomodoro</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
                 onClick={() => onPageChange('calendar')}
                 isActive={currentPage === 'calendar'}
               >
@@ -273,16 +285,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               >
                 <Activity className="w-4 h-4" />
                 <span>Activity</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('timetracking')}
-                isActive={currentPage === 'timetracking'}
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Time Tracking</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -579,7 +581,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                     <div 
                       className={`h-2 rounded-full transition-all duration-300 ${
-                        isWorkOverdue ? 'bg-orange-500' : 'bg-blue-500'
+                        isWorkOverdue ? 'bg-orange-500' : 
+                        isBreakOverdue ? 'bg-green-500' : 'bg-blue-500'
                       }`}
                       style={{ 
                         width: `${Math.max(0, Math.min(100, 
@@ -590,25 +593,80 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     />
                   </div>
                   <div className="text-xs text-blue-600">
-                    {Math.round(((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
-                      (pomodoroTimer.currentSession.duration * 60)) * 100)}% complete
+                    {Math.round(Math.max(0, Math.min(100, 
+                      ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
+                      (pomodoroTimer.currentSession.duration * 60)) * 100
+                    )))}% complete
                   </div>
                 </div>
               )}
               
               <div className="flex items-center justify-between">
                 <div className="text-sm text-blue-700">
-                  <div className={`font-mono font-bold text-lg ${isWorkOverdue ? 'text-orange-600' : 'text-blue-800'}`}>
+                  <div className={`font-mono font-bold text-lg ${
+                    isWorkOverdue ? 'text-orange-600' : 
+                    isBreakOverdue ? 'text-green-600' : 
+                    'text-blue-800'
+                  }`}>
                     {formatTime(pomodoroTimer.timeLeft)}
                   </div>
                   <div className="mt-1 text-xs font-medium">
                     {isWorkOverdue ? 'Take break' : 
+                     isBreakOverdue ? 'Break over!' :
                      pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-1">
-                  {pomodoroTimer.isRunning ? (
+                  {isWorkOverdue ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={completeWorkSession}
+                          className="h-8 w-8 p-0 text-orange-600 hover:bg-orange-100"
+                        >
+                          <Coffee className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Take Break</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : isBreakOverdue ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={skipBreak}
+                          className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
+                        >
+                          <SkipForward className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Continue Working</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.isRunning ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={skipBreak}
+                          className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
+                        >
+                          <SkipForward className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Skip Break</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : pomodoroTimer.isRunning ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 

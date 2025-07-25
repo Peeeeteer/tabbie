@@ -25,9 +25,10 @@ import DashboardPage from "@/components/DashboardPage"
 import ActivityPage from "@/components/ActivityPage"
 import YourTabbiePage from "@/components/YourTabbiePage"
 import PomodoroPage from "@/components/PomodoroPage"
+import { ActivityStatsProvider } from "@/components/ActivityStatsProvider"
 
 export default function Page() {
-  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -40,56 +41,7 @@ export default function Page() {
   const [isHealthChecking, setIsHealthChecking] = React.useState(false);
   const [isReconnecting, setIsReconnecting] = React.useState(false);
 
-  // Activity stats state that updates when user data changes
-  const [activityStats, setActivityStats] = React.useState({ totalXP: 0, totalPomodoros: 0 });
 
-  // Update activity stats when user data changes
-  React.useEffect(() => {
-    const updateActivityStats = () => {
-      const userDataStr = localStorage.getItem('tabbie-user-data');
-      if (!userDataStr) {
-        setActivityStats({ totalXP: 0, totalPomodoros: 0 });
-        return;
-      }
-      
-      try {
-        const userData = JSON.parse(userDataStr);
-        
-        // Calculate actual XP from user data
-        const totalXP = userData.totalXP || 0;
-        
-        // Calculate actual completed pomodoros
-        const totalPomodoros = userData.pomodoroSessions?.filter((session: any) => 
-          session.completed && session.type === 'work'
-        ).length || 0;
-        
-        setActivityStats({ totalXP, totalPomodoros });
-      } catch (error) {
-        console.error('Error parsing user data for activity stats:', error);
-        setActivityStats({ totalXP: 0, totalPomodoros: 0 });
-      }
-    };
-
-    // Update immediately
-    updateActivityStats();
-
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'tabbie-user-data') {
-        updateActivityStats();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also update periodically to catch local changes
-    const interval = setInterval(updateActivityStats, 1000); // Update more frequently
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
 
   // Smart ESP32 Auto-Discovery
   const discoverESP32 = async () => {
@@ -415,13 +367,17 @@ export default function Page() {
     <TodoProvider>
       <SidebarProvider>
         <Sidebar>
-          <CategorySidebar 
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            currentView={currentView}
-            onViewChange={setCurrentView}
-            activityStats={activityStats}
-          />
+          <ActivityStatsProvider>
+            {(activityStats) => (
+              <CategorySidebar 
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                currentView={currentView}
+                onViewChange={setCurrentView}
+                activityStats={activityStats}
+              />
+            )}
+          </ActivityStatsProvider>
         </Sidebar>
         <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -447,7 +403,6 @@ export default function Page() {
                      currentPage === 'pomodoro' ? 'Pomodoro Timer' :
                      currentPage === 'calendar' ? 'Calendar' :
                      currentPage === 'activity' ? 'Activity' :
-                     currentPage === 'timetracking' ? 'Time Tracking' :
                      currentPage === 'settings' ? 'Settings' : 'Dashboard'}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -472,6 +427,7 @@ export default function Page() {
               fetchLogs={fetchLogs}
               onNavigateToActivity={() => setCurrentPage('activity')}
               onNavigateToTabbie={() => setCurrentPage('yourtabbie')}
+              onPageChange={setCurrentPage}
             />
           ) : currentPage === 'yourtabbie' ? (
             <YourTabbiePage 
@@ -500,15 +456,13 @@ export default function Page() {
           ) : currentPage === 'notifications' ? (
             <NotificationsPage />
           ) : currentPage === 'pomodoro' ? (
-            <PomodoroPage />
+                            <PomodoroPage onPageChange={setCurrentPage} />
           ) : currentPage === 'calendar' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📅 Calendar</h2>
               <p className="text-muted-foreground">View your schedule and plan your day with Tabbie</p>
             </div>
           ) : currentPage === 'activity' ? (
-            <ActivityPage />
-          ) : currentPage === 'timetracking' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📊 Time Tracking</h2>
               <p className="text-muted-foreground mb-4">Ask Tabbie to manage your day or how you spent it!</p>
