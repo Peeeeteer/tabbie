@@ -391,9 +391,15 @@ const TaskItem: React.FC<TaskItemProps> = ({
           </div>
           
           {task.description && (
-            <div className="text-sm text-gray-600 mt-1">
-              {task.description}
-            </div>
+            <div 
+              className="text-sm text-gray-600 mt-1 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ 
+                __html: task.description
+                  .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+                  .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+                  .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+              }}
+            />
           )}
           
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">

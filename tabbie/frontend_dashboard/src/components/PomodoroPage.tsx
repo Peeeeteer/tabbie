@@ -321,7 +321,15 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                                   <span className="font-medium text-sm">{task.title}</span>
                                 </div>
                                 {task.description && (
-                                  <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                                  <div 
+                                    className="text-xs text-gray-600 mt-1 prose prose-xs max-w-none"
+                                    dangerouslySetInnerHTML={{ 
+                                      __html: task.description
+                                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+                                        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+                                        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+                                    }}
+                                  />
                                 )}
                                 <div className="flex items-center gap-2 mt-2">
                                   <span className="text-xs text-gray-500">
@@ -477,7 +485,15 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                   {currentTask?.title || 'No Task Selected'}
                 </h2>
                 {currentTask?.description && (
-                  <p className="text-gray-600">{currentTask.description}</p>
+                  <div 
+                    className="text-gray-600 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                      __html: currentTask.description
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+                        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+                        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+                    }}
+                  />
                 )}
                 {!currentTask && (
                   <p className="text-gray-500 text-sm">Please select a task to start a pomodoro session</p>

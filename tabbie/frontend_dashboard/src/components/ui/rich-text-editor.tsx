@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -41,6 +41,13 @@ export function RichTextEditor({
       },
     },
   });
+
+  // Update editor content when content prop changes
+  useEffect(() => {
+    if (editor && editor.getHTML() !== content) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   const addLink = () => {
     const url = window.prompt('Enter URL:');

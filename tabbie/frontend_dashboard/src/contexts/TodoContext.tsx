@@ -7,6 +7,7 @@ interface TodoContextType {
   userData: UserData;
   selectedCategoryId: string | null;
   currentTaskId: string | null;
+  currentTask: Task | null;
   pomodoroTimer: {
     isRunning: boolean;
     timeLeft: number; // in seconds
@@ -1027,6 +1028,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userData,
     selectedCategoryId,
     currentTaskId,
+    currentTask: getCurrentTask(),
     pomodoroTimer,
     
     addCategory,
