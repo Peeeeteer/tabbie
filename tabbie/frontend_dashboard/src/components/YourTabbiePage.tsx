@@ -14,6 +14,7 @@ interface YourTabbiePageProps {
   handleFaceChange: (faceType: string) => void;
   handleReconnect: () => void;
   fetchLogs: () => void;
+  handleManualIP?: (ip: string) => void;
 }
 
 const YourTabbiePage: React.FC<YourTabbiePageProps> = ({
@@ -29,6 +30,7 @@ const YourTabbiePage: React.FC<YourTabbiePageProps> = ({
   handleFaceChange,
   handleReconnect,
   fetchLogs,
+  handleManualIP,
 }) => {
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -104,18 +106,50 @@ const YourTabbiePage: React.FC<YourTabbiePageProps> = ({
                   ESP32: {esp32URL || 
                     (isReconnecting ? "Attempting to reconnect..." : 
                      isScanning ? "Scanning network..." : 
-                     "Not found - click Reconnect to retry")}
+                     "Not found - try Manual IP: 192.168.0.113")}
                 </div>
               </div>
             </div>
             {!esp32Connected && !isScanning && !isReconnecting && (
-              <Button 
-                onClick={handleReconnect}
-                variant="outline"
-                size="sm"
-              >
-                🔄 Reconnect
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleReconnect}
+                  variant="outline"
+                  size="sm"
+                >
+                  🔄 Reconnect
+                </Button>
+                {handleManualIP && (
+                  <Button 
+                    onClick={() => {
+                      const ip = prompt('Enter ESP32 IP address (e.g., 192.168.0.113):');
+                      if (ip) {
+                        handleManualIP(ip);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    📝 Manual IP
+                  </Button>
+                )}
+                {esp32Connected && esp32URL && (
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        await fetch(`${esp32URL}/face/default`);
+                        alert('Connection status shown on ESP32 display');
+                      } catch (error) {
+                        alert('Could not communicate with ESP32');
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    📺 Show Status
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
@@ -134,6 +168,20 @@ const YourTabbiePage: React.FC<YourTabbiePageProps> = ({
               <span className="font-medium">HTTP API</span>
             </div>
           </div>
+
+          {/* Setup Instructions */}
+          {!esp32Connected && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">🔧 Setup Instructions</h4>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div>1. Make sure ESP32 is powered on and connected via USB</div>
+                <div>2. Check ESP32 OLED display for WiFi connection status</div>
+                <div>3. If WiFi fails, update .env file with correct credentials</div>
+                <div>4. Upload code: <code className="bg-blue-100 px-1 rounded">pio run --target upload</code></div>
+                <div>5. Use "Manual IP" button and enter IP from OLED display</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

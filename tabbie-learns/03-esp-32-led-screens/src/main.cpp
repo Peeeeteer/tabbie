@@ -29,8 +29,8 @@
 // }
 
 
-// 
-// // 2. ESP32 + GME12864-11
+
+// 2. ESP32 + GME12864-11
 // #include <Wire.h>
 // #include <Adafruit_GFX.h>
 // #include <Adafruit_SSD1306.h>
@@ -330,6 +330,36 @@ void showFocusFace() {
   display.display();
 }
 
+// Function to show connection status
+void showConnectionStatus() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    display.println("WiFi Connected!");
+    display.println("IP: " + WiFi.localIP().toString());
+    display.println("");
+    display.println("Frontend URL:");
+    display.println("http://localhost:3000");
+    display.println("");
+    display.println("ESP32 API:");
+    display.println("http://" + WiFi.localIP().toString());
+    display.println("");
+    display.println("MAC: " + WiFi.macAddress());
+  } else {
+    display.println("WiFi Disconnected");
+    display.println("");
+    display.println("Check WiFi credentials");
+    display.println("in .env file");
+    display.println("");
+    display.println("Current SSID:");
+    display.println(ssid);
+  }
+  display.display();
+}
+
 void connectToWiFi() {
   addLog("🔄 Connecting to WiFi network: " + String(ssid));
   addLog("📊 SSID Length: " + String(strlen(ssid)) + " characters");
@@ -569,11 +599,13 @@ void setup() {
   display.println("WiFi Connected!");
   display.println("IP: " + WiFi.localIP().toString());
   display.println("");
-  display.println("Open Frontend:");
-  display.println("localhost:5174");
+  display.println("Frontend URL:");
+  display.println("http://localhost:3000");
   display.println("");
-  display.println("ESP32 MAC:");
-  display.println(WiFi.macAddress());
+  display.println("ESP32 API:");
+  display.println("http://" + WiFi.localIP().toString());
+  display.println("");
+  display.println("MAC: " + WiFi.macAddress());
   display.display();
   
   // Show initial default face

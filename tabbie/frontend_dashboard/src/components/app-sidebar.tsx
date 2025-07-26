@@ -196,9 +196,10 @@ const data = {
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onSetupWizard?: () => void;
   onNavigateToTabbie?: () => void;
+  esp32Connected?: boolean;
 }
 
-export function AppSidebar({ onSetupWizard, onNavigateToTabbie, ...props }: AppSidebarProps) {
+export function AppSidebar({ onSetupWizard, onNavigateToTabbie, esp32Connected, ...props }: AppSidebarProps) {
   // Add setup wizard to settings items and Your Tabbie navigation
   const dataWithSetup = {
     ...data,
@@ -208,6 +209,8 @@ export function AppSidebar({ onSetupWizard, onNavigateToTabbie, ...props }: AppS
         title: "Your Tabbie",
         url: "#",
         icon: Wrench,
+        showConnectionStatus: true,
+        isConnected: esp32Connected,
         items: [
           {
             title: "Hardware Control",

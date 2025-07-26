@@ -67,9 +67,21 @@ export default function Page() {
     
     // Get current device's IP to determine subnet
     const getLocalSubnet = () => {
-      // Common subnet patterns
+      // Try to detect the actual local network first
+      try {
+        // This will work in most browsers
+        const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+        if (connection && connection.type === 'wifi') {
+          // We're on WiFi, try to get local IP
+          return [window.location.hostname.split('.').slice(0, -1).join('.') + '.'];
+        }
+      } catch (e) {
+        console.log('Could not detect network automatically');
+      }
+      
+      // Fallback to common subnet patterns - prioritize 192.168.0.x since that's where ESP32 is
       return [
-        "192.168.1.", "192.168.2.", "192.168.0.", 
+        "192.168.0.", "192.168.1.", "192.168.2.", 
         "192.168.4.", "192.168.10.", "192.168.11.",
         "10.0.0.", "10.0.1.", "172.16.0."
       ];
@@ -81,7 +93,7 @@ export default function Page() {
       const subnets = getLocalSubnet();
       
       // Priority IPs first (including your known ESP32 IP)
-      const priorityIPs = [93, 100, 101, 102, 79, 50, 51, 52];
+      const priorityIPs = [113, 93, 100, 101, 102, 79, 50, 51, 52];
       
       for (const subnet of subnets) {
         // Add priority IPs first
@@ -140,6 +152,11 @@ export default function Page() {
      }
 
      console.log("❌ ESP32 not found on network. Check WiFi connection and power.");
+     console.log("💡 Troubleshooting:");
+     console.log("  • Make sure ESP32 is powered on");
+     console.log("  • Check that ESP32 is connected to WiFi");
+     console.log("  • Try manual IP entry: 192.168.0.113");
+     console.log("  • Check ESP32 OLED display for IP address");
      setIsScanning(false);
      return null;
    };
@@ -166,8 +183,41 @@ export default function Page() {
         checkFaceStatus();
         fetchLogs();
       }
-            } catch (err) {
-          console.log('Reconnect failed:', err);
+    } catch (err) {
+      console.log('Reconnect failed:', err);
+    } finally {
+      setIsReconnecting(false);
+    }
+  };
+
+  const handleManualIP = async (ip: string) => {
+    setIsReconnecting(true);
+    setEsp32Connected(false);
+    setEsp32URL(""); // Clear old URL
+    
+    try {
+      const url = `http://${ip}`;
+      const response = await fetch(`${url}/face/status`, { 
+        signal: AbortSignal.timeout(3000) 
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && typeof data.currentFace !== 'undefined') {
+          setEsp32URL(url);
+          setEsp32Connected(true);
+          checkFaceStatus();
+          fetchLogs();
+          console.log(`✅ Connected to ESP32 at: ${url}`);
+        } else {
+          alert('Invalid ESP32 response. Please check the IP address.');
+        }
+      } else {
+        alert('Could not connect to ESP32. Please check the IP address.');
+      }
+    } catch (err) {
+      console.log('Manual IP connection failed:', err);
+      alert('Connection failed. Please check the IP address and make sure ESP32 is powered on.');
     } finally {
       setIsReconnecting(false);
     }
@@ -379,6 +429,7 @@ export default function Page() {
                 currentView={currentView}
                 onViewChange={setCurrentView}
                 activityStats={activityStats}
+                esp32Connected={esp32Connected}
               />
             )}
           </ActivityStatsProvider>
@@ -435,20 +486,21 @@ export default function Page() {
               onPageChange={setCurrentPage}
             />
           ) : currentPage === 'yourtabbie' ? (
-            <YourTabbiePage 
-              currentFace={currentFace}
-              isLoading={isLoading}
-              esp32Connected={esp32Connected}
-              esp32URL={esp32URL}
-              isScanning={isScanning}
-              isReconnecting={isReconnecting}
-              isHealthChecking={isHealthChecking}
-              logs={logs}
-              logsLoading={logsLoading}
-              handleFaceChange={handleFaceChange}
-              handleReconnect={handleReconnect}
-              fetchLogs={fetchLogs}
-            />
+                    <YourTabbiePage
+          currentFace={currentFace}
+          isLoading={isLoading}
+          esp32Connected={esp32Connected}
+          esp32URL={esp32URL}
+          isScanning={isScanning}
+          isReconnecting={isReconnecting}
+          isHealthChecking={isHealthChecking}
+          logs={logs}
+          logsLoading={logsLoading}
+          handleFaceChange={handleFaceChange}
+          handleReconnect={handleReconnect}
+          fetchLogs={fetchLogs}
+          handleManualIP={handleManualIP}
+        />
           ) : currentPage === 'tasks' ? (
             <TasksPage currentView={currentView} onViewChange={setCurrentView} onPageChange={setCurrentPage} />
           ) : currentPage === 'reminders' ? (

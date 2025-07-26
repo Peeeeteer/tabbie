@@ -40,6 +40,7 @@ interface CategorySidebarProps {
     totalXP: number;
     totalPomodoros: number;
   };
+  esp32Connected?: boolean;
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
@@ -47,7 +48,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   onPageChange, 
   currentView: _currentView,
   onViewChange,
-  activityStats
+  activityStats,
+  esp32Connected
 }) => {
   const {
     userData,
@@ -204,6 +206,12 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               >
                 <Wrench className="w-4 h-4" />
                 <span>Your Tabbie</span>
+                <div 
+                  className={`ml-auto w-2 h-2 rounded-full ${
+                    esp32Connected ? 'bg-green-500' : 'bg-red-500'
+                  }`} 
+                  title={esp32Connected ? 'ESP32 Connected' : 'ESP32 Disconnected'}
+                />
               </SidebarMenuButton>
             </SidebarMenuItem>
             

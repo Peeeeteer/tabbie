@@ -27,6 +27,8 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     isActive?: boolean
+    showConnectionStatus?: boolean
+    isConnected?: boolean
     items?: {
       title: string
       url: string
@@ -51,6 +53,14 @@ export function NavMain({
                 <SidebarMenuButton tooltip={item.title}>
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
+                  {item.showConnectionStatus && (
+                    <div 
+                      className={`ml-auto w-2 h-2 rounded-full ${
+                        item.isConnected ? 'bg-green-500' : 'bg-red-500'
+                      }`} 
+                      title={item.isConnected ? 'ESP32 Connected' : 'ESP32 Disconnected'}
+                    />
+                  )}
                   <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
