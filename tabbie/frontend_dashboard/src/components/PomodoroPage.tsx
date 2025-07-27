@@ -150,9 +150,10 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
 
   const progress = calculateProgress();
 
-  // Check if work session is overdue (past scheduled time) - only work sessions can be overdue
-  // Allow overdue state even when just completed, so user can see the "Take Break" button
+  // Check if session is overdue (past scheduled time) - both work and break sessions can be overdue
+  // Allow overdue state even when just completed, so user can see the appropriate buttons
   const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
+  const isBreakOverdue = pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.timeLeft < 0;
 
   const formatTime = (seconds: number): string => {
     // Handle NaN, undefined, or invalid values
@@ -212,7 +213,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
             cy={size / 2}
             r={radius}
             stroke={
-              isWorkOverdue ? "rgb(249 115 22)" : // orange for overdue
+              isWorkOverdue ? "rgb(249 115 22)" : // orange for overdue work
+              isBreakOverdue ? "rgb(239 68 68)" : // red for overdue break (same as work)
               pomodoroTimer.sessionType === 'work' ? "rgb(239 68 68)" : "rgb(34 197 94)"
             }
             strokeWidth="8"
@@ -231,9 +233,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
           </div>
           <div className={`text-lg font-medium ${
             isWorkOverdue ? 'text-orange-600' : 
+            isBreakOverdue ? 'text-red-600' :
             pomodoroTimer.sessionType === 'work' ? 'text-red-600' : 'text-green-600'
           }`}>
             {isWorkOverdue ? '⏰ Take Break' : 
+             isBreakOverdue ? '⏰ Break Overdue' :
              pomodoroTimer.sessionType === 'work' ? '🍅 Focus Time' : '☕ Break Time'}
           </div>
         </div>
@@ -558,7 +562,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
               {/* Controls */}
               <div className="flex items-center justify-center gap-4">
                 {isWorkOverdue ? (
-                  // Show overdue controls first - this takes priority over justCompleted
+                  // Show overdue work controls first - this takes priority over justCompleted
                   <>
                     <Button 
                       onClick={completeWorkSession}
@@ -567,6 +571,27 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                     >
                       <Coffee className="w-5 h-5 mr-2" />
                       Take Break
+                    </Button>
+                    <Button 
+                      onClick={stopPomodoro}
+                      variant="outline"
+                      size="lg"
+                      className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Square className="w-5 h-5 mr-2" />
+                      Stop
+                    </Button>
+                  </>
+                ) : isBreakOverdue ? (
+                  // Show overdue break controls
+                  <>
+                    <Button 
+                      onClick={startNextSession}
+                      size="lg"
+                      className="bg-red-600 hover:bg-red-700 text-white px-8"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      Continue Working
                     </Button>
                     <Button 
                       onClick={stopPomodoro}
@@ -808,7 +833,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Progress</span>
                   <span className="font-medium">
-                    {isWorkOverdue ? 'Overdue' : `${progress.toFixed(0)}%`}
+                    {isWorkOverdue || isBreakOverdue ? 'Overdue' : `${progress.toFixed(0)}%`}
                   </span>
                 </div>
               </div>
@@ -835,11 +860,19 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
               <div className="space-y-2 text-xs text-gray-600">
                 {isWorkOverdue ? (
                   <>
-                    <p className="text-orange-600 font-medium">⏰ Session is overdue!</p>
+                    <p className="text-orange-600 font-medium">⏰ Work session is overdue!</p>
                     <p>• You've worked longer than planned</p>
                     <p>• Consider taking a break to stay fresh</p>
                     <p>• Click "Take Break" when ready</p>
                     <p>• Or continue if you're in the flow</p>
+                  </>
+                ) : isBreakOverdue ? (
+                  <>
+                    <p className="text-red-600 font-medium">⏰ Break is overdue!</p>
+                    <p>• You've been on break longer than planned</p>
+                    <p>• Consider getting back to work</p>
+                    <p>• Click "Continue Working" when ready</p>
+                    <p>• Or take more time if needed</p>
                   </>
                 ) : pomodoroTimer.sessionType === 'work' ? (
                   <>

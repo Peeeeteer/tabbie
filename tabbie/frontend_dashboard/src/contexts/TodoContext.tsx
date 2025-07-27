@@ -265,52 +265,44 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPomodoroTimer(prev => {
           const currentTask = getCurrentTask();
           // Check for session completion (timeLeft reaches 0)
-          // Only auto-complete break sessions, work sessions should continue into overtime
-          if (safeActualTimeLeft <= 0 && prev.timeLeft > 0 && prev.sessionType === 'shortBreak') {
-            // Break completed - play sound and show notification
-            playNotificationSound();
-            showNotification(
-              '☕ Break Complete!', 
-              'Break time is over. Ready to get back to work?'
-            );
-            
-            // Auto-complete the break session immediately when timer reaches 0
-            setTimeout(() => {
-              completePomodoro();
-            }, 100); // Very short delay to allow notification
-            
-            // Stop the timer at 0 for break sessions - don't go into overtime
-            return {
-              ...prev,
-              timeLeft: 0,
-              isRunning: false,
-              justCompleted: true,
-              totalPausedTime: safeTotalPausedTime,
-            };
+          // Both work and break sessions can continue into overtime
+          if (safeActualTimeLeft <= 0 && prev.timeLeft > 0) {
+            if (prev.sessionType === 'shortBreak') {
+              // Break completed - play sound and show notification
+              playNotificationSound();
+              showNotification(
+                '☕ Break Complete!', 
+                'Break time is over. Ready to get back to work?'
+              );
+            } else if (prev.sessionType === 'work') {
+              // Work session completed - play sound and show notification
+              playNotificationSound();
+              showNotification(
+                '🍅 Pomodoro Complete!', 
+                `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. You can continue working or take a break!`
+              );
+            }
           }
           
-          // For work sessions, play sound when they first reach 0 but don't auto-complete
-          if (safeActualTimeLeft <= 0 && prev.timeLeft > 0 && prev.sessionType === 'work') {
-            // Work session completed - play sound and show notification
-            playNotificationSound();
-            showNotification(
-              '🍅 Pomodoro Complete!', 
-              `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. You can continue working or take a break!`
-            );
-          }
-          
-          // Check for overtime notifications every 5 minutes for work sessions
-          if (safeActualTimeLeft < 0 && prev.sessionType === 'work') {
+          // Check for overtime notifications every 5 minutes for both work and break sessions
+          if (safeActualTimeLeft < 0) {
             const overtimeMinutes = Math.floor(Math.abs(safeActualTimeLeft) / 60);
             const timeSinceLastNotification = now - lastOvertimeNotification;
             
             // Play sound every 5 minutes of overtime
             if (overtimeMinutes > 0 && overtimeMinutes % 5 === 0 && timeSinceLastNotification > 4 * 60 * 1000) {
               playNotificationSound();
-              showNotification(
-                '⏰ Still Working!', 
-                `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
-              );
+              if (prev.sessionType === 'work') {
+                showNotification(
+                  '⏰ Still Working!', 
+                  `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
+                );
+              } else if (prev.sessionType === 'shortBreak') {
+                showNotification(
+                  '⏰ Break Overdue!', 
+                  `You've been on break for ${overtimeMinutes} minutes longer than planned. Ready to get back to work?`
+                );
+              }
               lastOvertimeNotification = now;
             }
           }
@@ -769,6 +761,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentTaskId: currentTask.id,
         startedAt: Date.now(),
         pausedAt: null,
+        totalPausedTime: 0,
       });
     } else if (pomodoroTimer.sessionType === 'shortBreak') {
       // Start next work session after break
@@ -799,6 +792,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentTaskId: currentTask.id,
         startedAt: Date.now(),
         pausedAt: null,
+        totalPausedTime: 0,
       });
     } else {
       // Task is completed or user chose to stop
@@ -808,6 +802,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession: null,
         sessionType: 'work',
         justCompleted: false,
+        pausedAt: null,
+        totalPausedTime: 0,
       });
       setCurrentTaskId(null);
       clearPomodoroState();
@@ -890,6 +886,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currentSession: null,
           sessionType: 'work',
           justCompleted: true,
+          pausedAt: null,
+          totalPausedTime: 0,
         });
         // Don't clear currentTask yet, keep it for display
         // Clear persisted state after a delay to allow completion screen to show
@@ -904,6 +902,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isRunning: false,
           timeLeft: 0,
           justCompleted: true,
+          pausedAt: null,
+          totalPausedTime: 0,
         }));
       }
     }
@@ -931,6 +931,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession: breakSession,
         sessionType: 'shortBreak',
         justCompleted: false,
+        pausedAt: null,
+        totalPausedTime: 0,
       });
     }
   };
@@ -974,6 +976,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currentSession: null,
           sessionType: 'work',
           justCompleted: true,
+          pausedAt: null,
+          totalPausedTime: 0,
         });
         setTimeout(() => {
           clearPomodoroState();
@@ -995,6 +999,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currentSession: workSession,
           sessionType: 'work',
           justCompleted: false,
+          pausedAt: null,
+          totalPausedTime: 0,
         });
       }
     }
