@@ -54,7 +54,7 @@ export const useTodo = () => {
   return context;
 };
 
-export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: string }> = ({ children, esp32URL }) => {
   const [userData, setUserData] = useState<UserData>(loadUserData);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -627,7 +627,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Pomodoro methods
-  const startPomodoro = (task: Task) => {
+  const startPomodoro = async (task: Task) => {
     const session: PomodoroSession = {
       id: generateId(),
       taskId: task.id,
@@ -647,6 +647,27 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pausedAt: null, // Reset pausedAt when starting a new session
       totalPausedTime: 0, // Reset totalPausedTime when starting a new session
     });
+
+    // Call ESP32 API to start Pomodoro session
+    if (esp32URL) {
+      try {
+        const response = await fetch(`${esp32URL}/pomodoro/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: task.title,
+        });
+        
+        if (response.ok) {
+          console.log('✅ ESP32 Pomodoro session started successfully');
+        } else {
+          console.warn('⚠️ Failed to start ESP32 Pomodoro session:', response.statusText);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not communicate with ESP32 for Pomodoro start:', error);
+      }
+    }
   };
 
   const pausePomodoro = () => {
@@ -701,7 +722,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const stopPomodoro = () => {
+  const stopPomodoro = async () => {
     if (pomodoroTimer.currentSession) {
       // Save incomplete session
       const session = {
@@ -719,6 +740,23 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentTaskId(null);
     // Clear persisted state
     clearPomodoroState();
+
+    // Call ESP32 API to stop Pomodoro session
+    if (esp32URL) {
+      try {
+        const response = await fetch(`${esp32URL}/pomodoro/stop`, {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          console.log('✅ ESP32 Pomodoro session stopped successfully');
+        } else {
+          console.warn('⚠️ Failed to stop ESP32 Pomodoro session:', response.statusText);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not communicate with ESP32 for Pomodoro stop:', error);
+      }
+    }
   };
 
   const startNextSession = () => {

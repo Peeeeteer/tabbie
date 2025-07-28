@@ -418,7 +418,7 @@ export default function Page() {
 
   return (
     <DarkModeProvider>
-      <TodoProvider>
+      <TodoProvider esp32URL={esp32URL}>
         <SidebarProvider>
         <Sidebar>
           <ActivityStatsProvider>
