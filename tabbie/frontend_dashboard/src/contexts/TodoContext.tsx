@@ -42,6 +42,9 @@ interface TodoContextType {
   startNextSession: () => void; // New method for manual next session start
   skipBreak: () => void; // New method to skip break and start next work session
   debugSetTimerTo10Seconds: () => void; // Debug function to set timer to 10 seconds
+  
+  // Notes methods
+  updateUserNotes: (type: 'global' | 'category', content: string, categoryId?: string) => void;
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
@@ -1068,6 +1071,35 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
     }
   };
 
+  const updateUserNotes = (type: 'global' | 'category', content: string, categoryId?: string) => {
+    setUserData(prev => {
+      const currentNotes = prev.notes || { global: '', categories: {} };
+      
+      if (type === 'global') {
+        return {
+          ...prev,
+          notes: {
+            ...currentNotes,
+            global: content
+          }
+        };
+      } else if (type === 'category' && categoryId) {
+        return {
+          ...prev,
+          notes: {
+            ...currentNotes,
+            categories: {
+              ...currentNotes.categories,
+              [categoryId]: content
+            }
+          }
+        };
+      }
+      
+      return prev;
+    });
+  };
+
   const value: TodoContextType = {
     userData,
     selectedCategoryId,
@@ -1096,6 +1128,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
     startNextSession,
     skipBreak,
     debugSetTimerTo10Seconds,
+    
+    updateUserNotes,
   };
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>;

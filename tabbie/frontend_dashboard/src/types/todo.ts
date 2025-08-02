@@ -45,12 +45,18 @@ export interface PomodoroSession {
   type: 'work' | 'shortBreak' | 'longBreak';
 }
 
+export interface Notes {
+  global: string; // All notes content
+  categories: { [categoryId: string]: string }; // Notes per category
+}
+
 export interface UserData {
   categories: Category[];
   tasks: Task[];
   completedTasks: CompletedTask[];
   pomodoroSessions: PomodoroSession[];
   totalXP?: number; // Total XP earned from pomodoro sessions
+  notes?: Notes; // User notes
   settings: {
     workDuration: number; // minutes
     shortBreakDuration: number; // minutes

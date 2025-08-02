@@ -181,6 +181,7 @@ export const loadUserData = (): UserData => {
         completedTasks: parsed.completedTasks || [],
         pomodoroSessions: parsed.pomodoroSessions || [],
         totalXP,
+        notes: parsed.notes || { global: '', categories: {} },
         settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       };
     }
@@ -195,6 +196,7 @@ export const loadUserData = (): UserData => {
     completedTasks: [],
     pomodoroSessions: [],
     totalXP: 0,
+    notes: { global: '', categories: {} },
     settings: DEFAULT_SETTINGS,
   };
 };

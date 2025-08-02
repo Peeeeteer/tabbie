@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square, Coffee, SkipForward
+  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square, Coffee, SkipForward,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,8 @@ import { useTodo } from '@/contexts/TodoContext';
 import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 
 interface CategorySidebarProps {
-  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings';
-  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings') => void;
+  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'calendar' | 'activity' | 'timetracking' | 'settings';
+  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
       currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
@@ -244,6 +245,16 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   <span className="ml-auto mr-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse">
                   </span>
                 )}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={() => onPageChange('notes')}
+                isActive={currentPage === 'notes'}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Notes</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             

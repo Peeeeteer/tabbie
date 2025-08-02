@@ -28,10 +28,11 @@ import DashboardPage from "@/components/DashboardPage"
 import ActivityPage from "@/components/ActivityPage"
 import YourTabbiePage from "@/components/YourTabbiePage"
 import PomodoroPage from "@/components/PomodoroPage"
+import NotesPage from "@/components/NotesPage"
 import { ActivityStatsProvider } from "@/components/ActivityStatsProvider"
 
 export default function Page() {
-  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'calendar' | 'activity' | 'timetracking' | 'settings'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
   const [currentFace, setCurrentFace] = React.useState("default");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -514,6 +515,8 @@ export default function Page() {
             <NotificationsPage />
           ) : currentPage === 'pomodoro' ? (
                             <PomodoroPage onPageChange={setCurrentPage} />
+          ) : currentPage === 'notes' ? (
+                            <NotesPage onPageChange={setCurrentPage} />
           ) : currentPage === 'calendar' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📅 Calendar</h2>
