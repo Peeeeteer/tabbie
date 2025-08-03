@@ -7,13 +7,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 
 interface DateTimePickerProps {
   date?: Date;
   onDateChange: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
+  hideQuickSelect?: boolean;
 }
 
 export function DateTimePicker({
@@ -21,6 +22,7 @@ export function DateTimePicker({
   onDateChange,
   placeholder = "Pick a date and time",
   className,
+  hideQuickSelect = false,
 }: DateTimePickerProps) {
   const [time, setTime] = React.useState('09:00');
   const [is24Hour, setIs24Hour] = React.useState(false);
@@ -116,48 +118,50 @@ export function DateTimePicker({
           </div>
         </div>
         
-        {/* Quick Date Shortcuts */}
-        <div className="p-3 border-b bg-muted/50">
-          <div className="text-xs font-medium text-muted-foreground mb-2">Quick Select</div>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickDate(0)}
-              className="h-8 px-2 text-xs flex items-center gap-1"
-            >
-              <span>📅</span>
-              Today
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickDate(1)}
-              className="h-8 px-2 text-xs flex items-center gap-1"
-            >
-              <span>🌅</span>
-              Tomorrow
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickDate(3)}
-              className="h-8 px-2 text-xs flex items-center gap-1"
-            >
-              <span>📆</span>
-              3 Days
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickDate(7)}
-              className="h-8 px-2 text-xs flex items-center gap-1"
-            >
-              <span>🗓️</span>
-              Week
-            </Button>
+        {/* Quick Date Shortcuts - Only show if not hidden */}
+        {!hideQuickSelect && (
+          <div className="p-3 border-b bg-muted/50">
+            <div className="text-xs font-medium text-muted-foreground mb-2">Quick Select</div>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickDate(0)}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📅</span>
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickDate(1)}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🌅</span>
+                Tomorrow
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickDate(3)}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📆</span>
+                3 Days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickDate(7)}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🗓️</span>
+                Week
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
         
         <Calendar
           mode="single"

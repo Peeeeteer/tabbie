@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
+import { format, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
@@ -1370,6 +1371,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       // Reset form first
                       resetCreateTaskForm();
                       
+                      // Close edit panel if open
+                      if (isEditPanelOpen) {
+                        setIsEditPanelOpen(false);
+                        setEditingTask(null);
+                      }
+                      
                       setIsCreatePanelOpen(true);
                       setIsViewPanelOpen(false);
                       setViewingTask(null);
@@ -1501,14 +1508,105 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Due Date & Time */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
-            <DateTimePicker
-              date={newTaskDueDate}
-              onDateChange={setNewTaskDueDate}
-              placeholder="Pick date and time"
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
+            
+            {/* Quick Date Shortcuts */}
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                variant={newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  today.setHours(9, 0, 0, 0);
+                  setNewTaskDueDate(today);
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📅</span>
+                Today
+              </Button>
+              
+              <Button
+                type="button"
+                variant={newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const tomorrow = addDays(new Date(), 1);
+                  tomorrow.setHours(9, 0, 0, 0);
+                  setNewTaskDueDate(tomorrow);
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🌅</span>
+                Tomorrow
+              </Button>
+              
+              <Button
+                type="button"
+                variant={newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const threeDays = addDays(new Date(), 3);
+                  threeDays.setHours(9, 0, 0, 0);
+                  setNewTaskDueDate(threeDays);
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📆</span>
+                3 Days
+              </Button>
+              
+              <Button
+                type="button"
+                variant={newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const nextWeek = addDays(new Date(), 7);
+                  nextWeek.setHours(9, 0, 0, 0);
+                  setNewTaskDueDate(nextWeek);
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🗓️</span>
+                Week
+              </Button>
+            </div>
+            
+            {/* Custom Date/Time Option */}
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-gray-600">Or choose specific date & time:</span>
+              </div>
+              <DateTimePicker
+                date={newTaskDueDate}
+                onDateChange={setNewTaskDueDate}
+                placeholder="Pick specific date and time"
+                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                hideQuickSelect={true}
+              />
+            </div>
+            
+            {/* Clear Date Option */}
+            {newTaskDueDate && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-gray-600">
+                  Due: <span className="font-medium text-gray-900">
+                    {format(newTaskDueDate, 'MMM dd, yyyy')} at {format(newTaskDueDate, 'h:mm a')}
+                  </span>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setNewTaskDueDate(undefined)}
+                  className="text-gray-500 hover:text-red-600 h-auto p-1"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Estimated Pomodoros */}
@@ -1662,17 +1760,115 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Due Date & Time */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
-            <DateTimePicker
-              date={editDueDate}
-              onDateChange={(date) => {
-                setEditDueDate(date);
-                scheduleAutoSave();
-              }}
-              placeholder="Pick date and time"
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
+            
+            {/* Quick Date Shortcuts */}
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                variant={editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  today.setHours(9, 0, 0, 0);
+                  setEditDueDate(today);
+                  scheduleAutoSave();
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📅</span>
+                Today
+              </Button>
+              
+              <Button
+                type="button"
+                variant={editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const tomorrow = addDays(new Date(), 1);
+                  tomorrow.setHours(9, 0, 0, 0);
+                  setEditDueDate(tomorrow);
+                  scheduleAutoSave();
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🌅</span>
+                Tomorrow
+              </Button>
+              
+              <Button
+                type="button"
+                variant={editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const threeDays = addDays(new Date(), 3);
+                  threeDays.setHours(9, 0, 0, 0);
+                  setEditDueDate(threeDays);
+                  scheduleAutoSave();
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>📆</span>
+                3 Days
+              </Button>
+              
+              <Button
+                type="button"
+                variant={editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const nextWeek = addDays(new Date(), 7);
+                  nextWeek.setHours(9, 0, 0, 0);
+                  setEditDueDate(nextWeek);
+                  scheduleAutoSave();
+                }}
+                className="h-8 px-2 text-xs flex items-center gap-1"
+              >
+                <span>🗓️</span>
+                Week
+              </Button>
+            </div>
+            
+            {/* Custom Date/Time Option */}
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-gray-600">Or choose specific date & time:</span>
+              </div>
+              <DateTimePicker
+                date={editDueDate}
+                onDateChange={(date) => {
+                  setEditDueDate(date);
+                  scheduleAutoSave();
+                }}
+                placeholder="Pick specific date and time"
+                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                hideQuickSelect={true}
+              />
+            </div>
+            
+            {/* Clear Date Option */}
+            {editDueDate && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-gray-600">
+                  Due: <span className="font-medium text-gray-900">
+                    {format(editDueDate, 'MMM dd, yyyy')} at {format(editDueDate, 'h:mm a')}
+                  </span>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditDueDate(undefined);
+                    scheduleAutoSave();
+                  }}
+                  className="text-gray-500 hover:text-red-600 h-auto p-1"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Estimated Pomodoros */}
