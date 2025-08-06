@@ -5,7 +5,7 @@ Ever wanted a **to-do app with a Cute Face**? One that lives on your desk?
 
 **That’s Tabbie.**
 
-[📬 Join the waitlist](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@peeeeteer)
+[📬 Join the waitlist](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@looyd1)
 
 </div>
 
