@@ -38,8 +38,8 @@ interface TodoContextType {
   resumePomodoro: () => void;
   stopPomodoro: () => void;
   completePomodoro: () => void;
-  completeWorkSession: () => void; // New method to manually complete work sessions
-  startNextSession: () => void; // New method for manual next session start
+  completeWorkSession: () => Promise<void>; // New method to manually complete work sessions
+  startNextSession: () => Promise<void>; // New method for manual next session start
   skipBreak: () => void; // New method to skip break and start next work session
   debugSetTimerTo10Seconds: () => void; // Debug function to set timer to 10 seconds
   
@@ -659,7 +659,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
           headers: {
             'Content-Type': 'text/plain',
           },
-          body: task.title,
+          body: `${userData.settings.workDuration * 60} ${task.title}`, // Send duration in seconds + task name
         });
         
         if (response.ok) {
@@ -762,7 +762,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
     }
   };
 
-  const startNextSession = () => {
+  const startNextSession = async () => {
     const currentTask = getCurrentTask();
     if (!currentTask) return;
 
@@ -804,6 +804,27 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         pausedAt: null,
         totalPausedTime: 0,
       });
+
+      // Call ESP32 API to start break session
+      if (esp32URL) {
+        try {
+          const response = await fetch(`${esp32URL}/break/start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+            body: `${userData.settings.shortBreakDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
+          });
+          
+          if (response.ok) {
+            console.log('✅ ESP32 Break session started successfully');
+          } else {
+            console.warn('⚠️ Failed to start ESP32 Break session:', response.statusText);
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not communicate with ESP32 for Break start:', error);
+        }
+      }
     } else if (pomodoroTimer.sessionType === 'shortBreak') {
       // Start next work session after break
       const workSession: PomodoroSession = {
@@ -835,6 +856,27 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         pausedAt: null,
         totalPausedTime: 0,
       });
+
+      // Call ESP32 API to start work session
+      if (esp32URL) {
+        try {
+          const response = await fetch(`${esp32URL}/pomodoro/start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+            body: `${userData.settings.workDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
+          });
+          
+          if (response.ok) {
+            console.log('✅ ESP32 Work session started successfully');
+          } else {
+            console.warn('⚠️ Failed to start ESP32 Work session:', response.statusText);
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not communicate with ESP32 for Work session start:', error);
+        }
+      }
     } else {
       // Task is completed or user chose to stop
       setPomodoroTimer({
@@ -950,7 +992,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
     }
   };
 
-  const completeWorkSession = () => {
+  const completeWorkSession = async () => {
     const currentTask = getCurrentTask();
     if (pomodoroTimer.sessionType === 'work' && pomodoroTimer.currentSession && currentTask) {
       // Complete the current work session
@@ -975,6 +1017,27 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         pausedAt: null,
         totalPausedTime: 0,
       });
+
+      // Call ESP32 API to take break
+      if (esp32URL) {
+        try {
+          const response = await fetch(`${esp32URL}/take-break`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+            body: `${userData.settings.shortBreakDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
+          });
+          
+          if (response.ok) {
+            console.log('✅ ESP32 Take Break command executed successfully');
+          } else {
+            console.warn('⚠️ Failed to execute ESP32 Take Break command:', response.statusText);
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not communicate with ESP32 for Take Break command:', error);
+        }
+      }
     }
   };
 
