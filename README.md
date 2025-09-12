@@ -13,6 +13,8 @@ Ever wanted a **to-do app with a Cute Face**? One that lives on your desk?
 
 ## 🧠 What is Tabbie?
 
+
+
 **Tabbie is a DIY desk robot that helps you work, focus, and learn.**  
 It's like a to-do app — but physical, local, and full of personality.
 
@@ -24,6 +26,11 @@ Tabbie lives on your desk, connects to your computer, and helps with small daily
 - 🗣️ Talking to you (coming soon!)
 
 **Think:** a mini Twitch streamer sitting on your desk, cheering you on — but also keeping you on track.
+
+
+https://github.com/user-attachments/assets/8622418c-c75d-4014-b173-b217fcf1de87
+
+
 
 ## ✨ Made to Be Built
 
