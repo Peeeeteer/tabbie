@@ -108,6 +108,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const editPanelRef = React.useRef<HTMLDivElement>(null);
   const viewPanelRef = React.useRef<HTMLDivElement>(null);
   const navigationRef = React.useRef<HTMLDivElement>(null);
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
 
   // Setup drag and drop sensors
   const sensors = useSensors(
@@ -508,9 +509,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   };
 
   const autoSaveTask = () => {
-    if (editingTask && editTitle.trim()) {
+    if (editingTask) {
+      // Get the current title value directly from the input to avoid stale state
+      const currentTitle = titleInputRef.current?.value || editTitle;
       updateTask(editingTask.id, {
-        title: editTitle,
+        title: currentTitle,
         description: editDescription,
         dueDate: editDueDate,
         categoryId: editCategory,
@@ -1693,11 +1696,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               <Select value={editCategory || 'no-category'} onValueChange={(value) => {
                 const newCategory = value === 'no-category' ? undefined : value;
                 setEditCategory(newCategory);
-                // Immediately save the category change
+                // Immediately save the category change with the new value
                 if (editingTask) {
                   updateTask(editingTask.id, { categoryId: newCategory });
                 }
-                scheduleAutoSave();
               }}>
                 <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="Choose category" />
@@ -1734,11 +1736,20 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-900">Title</label>
             <Input
+              ref={titleInputRef}
               placeholder="Enter task title..."
               value={editTitle}
               onChange={(e) => {
                 setEditTitle(e.target.value);
                 scheduleAutoSave();
+              }}
+              onBlur={() => {
+                // Cancel any pending auto-save to avoid conflicts and save immediately
+                if (autoSaveTimeout) {
+                  clearTimeout(autoSaveTimeout);
+                  setAutoSaveTimeout(null);
+                }
+                autoSaveTask();
               }}
               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
               autoFocus
@@ -2438,9 +2449,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
             <span className="text-xs text-muted-foreground font-medium">
               🍅 {completedSessions}/{task.estimatedPomodoros || 3}
             </span>
-          )}
-          {task.completed && (
-            <span className="text-xs text-green-600 opacity-60">+XP</span>
           )}
           {isCurrentTaskPomodoro && (
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>

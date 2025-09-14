@@ -125,7 +125,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange }) => {
                 Connection
               </CardTitle>
               <CardDescription>
-                Manage ESP32 connection settings
+                Manage device connection settings
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -133,7 +133,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange }) => {
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Auto-Connect</label>
                   <p className="text-sm text-muted-foreground">
-                    Automatically connect to ESP32 on startup
+                    Automatically connect to device on startup
                   </p>
                 </div>
                 <ToggleSwitch

@@ -20,38 +20,12 @@ interface ActivityStats {
 }
 
 interface DashboardPageProps {
-  currentFace: string;
-  isLoading: boolean;
-  esp32Connected: boolean;
-  esp32URL: string;
-  isScanning: boolean;
-  isReconnecting: boolean;
-  isHealthChecking: boolean;
-  logs: string[];
-  logsLoading: boolean;
-  handleFaceChange: (faceType: string) => void;
-  handleReconnect: () => void;
-  fetchLogs: () => void;
   onNavigateToActivity?: () => void;
-  onNavigateToTabbie?: () => void;
-  onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+  onPageChange?: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'activity' | 'timetracking' | 'settings' | 'tabbie') => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
-  currentFace,
-  isLoading,
-  esp32Connected,
-  esp32URL,
-  isScanning,
-  isReconnecting,
-  isHealthChecking,
-  logs,
-  logsLoading,
-  handleFaceChange,
-  handleReconnect,
-  fetchLogs,
   onNavigateToActivity,
-  onNavigateToTabbie,
   onPageChange,
 }) => {
   const { userData } = useTodo();
@@ -375,21 +349,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     >
                       <ChevronRight className="h-3 w-3" />
                     </Button>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={onNavigateToActivity}
-                          className="h-6 w-6 p-0 ml-2"
-                        >
-                          <BarChart3 className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>View full activity details</p>
-                      </TooltipContent>
-                    </Tooltip>
                   </div>
                 </div>
               </div>
@@ -460,10 +419,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   <span className="text-muted-foreground">This Month</span>
                   <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
                 </div>
-                <div className="flex justify-between text-sm pt-2 border-t">
-                  <span className="text-muted-foreground">XP Earned</span>
-                  <span className="font-medium text-purple-600">{userData.totalXP || 0}</span>
-                </div>
               </div>
             </div>
 
@@ -501,39 +456,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
 
-            {/* Quick Tabbie */}
-            <div className="bg-card rounded-lg border p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">🤖 Quick Tabbie</h3>
-              
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  esp32Connected 
-                    ? (isHealthChecking ? 'bg-blue-500 animate-pulse' : 'bg-green-500')
-                    : (isScanning || isReconnecting)
-                      ? 'bg-yellow-500 animate-pulse' 
-                      : 'bg-red-500'
-                }`} />
-                <span className="text-sm font-medium">
-                  {esp32Connected 
-                    ? (isHealthChecking ? 'Checking...' : 'Connected')
-                    : isReconnecting
-                      ? 'Reconnecting...'
-                      : isScanning 
-                        ? 'Scanning...' 
-                        : 'Disconnected'
-                  }
-                </span>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full text-xs"
-                onClick={onNavigateToTabbie}
-              >
-                View Details →
-              </Button>
-            </div>
           </div>
         </div>
       </div>

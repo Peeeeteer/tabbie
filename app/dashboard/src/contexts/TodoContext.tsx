@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
 import { DEFAULT_CATEGORIES } from '@/types/todo';
-import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoroState, clearPomodoroState, updateXP, type PomodoroState } from '@/utils/storage';
+import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoroState, clearPomodoroState, type PomodoroState } from '@/utils/storage';
 
 interface TodoContextType {
   userData: UserData;
@@ -57,7 +57,7 @@ export const useTodo = () => {
   return context;
 };
 
-export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: string }> = ({ children, esp32URL }) => {
+export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userData, setUserData] = useState<UserData>(loadUserData);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -651,26 +651,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
       totalPausedTime: 0, // Reset totalPausedTime when starting a new session
     });
 
-    // Call ESP32 API to start Pomodoro session
-    if (esp32URL) {
-      try {
-        const response = await fetch(`${esp32URL}/pomodoro/start`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain',
-          },
-          body: `${userData.settings.workDuration * 60} ${task.title}`, // Send duration in seconds + task name
-        });
-        
-        if (response.ok) {
-          console.log('✅ ESP32 Pomodoro session started successfully');
-        } else {
-          console.warn('⚠️ Failed to start ESP32 Pomodoro session:', response.statusText);
-        }
-      } catch (error) {
-        console.warn('⚠️ Could not communicate with ESP32 for Pomodoro start:', error);
-      }
-    }
   };
 
   const pausePomodoro = () => {
@@ -744,22 +724,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
     // Clear persisted state
     clearPomodoroState();
 
-    // Call ESP32 API to stop Pomodoro session
-    if (esp32URL) {
-      try {
-        const response = await fetch(`${esp32URL}/pomodoro/stop`, {
-          method: 'POST',
-        });
-        
-        if (response.ok) {
-          console.log('✅ ESP32 Pomodoro session stopped successfully');
-        } else {
-          console.warn('⚠️ Failed to stop ESP32 Pomodoro session:', response.statusText);
-        }
-      } catch (error) {
-        console.warn('⚠️ Could not communicate with ESP32 for Pomodoro stop:', error);
-      }
-    }
   };
 
   const startNextSession = async () => {
@@ -805,26 +769,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         totalPausedTime: 0,
       });
 
-      // Call ESP32 API to start break session
-      if (esp32URL) {
-        try {
-          const response = await fetch(`${esp32URL}/break/start`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-            body: `${userData.settings.shortBreakDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
-          });
-          
-          if (response.ok) {
-            console.log('✅ ESP32 Break session started successfully');
-          } else {
-            console.warn('⚠️ Failed to start ESP32 Break session:', response.statusText);
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not communicate with ESP32 for Break start:', error);
-        }
-      }
     } else if (pomodoroTimer.sessionType === 'shortBreak') {
       // Start next work session after break
       const workSession: PomodoroSession = {
@@ -857,26 +801,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         totalPausedTime: 0,
       });
 
-      // Call ESP32 API to start work session
-      if (esp32URL) {
-        try {
-          const response = await fetch(`${esp32URL}/pomodoro/start`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-            body: `${userData.settings.workDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
-          });
-          
-          if (response.ok) {
-            console.log('✅ ESP32 Work session started successfully');
-          } else {
-            console.warn('⚠️ Failed to start ESP32 Work session:', response.statusText);
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not communicate with ESP32 for Work session start:', error);
-        }
-      }
     } else {
       // Task is completed or user chose to stop
       setPomodoroTimer({
@@ -902,35 +826,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         completed: true,
       };
       
-      // Calculate XP based on session duration
-      const sessionDuration = Math.floor((completedSession.ended.getTime() - completedSession.started.getTime()) / 1000 / 60); // minutes
-      let xpEarned = 0;
-      
-      if (completedSession.type === 'work') {
-        // Work sessions: 1 minute = 1 XP, capped at 30 minutes overtime
-        const baseDuration = completedSession.duration;
-        const actualDuration = sessionDuration;
-        const overtime = Math.max(0, actualDuration - baseDuration);
-        const cappedOvertime = Math.min(overtime, 30); // Cap at 30 minutes overtime
-        xpEarned = Math.min(actualDuration, baseDuration + cappedOvertime);
-      } else {
-        // Break sessions: Inverse scaling - shorter breaks give more XP
-        const breakDuration = completedSession.duration;
-        const actualDuration = sessionDuration;
-        const efficiency = Math.min(1, actualDuration / breakDuration);
-        xpEarned = Math.floor((1 - efficiency) * 5); // Max 5 XP for perfect break efficiency
-      }
-      
       setUserData(prev => ({
         ...prev,
         pomodoroSessions: [...prev.pomodoroSessions, completedSession],
-        totalXP: (prev.totalXP || 0) + xpEarned,
       }));
-      
-      // Also update XP using safe function for persistence
-      if (xpEarned > 0) {
-        updateXP(xpEarned);
-      }
 
       // Update task with completed session
       const currentTask = getCurrentTask();
@@ -940,15 +839,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         });
       }
       
-      // Show XP notification with overtime info
-      if (xpEarned > 0) {
-        const overtime = Math.max(0, sessionDuration - completedSession.duration);
-        const overtimeMessage = overtime > 0 ? ` (${overtime} min overtime)` : '';
-        showNotification(
-          '⭐ XP Earned!', 
-          `You earned ${xpEarned} XP for your ${completedSession.type === 'work' ? 'focus session' : 'break'}${overtimeMessage}`
-        );
-      }
 
       // Check if this was the last session
       const completedWorkSessions = (currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) + 
@@ -1018,26 +908,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode; esp32URL?: stri
         totalPausedTime: 0,
       });
 
-      // Call ESP32 API to take break
-      if (esp32URL) {
-        try {
-          const response = await fetch(`${esp32URL}/take-break`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-            body: `${userData.settings.shortBreakDuration * 60} ${currentTask.title}`, // Send duration in seconds + task name
-          });
-          
-          if (response.ok) {
-            console.log('✅ ESP32 Take Break command executed successfully');
-          } else {
-            console.warn('⚠️ Failed to execute ESP32 Take Break command:', response.statusText);
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not communicate with ESP32 for Take Break command:', error);
-        }
-      }
     }
   };
 

@@ -3,7 +3,7 @@ import {
   Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
   Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
   Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square, Coffee, SkipForward,
-  BookOpen
+  BookOpen, Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,15 +33,13 @@ import { useTodo } from '@/contexts/TodoContext';
 import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 
 interface CategorySidebarProps {
-  currentPage: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'calendar' | 'activity' | 'timetracking' | 'settings';
-  onPageChange: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+  currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie';
+  onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie') => void;
       currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
-    totalXP: number;
     totalPomodoros: number;
   };
-  esp32Connected?: boolean;
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
@@ -49,8 +47,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   onPageChange, 
   currentView: _currentView,
   onViewChange,
-  activityStats,
-  esp32Connected
+  activityStats
 }) => {
   const {
     userData,
@@ -175,8 +172,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <div className="font-semibold text-sm">Tabbie</div>
               <div className="text-xs text-muted-foreground">Your AI Assistant</div>
               <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                <span>{activityStats?.totalXP || 0} XP</span>
-                <span>•</span>
                 <span>{activityStats?.totalPomodoros || 0} 🍅</span>
               </div>
 
@@ -200,21 +195,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               </SidebarMenuButton>
             </SidebarMenuItem>
             
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('yourtabbie')}
-                isActive={currentPage === 'yourtabbie'}
-              >
-                <Wrench className="w-4 h-4" />
-                <span>Your Tabbie</span>
-                <div 
-                  className={`ml-auto w-2 h-2 rounded-full ${
-                    esp32Connected ? 'bg-green-500' : 'bg-red-500'
-                  }`} 
-                  title={esp32Connected ? 'ESP32 Connected' : 'ESP32 Disconnected'}
-                />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
             
             <SidebarMenuItem>
               <SidebarMenuButton 
@@ -283,18 +263,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 onClick={() => onPageChange('notifications')}
                 isActive={currentPage === 'notifications'}
               >
-                <Activity className="w-4 h-4" />
+                <Bell className="w-4 h-4" />
                 <span>Notifications</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('calendar')}
-                isActive={currentPage === 'calendar'}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Calendar</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             
@@ -303,37 +273,25 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 onClick={() => onPageChange('activity')}
                 isActive={currentPage === 'activity'}
               >
-                <Activity className="w-4 h-4" />
-                <span>Activity</span>
+                <Bot className="w-4 h-4" />
+                <span>Chat with your data</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={() => onPageChange('tabbie')}
+                isActive={currentPage === 'tabbie'}
+              >
+                <Wrench className="w-4 h-4" />
+                <span>Tabbie</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Gamification Hint */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="relative mx-2 bg-gray-50 border border-gray-200 rounded-lg p-2.5 group hover:bg-blue-50 hover:border-blue-200 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">Upgrade Tabbie</div>
-                      <div className="text-xs text-gray-500">0 XP • Coming soon</div>
-                    </div>
-                  </div>
-                  <div className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                    Soon
-                  </div>
-                </div>
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
 
-        {/* Enhanced Categories Section - Always visible on tasks page */}
-        {currentPage === 'tasks' && (
+        {/* Categories */}
           <SidebarGroup>
             <div className="flex items-center justify-between px-2">
               <div className="flex items-center gap-2">
@@ -577,7 +535,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               </SidebarMenu>
             )}
           </SidebarGroup>
-        )}
 
                 {/* Current Pomodoro Session */}
         {(currentTask || pomodoroTimer.currentSession) && (
