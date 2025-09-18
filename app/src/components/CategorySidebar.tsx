@@ -273,8 +273,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 onClick={() => onPageChange('activity')}
                 isActive={currentPage === 'activity'}
               >
-                <Bot className="w-4 h-4" />
-                <span>Chat with your data</span>
+                <BarChart3 className="w-4 h-4" />
+                <span>Insight</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             
@@ -283,7 +283,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 onClick={() => onPageChange('tabbie')}
                 isActive={currentPage === 'tabbie'}
               >
-                <Wrench className="w-4 h-4" />
+                <Bot className="w-4 h-4" />
                 <span>Tabbie</span>
               </SidebarMenuButton>
             </SidebarMenuItem>

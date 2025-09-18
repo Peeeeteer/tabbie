@@ -121,12 +121,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionType: pomodoroTimer.sessionType,
       justCompleted: pomodoroTimer.justCompleted,
       currentTaskId: currentTaskId,
-      startedAt: pomodoroTimer.isRunning && pomodoroTimer.currentSession 
+      startedAt: pomodoroTimer.currentSession 
         ? pomodoroTimer.currentSession.started.getTime() 
         : null,
-      pausedAt: !pomodoroTimer.isRunning && pomodoroTimer.currentSession 
-        ? Date.now() 
-        : null,
+      pausedAt: pomodoroTimer.pausedAt ? pomodoroTimer.pausedAt.getTime() : null,
       totalPausedTime: pomodoroTimer.totalPausedTime,
     };
     
@@ -339,11 +337,15 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Recalculate time left based on actual elapsed time
+      // Recalculate time left based on actual elapsed time, accounting for paused time
       const now = Date.now();
       const elapsedSeconds = Math.floor((now - savedState.currentSession.started.getTime()) / 1000);
       const totalDuration = savedState.currentSession.duration * 60;
-      const actualTimeLeft = totalDuration - elapsedSeconds;
+      const safeTotalPausedTime = (typeof savedState.totalPausedTime === 'number' && !isNaN(savedState.totalPausedTime)) 
+        ? savedState.totalPausedTime 
+        : 0;
+      const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
+      const actualTimeLeft = totalDuration - effectiveElapsedSeconds;
       
       // Check if session is overdue
       if (actualTimeLeft < 0) {
@@ -374,7 +376,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
         setPomodoroTimer(createSafePomodoroState({
           isRunning: savedState.isRunning,
-          timeLeft: actualTimeLeft,
+          timeLeft: savedState.isRunning ? actualTimeLeft : savedState.timeLeft, // Only recalculate for running sessions
           currentSession: savedState.currentSession,
           sessionType: savedState.sessionType,
           justCompleted: false,
@@ -677,7 +679,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resumePomodoro = () => {
     setPomodoroTimer(prev => {
-      if (prev.pausedAt) {
+      if (prev.pausedAt && prev.currentSession) {
         // Calculate how long we were paused
         const pauseDuration = Math.floor((Date.now() - prev.pausedAt.getTime()) / 1000);
         
@@ -688,11 +690,19 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const newTotalPausedTime = currentTotalPausedTime + pauseDuration;
         
+        // Adjust the session start time to account for the pause
+        // This way the timer calculation will work correctly
+        const adjustedStartTime = new Date(prev.currentSession.started.getTime() + pauseDuration * 1000);
+        
         return {
           ...prev,
           isRunning: true,
           pausedAt: null, // Clear pause time
           totalPausedTime: newTotalPausedTime, // Add to total paused time
+          currentSession: {
+            ...prev.currentSession,
+            started: adjustedStartTime, // Shift start time forward by pause duration
+          },
         };
       }
       return { 

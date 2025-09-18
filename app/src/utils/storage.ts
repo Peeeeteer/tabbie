@@ -40,7 +40,9 @@ export const loadPomodoroState = (): PomodoroState | null => {
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - parsed.startedAt) / 1000);
         const totalDuration = parsed.currentSession.duration * 60; // convert to seconds
-        const actualTimeLeft = Math.max(0, totalDuration - elapsedSeconds);
+        // Account for paused time when calculating actual time left
+        const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
+        const actualTimeLeft = Math.max(0, totalDuration - effectiveElapsedSeconds);
         
         // If session has actually completed, mark it as not running
         if (actualTimeLeft === 0) {
