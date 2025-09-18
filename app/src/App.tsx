@@ -6,7 +6,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -18,7 +17,6 @@ import React from "react"
 import { TodoProvider } from "@/contexts/TodoContext"
 import { DarkModeProvider } from "@/contexts/DarkModeContext"
 import CategorySidebar from "@/components/CategorySidebar"
-import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 import TasksPage from "@/components/TasksPage"
 import SettingsPage from "@/components/SettingsPage"
 import EventsPage from "@/components/EventsPage"
@@ -26,6 +24,7 @@ import NotificationsPage from "@/components/NotificationsPage"
 import DashboardPage from "@/components/DashboardPage"
 import PomodoroPage from "@/components/PomodoroPage"
 import NotesPage from "@/components/NotesPage"
+import TabbiePage from "@/components/TabbiePage"
 import { ActivityStatsProvider } from "@/components/ActivityStatsProvider"
 
 export default function Page() {
@@ -76,13 +75,12 @@ export default function Page() {
                 <BreadcrumbItem>
                   <BreadcrumbPage>
                     {currentPage === 'dashboard' ? 'Dashboard' :
-                     currentPage === 'yourtabbie' ? 'Your Tabbie' :
                      currentPage === 'tasks' ? 'Tasks' :
                      currentPage === 'reminders' ? 'Reminders' :
                      currentPage === 'events' ? 'Events' :
                      currentPage === 'notifications' ? 'Notifications' :
                      currentPage === 'pomodoro' ? 'Pomodoro Timer' :
-                     currentPage === 'activity' ? 'Activity' :
+                     currentPage === 'activity' ? 'Insight' :
                      currentPage === 'settings' ? 'Settings' : 
                      currentPage === 'tabbie' ? 'Tabbie' : 'Dashboard'}
                   </BreadcrumbPage>
@@ -115,16 +113,13 @@ export default function Page() {
                             <NotesPage onPageChange={setCurrentPage} />
           ) : currentPage === 'activity' ? (
             <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold mb-4">🤖 Chat with your data</h2>
+              <h2 className="text-2xl font-bold mb-4">📊 Insight</h2>
               <p className="text-muted-foreground mb-4">Coming soon - Local AI</p>
             </div>
           ) : currentPage === 'settings' ? (
             <SettingsPage onPageChange={setCurrentPage} />
           ) : currentPage === 'tabbie' ? (
-            <div className="p-8 text-center">
-              <h2 className="text-2xl font-bold mb-4">🤖 Tabbie</h2>
-              <p className="text-muted-foreground">Coming soon</p>
-            </div>
+            <TabbiePage onPageChange={setCurrentPage} />
           ) : (
             <>
           
