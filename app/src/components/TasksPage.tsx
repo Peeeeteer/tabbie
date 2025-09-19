@@ -74,6 +74,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
   const [newTaskEstimatedPomodoros, setNewTaskEstimatedPomodoros] = useState<number>(3);
   const [taskCategory, setTaskCategory] = useState<string | undefined>('work');
+  const [newTaskWorkspaceUrls, setNewTaskWorkspaceUrls] = useState<string[]>([]);
+  const [newUrlInput, setNewUrlInput] = useState('');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [isViewPanelOpen, setIsViewPanelOpen] = useState(false);
@@ -90,6 +92,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
   const [editEstimatedPomodoros, setEditEstimatedPomodoros] = useState<number>(3);
   const [editCategory, setEditCategory] = useState<string | undefined>('work');
+  const [editWorkspaceUrls, setEditWorkspaceUrls] = useState<string[]>([]);
+  const [editUrlInput, setEditUrlInput] = useState('');
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [completedTasksDateFilter, setCompletedTasksDateFilter] = useState<'7days' | '30days' | 'all'>('30days');
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
@@ -101,6 +105,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     setNewTaskDueDate(undefined);
     setNewTaskEstimatedPomodoros(3);
     setTaskCategory(undefined);
+    setNewTaskWorkspaceUrls([]);
+    setNewUrlInput('');
     setAutoCreatedTaskId(null);
   };
 
@@ -302,7 +308,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     // Auto-create task when user starts typing
     if (value.trim() && !autoCreatedTaskId) {
       const categoryId = taskCategory || userData.categories[0]?.id;
-      const newTaskId = addTask(value.trim(), categoryId, '', undefined, newTaskEstimatedPomodoros);
+      const newTaskId = addTask(value.trim(), categoryId, '', undefined, newTaskEstimatedPomodoros, newTaskWorkspaceUrls);
       setAutoCreatedTaskId(newTaskId);
     } else if (!value.trim() && autoCreatedTaskId) {
       // Delete auto-created task if user clears the title
@@ -331,7 +337,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         categoryId = taskCategory || userData.categories[0]?.id;
       }
       
-      const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate, newTaskEstimatedPomodoros);
+      const newTaskId = addTask(cleanTitle || 'New Task', categoryId, newTaskDescription, dueDate || newTaskDueDate, newTaskEstimatedPomodoros, newTaskWorkspaceUrls);
       
       if (!autoCreate) {
         resetCreateTaskForm();
@@ -354,6 +360,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           dueDate: newTaskDueDate || dueDate,
           categoryId: taskCategory,
           estimatedPomodoros: newTaskEstimatedPomodoros,
+          workspaceUrls: newTaskWorkspaceUrls,
         });
         setIsCreatePanelOpen(false);
         resetCreateTaskForm();
@@ -382,6 +389,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     setEditDueDate(task.dueDate);
     setEditEstimatedPomodoros(task.estimatedPomodoros || 3);
     setEditCategory(task.categoryId);
+    setEditWorkspaceUrls(task.workspaceUrls || []);
+    setEditUrlInput('');
     setIsEditPanelOpen(true);
     setIsViewPanelOpen(false);
     // Don't close create panel if it's open - user might want to keep creating
@@ -518,6 +527,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         dueDate: editDueDate,
         categoryId: editCategory,
         estimatedPomodoros: editEstimatedPomodoros,
+        workspaceUrls: editWorkspaceUrls,
       });
     }
   };
@@ -578,9 +588,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         dueDate: newTaskDueDate,
         categoryId: taskCategory,
         estimatedPomodoros: newTaskEstimatedPomodoros,
+        workspaceUrls: newTaskWorkspaceUrls,
       });
     }
-  }, [autoCreatedTaskId, newTaskDescription, newTaskDueDate, taskCategory, newTaskEstimatedPomodoros]);
+  }, [autoCreatedTaskId, newTaskDescription, newTaskDueDate, taskCategory, newTaskEstimatedPomodoros, newTaskWorkspaceUrls]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1411,13 +1422,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         ref={createPanelRef}
         className={`
           fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
-          transform transition-transform duration-300 ease-in-out z-50
+          transform transition-transform duration-300 ease-in-out z-50 flex flex-col
           ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className="bg-card border-b border-border p-6 pb-0">
-          <div className="flex items-center justify-between mb-4 h-10">
+        <div className="bg-card border-b border-border p-6 pb-0 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2 h-10">
             <h2 className="text-xl font-semibold text-foreground">Create New Task</h2>
             <Button 
               variant="ghost" 
@@ -1431,11 +1442,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <div className="pb-3"></div>
+          <div className="text-xs text-gray-500 mb-4">
+            ✨ Changes are automatically saved as you type
+          </div>
         </div>
 
         {/* Task Creation Form */}
-        <div className="p-6 space-y-6 h-full overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
           {/* Category Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -1512,10 +1526,23 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
           {/* Due Date & Time */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-900">Due Date</label>
+              {newTaskDueDate && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setNewTaskDueDate(undefined)}
+                  className="text-gray-500 hover:text-red-600 h-auto p-1"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
             
             {/* Quick Date Shortcuts */}
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "default" : "outline"}
@@ -1525,9 +1552,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   today.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(today);
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>📅</span>
                 Today
               </Button>
               
@@ -1540,9 +1566,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   tomorrow.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(tomorrow);
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>🌅</span>
                 Tomorrow
               </Button>
               
@@ -1555,9 +1580,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   threeDays.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(threeDays);
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>📆</span>
                 3 Days
               </Button>
               
@@ -1570,50 +1594,26 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   nextWeek.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(nextWeek);
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>🗓️</span>
-                Week
+                Next Week
               </Button>
             </div>
             
             {/* Custom Date/Time Option */}
-            <div className="pt-2 border-t border-gray-200">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-gray-600">Or choose specific date & time:</span>
-              </div>
+            <div className="space-y-2">
               <DateTimePicker
                 date={newTaskDueDate}
                 onDateChange={setNewTaskDueDate}
-                placeholder="Pick specific date and time"
+                placeholder="Or pick specific date & time"
                 className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 hideQuickSelect={true}
               />
             </div>
-            
-            {/* Clear Date Option */}
-            {newTaskDueDate && (
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-sm text-gray-600">
-                  Due: <span className="font-medium text-gray-900">
-                    {format(newTaskDueDate, 'MMM dd, yyyy')} at {format(newTaskDueDate, 'h:mm a')}
-                  </span>
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setNewTaskDueDate(undefined)}
-                  className="text-gray-500 hover:text-red-600 h-auto p-1"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
@@ -1639,11 +1639,84 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
           </div>
 
-          {/* Instructions */}
-          <div className="pt-6">
-            <div className="text-xs text-muted-foreground bg-primary/10 p-3 rounded-lg border border-primary/20">
-              💡 <strong>Tips:</strong> Task is created automatically as you type. Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> to finish, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Esc</kbd> to close.
+          {/* Workspace URLs */}
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-lg">🔗</span>
+              Workspace URLs
+              <span className="text-xs text-gray-500 font-normal">(optional)</span>
+            </label>
+            <div className="space-y-3">
+              <div className="text-xs text-gray-600">
+                Add URLs that will automatically open when you start a Pomodoro for this task
+              </div>
+              
+              {/* URL Input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newUrlInput}
+                  onChange={(e) => setNewUrlInput(e.target.value)}
+                  placeholder="Enter URL (e.g., github.com/user/repo)"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newUrlInput.trim()) {
+                      e.preventDefault();
+                      if (!newTaskWorkspaceUrls.includes(newUrlInput.trim())) {
+                        setNewTaskWorkspaceUrls([...newTaskWorkspaceUrls, newUrlInput.trim()]);
+                        setNewUrlInput('');
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (newUrlInput.trim() && !newTaskWorkspaceUrls.includes(newUrlInput.trim())) {
+                      setNewTaskWorkspaceUrls([...newTaskWorkspaceUrls, newUrlInput.trim()]);
+                      setNewUrlInput('');
+                    }
+                  }}
+                  disabled={!newUrlInput.trim() || newTaskWorkspaceUrls.includes(newUrlInput.trim())}
+                  className="px-3"
+                >
+                  Add
+                </Button>
+              </div>
+
+              {/* URL List */}
+              {newTaskWorkspaceUrls.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-600">
+                    URLs to open ({newTaskWorkspaceUrls.length}):
+                  </div>
+                  <div className="space-y-1">
+                    {newTaskWorkspaceUrls.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                        <span className="text-xs">🔗</span>
+                        <span className="flex-1 text-sm text-gray-700 truncate" title={url}>
+                          {url}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setNewTaskWorkspaceUrls(newTaskWorkspaceUrls.filter((_, i) => i !== index));
+                          }}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+
           </div>
         </div>
       </div>
@@ -1653,13 +1726,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         ref={editPanelRef}
         className={`
           fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
-          transform transition-transform duration-300 ease-in-out z-50
+          transform transition-transform duration-300 ease-in-out z-50 flex flex-col
           ${isEditPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className="bg-card border-b border-border p-6 pb-0">
-          <div className="flex items-center justify-between mb-4 h-10">
+        <div className="bg-card border-b border-border p-6 pb-0 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2 h-10">
             <h2 className="text-xl font-semibold text-foreground">Edit Task</h2>
             <Button 
               variant="ghost" 
@@ -1670,11 +1743,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <div className="pb-3"></div>
+          <div className="text-xs text-gray-500 mb-4">
+            ✨ Changes are automatically saved as you type
+          </div>
         </div>
 
         {/* Task Edit Form */}
-        <div className="p-6 space-y-6 h-full overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
           {/* Category Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -1772,10 +1848,26 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
           {/* Due Date & Time */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-900">Due Date & Time</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-900">Due Date</label>
+              {editDueDate && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditDueDate(undefined);
+                    scheduleAutoSave();
+                  }}
+                  className="text-gray-500 hover:text-red-600 h-auto p-1"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
             
             {/* Quick Date Shortcuts */}
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "default" : "outline"}
@@ -1786,9 +1878,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(today);
                   scheduleAutoSave();
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>📅</span>
                 Today
               </Button>
               
@@ -1802,9 +1893,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(tomorrow);
                   scheduleAutoSave();
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>🌅</span>
                 Tomorrow
               </Button>
               
@@ -1818,9 +1908,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(threeDays);
                   scheduleAutoSave();
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>📆</span>
                 3 Days
               </Button>
               
@@ -1834,56 +1923,29 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(nextWeek);
                   scheduleAutoSave();
                 }}
-                className="h-8 px-2 text-xs flex items-center gap-1"
+                className="h-8 text-xs"
               >
-                <span>🗓️</span>
-                Week
+                Next Week
               </Button>
             </div>
             
             {/* Custom Date/Time Option */}
-            <div className="pt-2 border-t border-gray-200">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-gray-600">Or choose specific date & time:</span>
-              </div>
+            <div className="space-y-2">
               <DateTimePicker
                 date={editDueDate}
                 onDateChange={(date) => {
                   setEditDueDate(date);
                   scheduleAutoSave();
                 }}
-                placeholder="Pick specific date and time"
+                placeholder="Or pick specific date & time"
                 className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 hideQuickSelect={true}
               />
             </div>
-            
-            {/* Clear Date Option */}
-            {editDueDate && (
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-sm text-gray-600">
-                  Due: <span className="font-medium text-gray-900">
-                    {format(editDueDate, 'MMM dd, yyyy')} at {format(editDueDate, 'h:mm a')}
-                  </span>
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEditDueDate(undefined);
-                    scheduleAutoSave();
-                  }}
-                  className="text-gray-500 hover:text-red-600 h-auto p-1"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
@@ -1893,7 +1955,18 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     value={[editEstimatedPomodoros]}
                     onValueChange={(value) => {
                       setEditEstimatedPomodoros(value[0]);
-                      scheduleAutoSave();
+                      // Immediate save for slider changes
+                      if (editingTask) {
+                        const currentTitle = titleInputRef.current?.value || editTitle;
+                        updateTask(editingTask.id, {
+                          title: currentTitle,
+                          description: editDescription,
+                          dueDate: editDueDate,
+                          categoryId: editCategory,
+                          estimatedPomodoros: value[0],
+                          workspaceUrls: editWorkspaceUrls,
+                        });
+                      }
                     }}
                     min={1}
                     max={15}
@@ -1912,9 +1985,123 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
           </div>
 
-          {/* Auto-save indicator */}
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-            ✨ Changes are automatically saved as you type
+          {/* Workspace URLs */}
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-lg">🔗</span>
+              Workspace URLs
+              <span className="text-xs text-gray-500 font-normal">(optional)</span>
+            </label>
+            <div className="space-y-3">
+              <div className="text-xs text-gray-600">
+                URLs that will automatically open when you start a Pomodoro for this task
+              </div>
+              
+              {/* URL Input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={editUrlInput}
+                  onChange={(e) => setEditUrlInput(e.target.value)}
+                  placeholder="Enter URL (e.g., github.com/user/repo)"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && editUrlInput.trim()) {
+                      e.preventDefault();
+                      if (!editWorkspaceUrls.includes(editUrlInput.trim())) {
+                        const newUrls = [...editWorkspaceUrls, editUrlInput.trim()];
+                        setEditWorkspaceUrls(newUrls);
+                        setEditUrlInput('');
+                        // Auto-save the URLs
+                        if (editingTask) {
+                          const currentTitle = titleInputRef.current?.value || editTitle;
+                          updateTask(editingTask.id, {
+                            title: currentTitle,
+                            description: editDescription,
+                            dueDate: editDueDate,
+                            categoryId: editCategory,
+                            estimatedPomodoros: editEstimatedPomodoros,
+                            workspaceUrls: newUrls,
+                          });
+                        }
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (editUrlInput.trim() && !editWorkspaceUrls.includes(editUrlInput.trim())) {
+                      const newUrls = [...editWorkspaceUrls, editUrlInput.trim()];
+                      setEditWorkspaceUrls(newUrls);
+                      setEditUrlInput('');
+                      // Auto-save the URLs
+                      if (editingTask) {
+                        const currentTitle = titleInputRef.current?.value || editTitle;
+                        updateTask(editingTask.id, {
+                          title: currentTitle,
+                          description: editDescription,
+                          dueDate: editDueDate,
+                          categoryId: editCategory,
+                          estimatedPomodoros: editEstimatedPomodoros,
+                          workspaceUrls: newUrls,
+                        });
+                      }
+                    }
+                  }}
+                  disabled={!editUrlInput.trim() || editWorkspaceUrls.includes(editUrlInput.trim())}
+                  className="px-3"
+                >
+                  Add
+                </Button>
+              </div>
+
+              {/* URL List */}
+              {editWorkspaceUrls.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-600">
+                    URLs to open ({editWorkspaceUrls.length}):
+                  </div>
+                  <div className="space-y-1">
+                    {editWorkspaceUrls.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                        <span className="text-xs">🔗</span>
+                        <span className="flex-1 text-sm text-gray-700 truncate" title={url}>
+                          {url}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newUrls = editWorkspaceUrls.filter((_, i) => i !== index);
+                            setEditWorkspaceUrls(newUrls);
+                            // Auto-save the URLs
+                            if (editingTask) {
+                              const currentTitle = titleInputRef.current?.value || editTitle;
+                              updateTask(editingTask.id, {
+                                title: currentTitle,
+                                description: editDescription,
+                                dueDate: editDueDate,
+                                categoryId: editCategory,
+                                estimatedPomodoros: editEstimatedPomodoros,
+                                workspaceUrls: newUrls,
+                              });
+                            }
+                          }}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           </div>
         </div>
       </div>
@@ -2124,6 +2311,38 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                          {formatSmartDate(new Date(viewingTask.dueDate))}
                        </span>
                      </div>
+                  </div>
+                )}
+
+                {/* Workspace URLs - Full Width if Present */}
+                {viewingTask.workspaceUrls && viewingTask.workspaceUrls.length > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-gray-100">
+                    <label className="text-xs font-medium text-gray-500">
+                      Workspace URLs ({viewingTask.workspaceUrls.length})
+                    </label>
+                    <div className="space-y-1">
+                      {viewingTask.workspaceUrls.map((url, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs">
+                          <span className="text-blue-500">🌐</span>
+                          <span 
+                            className="flex-1 text-gray-700 truncate cursor-pointer hover:text-blue-600" 
+                            title={url}
+                            onClick={() => {
+                              try {
+                                const formattedUrl = url.startsWith('http://') || url.startsWith('https://') 
+                                  ? url 
+                                  : `https://${url}`;
+                                window.open(formattedUrl, '_blank');
+                              } catch (error) {
+                                console.error('Error opening URL:', error);
+                              }
+                            }}
+                          >
+                            {url}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -854,6 +854,44 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
               </div>
             </div>
 
+            {/* Workspace URLs */}
+            {currentTask?.workspaceUrls && currentTask.workspaceUrls.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border p-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <span className="text-base">🔗</span>
+                  Workspace URLs ({currentTask.workspaceUrls.length})
+                </h3>
+                <div className="space-y-1">
+                  {currentTask.workspaceUrls.map((url, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs">
+                      <span className="text-blue-500">🌐</span>
+                      <span 
+                        className="flex-1 text-gray-700 truncate cursor-pointer hover:text-blue-600" 
+                        title={url}
+                        onClick={() => {
+                          try {
+                            const formattedUrl = url.startsWith('http://') || url.startsWith('https://') 
+                              ? url 
+                              : `https://${url}`;
+                            window.open(formattedUrl, '_blank');
+                          } catch (error) {
+                            console.error('Error opening URL:', error);
+                          }
+                        }}
+                      >
+                        {url}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-2 border-t border-gray-200 mt-3">
+                  <div className="text-xs text-gray-500">
+                    💡 Manually close workspace tabs when you're done focusing
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Focus Tips */}
             <div className="bg-white rounded-lg shadow-sm border p-4">
               <h3 className="text-sm font-semibold mb-3">💡 Focus Tips</h3>

@@ -26,7 +26,7 @@ interface TodoContextType {
   resetCategoriesToDefault: () => void;
   
   // Task methods
-  addTask: (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number) => string;
+  addTask: (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number, workspaceUrls?: string[]) => string;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskComplete: (taskId: string) => void;
@@ -521,7 +521,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task methods
-  const addTask = (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number): string => {
+  const addTask = (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number, workspaceUrls?: string[]): string => {
     const taskId = generateId();
     const nextOrder = Math.max(...userData.tasks.map(t => t.order), 0) + 1;
     const newTask: Task = {
@@ -537,6 +537,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pomodoroSessions: [],
       estimatedPomodoros: estimatedPomodoros || 3,
       order: nextOrder,
+      workspaceUrls: workspaceUrls || [],
     };
     setUserData(prev => ({
       ...prev,
@@ -631,6 +632,34 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
+  // Helper function to open workspace URLs
+  const openWorkspaceUrls = (urls: string[]) => {
+    if (!urls || urls.length === 0) return;
+    
+    console.log(`🔗 Opening ${urls.length} workspace URLs for focused work session...`);
+    
+    urls.forEach((url, index) => {
+      try {
+        // Add protocol if missing
+        const formattedUrl = url.startsWith('http://') || url.startsWith('https://') 
+          ? url 
+          : `https://${url}`;
+        
+        // Small delay between opening tabs to avoid being blocked by popup blockers
+        setTimeout(() => {
+          const newTab = window.open(formattedUrl, '_blank');
+          if (!newTab) {
+            console.warn(`⚠️ Failed to open URL (popup blocked?): ${formattedUrl}`);
+          } else {
+            console.log(`✅ Opened workspace tab: ${formattedUrl}`);
+          }
+        }, index * 100); // 100ms delay between each tab
+      } catch (error) {
+        console.error(`❌ Error opening URL: ${url}`, error);
+      }
+    });
+  };
+
   // Pomodoro methods
   const startPomodoro = async (task: Task) => {
     const session: PomodoroSession = {
@@ -652,6 +681,11 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pausedAt: null, // Reset pausedAt when starting a new session
       totalPausedTime: 0, // Reset totalPausedTime when starting a new session
     });
+
+    // Open workspace URLs if they exist
+    if (task.workspaceUrls && task.workspaceUrls.length > 0) {
+      openWorkspaceUrls(task.workspaceUrls);
+    }
 
   };
 

@@ -19,6 +19,7 @@ export interface Task {
   pomodoroSessions: PomodoroSession[];
   estimatedPomodoros?: number;
   order: number;
+  workspaceUrls?: string[]; // URLs to open when starting Pomodoro for this task
 }
 
 export interface CompletedTask {
