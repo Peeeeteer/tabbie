@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "setup": "node setup.cjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -2,3 +2,6 @@ learnings/01-arduino-uno-basic/compress.py
 content
 tabbie-learns/03-esp-32-led-screens/.env
 todo.txt
+image-to-bitmap
+firmware/.env
+firmware/wifi.env

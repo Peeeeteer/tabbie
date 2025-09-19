@@ -63,11 +63,9 @@ That guide covers:
 
 ```txt
 tabbie/
-├── apps/                     # React control panel
-│   └── dashboard/
+├── app/                      # React control panel
 │
 ├── firmware/                 # Code that runs on devices
-│   └── esp32/
 │
 ├── hardware/                 # Physical build assets
 │   └── 3d-models/            # STL/CAD files
@@ -76,7 +74,6 @@ tabbie/
 │   ├── get_started.md
 │   └── learning/
 │
-├── scripts/                  # Helper scripts (build/flash/dev)
 ├── CONTRIBUTING.md
 └── README.md
 ```

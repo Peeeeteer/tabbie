@@ -77,7 +77,7 @@ The dashboard will open at `http://localhost:3000`
 #### Option A: Using PlatformIO (Recommended)
 ```bash
 # Navigate to firmware directory
-cd firmware/esp32
+cd firmware
 
 # Create environment file
 cp src/env.example .env
@@ -92,14 +92,14 @@ pio run --target upload
 
 #### Option B: Using Arduino IDE
 1. Install ESP32 board support in Arduino IDE
-2. Open `firmware/esp32/src/main.cpp`
+2. Open `firmware/src/main.cpp`
 3. Install required libraries:
    - Adafruit SSD1306
    - Adafruit GFX Library
 4. Upload to your ESP32
 
 ### 2.4 Configure WiFi
-1. **Create `.env` file** in `firmware/esp32/`:
+1. **Create `.env` file** in `firmware/`:
    ```env
    WIFI_SSID=your_wifi_name
    WIFI_PASSWORD=your_wifi_password

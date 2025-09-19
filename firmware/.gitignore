@@ -1,0 +1,10 @@
+# WiFi credentials - keep secure!
+wifi.env
+
+# Build artifacts
+.pio/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

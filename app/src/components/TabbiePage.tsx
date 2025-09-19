@@ -18,14 +18,14 @@ interface TabbieStatus {
   ip: string;
 }
 
-const TABBIE_IP = "192.168.4.1";
+const TABBIE_HOSTNAME = "tabbie.local";
 
 const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [tabbieStatus, setTabbieStatus] = useState<TabbieStatus | null>(null);
   const [connectionError, setConnectionError] = useState<string>('');
-  const [customIP, setCustomIP] = useState(TABBIE_IP);
+  const [customIP, setCustomIP] = useState(TABBIE_HOSTNAME);
   const { userData, pomodoroTimer } = useTodo();
 
   // Auto-connect on component mount
@@ -73,7 +73,15 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
     } catch (error) {
       setIsConnected(false);
       setTabbieStatus(null);
-      setConnectionError('Cannot connect to Tabbie. Make sure you\'re connected to "Tabbie-Assistant" WiFi network.');
+      
+      // Provide more specific error messages
+      if (customIP.includes('192.168.4.1') || customIP.includes('tabbie-setup')) {
+        setConnectionError('🔧 Tabbie is in setup mode. Complete WiFi configuration first, then reconnect to your home network and try again.');
+      } else if (customIP === 'tabbie.local' || customIP.includes('.local')) {
+        setConnectionError('🔍 Cannot reach tabbie.local. Check that: 1) Tabbie is powered on, 2) Both devices are on the same WiFi network, 3) Tabbie\'s OLED shows a connected status.');
+      } else {
+        setConnectionError('❌ Connection failed. Verify Tabbie is powered on, connected to WiFi (check OLED display), and on the same network as this computer.');
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -186,13 +194,43 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Connection Steps:</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <h4 className="font-semibold mb-3">Connection Steps:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
                     <li>Make sure your Tabbie device is powered on</li>
-                    <li>Connect to WiFi network: <strong>"Tabbie-Assistant"</strong></li>
-                    <li>Password: <strong>"tabbie123"</strong></li>
+                    <li className="pl-4">
+                      <strong>First time setup?</strong> Configure WiFi first:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1 text-xs text-muted-foreground">
+                        <li>Connect to "Tabbie-Setup" WiFi network on your computer</li>
+                        <li>Visit <code className="bg-muted px-1 rounded">tabbie.local</code> or <code className="bg-muted px-1 rounded">192.168.4.1</code> in your browser</li>
+                        <li>Choose your home WiFi network and enter password</li>
+                        <li>Wait for Tabbie to connect and reconnect your computer to home WiFi</li>
+                      </ul>
+                    </li>
+                    <li>Ensure Tabbie is connected to your WiFi network (check OLED display)</li>
+                    <li>Both your computer and Tabbie should be on the same network</li>
                     <li>Click "Connect" below</li>
                   </ol>
+                </div>
+                
+                <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Troubleshooting
+                  </h4>
+                  <div className="text-sm space-y-2">
+                    <div><strong>OLED shows "Something went wrong!"?</strong></div>
+                    <ul className="list-disc list-inside ml-4 space-y-1 text-xs text-muted-foreground">
+                      <li>WiFi password might be incorrect</li>
+                      <li>WiFi network might be out of range</li>
+                      <li>Follow the setup steps shown on Tabbie's screen</li>
+                    </ul>
+                    <div className="mt-3"><strong>Can't find "Tabbie-Setup" network?</strong></div>
+                    <ul className="list-disc list-inside ml-4 space-y-1 text-xs text-muted-foreground">
+                      <li>Check if Tabbie's OLED shows setup instructions</li>
+                      <li>Try restarting Tabbie by unplugging and plugging back in</li>
+                      <li>Look for the network in your WiFi settings</li>
+                    </ul>
+                  </div>
                 </div>
 
                 {connectionError && (
@@ -206,7 +244,7 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
 
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Tabbie IP Address"
+                    placeholder="Tabbie Address (tabbie.local)"
                     value={customIP}
                     onChange={(e) => setCustomIP(e.target.value)}
                     className="flex-1"
