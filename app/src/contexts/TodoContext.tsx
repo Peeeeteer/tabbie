@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
 import { DEFAULT_CATEGORIES } from '@/types/todo';
 import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoroState, clearPomodoroState, type PomodoroState } from '@/utils/storage';
+import { computeTimeLeftSeconds, sanitizePausedSeconds } from '@/utils/pomodoroTime';
 
 interface TodoContextType {
   userData: UserData;
@@ -66,14 +67,25 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pomodoroTimer, setPomodoroTimer] = useState(() => {
     const savedState = loadPomodoroState();
     if (savedState) {
+      const safeTotalPausedTime = sanitizePausedSeconds(savedState.totalPausedTime);
+      const restoredTimeLeft = savedState.isRunning && savedState.currentSession && savedState.startedAt
+        ? computeTimeLeftSeconds({
+            startedAt: savedState.startedAt,
+            durationMinutes: savedState.currentSession.duration,
+            totalPausedSeconds: safeTotalPausedTime,
+            isRunning: savedState.isRunning,
+            pausedAt: savedState.pausedAt ?? null,
+          })
+        : savedState.timeLeft;
+
       return {
         isRunning: savedState.isRunning,
-        timeLeft: savedState.timeLeft,
+        timeLeft: restoredTimeLeft,
         currentSession: savedState.currentSession,
         sessionType: savedState.sessionType,
         justCompleted: savedState.justCompleted,
-        pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null, // Track when paused
-        totalPausedTime: savedState.totalPausedTime || 0, // Ensure it's always a number
+        pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null,
+        totalPausedTime: safeTotalPausedTime,
       };
     }
     return {
@@ -83,7 +95,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionType: 'work' as 'work' | 'shortBreak' | 'longBreak',
       justCompleted: false,
       pausedAt: null as Date | null,
-      totalPausedTime: 0, // Total time paused in seconds
+      totalPausedTime: 0,
     };
   });
 
@@ -125,7 +137,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? pomodoroTimer.currentSession.started.getTime() 
         : null,
       pausedAt: pomodoroTimer.pausedAt ? pomodoroTimer.pausedAt.getTime() : null,
-      totalPausedTime: pomodoroTimer.totalPausedTime,
+      totalPausedTime: sanitizePausedSeconds(pomodoroTimer.totalPausedTime),
+      overtimeAutoPaused: pomodoroTimer.overtimeAutoPaused,
     };
     
     // Only save if there's an active session or if we're clearing the state
@@ -239,44 +252,32 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Pomodoro timer countdown effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    let lastUpdate = Date.now();
     let lastOvertimeNotification = 0; // Track last overtime notification time
     
     if (pomodoroTimer.isRunning && pomodoroTimer.currentSession) {
       interval = setInterval(() => {
         const now = Date.now();
-        
-        // Calculate actual elapsed time based on session start, accounting for paused time
-        const sessionElapsedSeconds = (now - pomodoroTimer.currentSession!.started.getTime()) / 1000;
-        
-        // Ensure totalPausedTime is always a valid number
-        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime)) 
-          ? pomodoroTimer.totalPausedTime 
-          : 0;
-        
-        const effectiveElapsedSeconds = sessionElapsedSeconds - safeTotalPausedTime; // Subtract paused time
-        const totalDuration = pomodoroTimer.currentSession!.duration * 60;
-        const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
-        
-        // Ensure actualTimeLeft is a valid number
-        const safeActualTimeLeft = (typeof actualTimeLeft === 'number' && !isNaN(actualTimeLeft)) 
-          ? actualTimeLeft 
-          : 0;
+        const safeTotalPausedTime = sanitizePausedSeconds(pomodoroTimer.totalPausedTime);
+        const actualTimeLeft = computeTimeLeftSeconds({
+          startedAt: pomodoroTimer.currentSession!.started,
+          durationMinutes: pomodoroTimer.currentSession!.duration,
+          totalPausedSeconds: safeTotalPausedTime,
+          isRunning: true,
+          now,
+        });
+        const safeActualTimeLeft = Number.isFinite(actualTimeLeft) ? actualTimeLeft : pomodoroTimer.timeLeft;
         
         setPomodoroTimer(prev => {
           const currentTask = getCurrentTask();
-          // Check for session completion (timeLeft reaches 0)
-          // Both work and break sessions can continue into overtime
+          
           if (safeActualTimeLeft <= 0 && prev.timeLeft > 0) {
             if (prev.sessionType === 'shortBreak') {
-              // Break completed - play sound and show notification
               playNotificationSound();
               showNotification(
                 '☕ Break Complete!', 
                 'Break time is over. Ready to get back to work?'
               );
             } else if (prev.sessionType === 'work') {
-              // Work session completed - play sound and show notification
               playNotificationSound();
               showNotification(
                 '🍅 Pomodoro Complete!', 
@@ -285,12 +286,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
-          // Check for overtime notifications every 5 minutes for both work and break sessions
           if (safeActualTimeLeft < 0) {
             const overtimeMinutes = Math.floor(Math.abs(safeActualTimeLeft) / 60);
             const timeSinceLastNotification = now - lastOvertimeNotification;
             
-            // Play sound every 5 minutes of overtime
             if (overtimeMinutes > 0 && overtimeMinutes % 5 === 0 && timeSinceLastNotification > 4 * 60 * 1000) {
               playNotificationSound();
               if (prev.sessionType === 'work') {
@@ -311,16 +310,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return {
             ...prev,
             timeLeft: safeActualTimeLeft,
-            totalPausedTime: safeTotalPausedTime, // Ensure it's always safe
+            totalPausedTime: safeTotalPausedTime,
           };
         });
-        
-        lastUpdate = now;
       }, 1000);
     }
 
     return () => clearInterval(interval);
-  }, [pomodoroTimer.isRunning, pomodoroTimer.currentSession, currentTaskId, pomodoroTimer.totalPausedTime]);
+  }, [pomodoroTimer.isRunning, pomodoroTimer.currentSession, pomodoroTimer.totalPausedTime, currentTaskId]);
 
   // Handle session recovery on page load
   useEffect(() => {
@@ -338,14 +335,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Recalculate time left based on actual elapsed time, accounting for paused time
-      const now = Date.now();
-      const elapsedSeconds = Math.floor((now - savedState.currentSession.started.getTime()) / 1000);
-      const totalDuration = savedState.currentSession.duration * 60;
-      const safeTotalPausedTime = (typeof savedState.totalPausedTime === 'number' && !isNaN(savedState.totalPausedTime)) 
-        ? savedState.totalPausedTime 
-        : 0;
-      const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
-      const actualTimeLeft = totalDuration - effectiveElapsedSeconds;
+      const safeTotalPausedTime = sanitizePausedSeconds(savedState.totalPausedTime);
+      const actualTimeLeft = computeTimeLeftSeconds({
+        startedAt: savedState.currentSession.started,
+        durationMinutes: savedState.currentSession.duration,
+        totalPausedSeconds: safeTotalPausedTime,
+        isRunning: savedState.isRunning,
+        pausedAt: savedState.pausedAt ?? null,
+      });
       
       // Check if session is overdue
       if (actualTimeLeft < 0) {
@@ -358,7 +355,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Check if session has been running for too long (more than 2x the intended duration)
-      const maxAllowedTime = totalDuration * 2;
+      const maxAllowedTime = savedState.currentSession.duration * 120; // twice duration in seconds
       if (actualTimeLeft < -maxAllowedTime) {
         // Session has been running for too long, auto-stop it
         showNotification(
@@ -370,13 +367,9 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentTaskId(null);
       } else {
         // Restore session with correct time and safe pause tracking
-        const safeTotalPausedTime = (typeof savedState.totalPausedTime === 'number' && !isNaN(savedState.totalPausedTime)) 
-          ? savedState.totalPausedTime 
-          : 0;
-          
         setPomodoroTimer(createSafePomodoroState({
           isRunning: savedState.isRunning,
-          timeLeft: savedState.isRunning ? actualTimeLeft : savedState.timeLeft, // Only recalculate for running sessions
+          timeLeft: savedState.isRunning ? actualTimeLeft : savedState.timeLeft,
           currentSession: savedState.currentSession,
           sessionType: savedState.sessionType,
           justCompleted: false,
@@ -395,20 +388,20 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle page visibility changes to pause/resume timer
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (pomodoroTimer.isRunning && pomodoroTimer.currentSession) {
+      if (pomodoroTimer.currentSession) {
         if (document.hidden) {
           // Page is hidden, but timer should continue running
           // Don't pause the timer, just let it continue
         } else {
           // Page is visible again, recalculate time for accuracy
-          const now = Date.now();
-          const elapsedSeconds = (now - pomodoroTimer.currentSession.started.getTime()) / 1000;
-          const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime))
-            ? pomodoroTimer.totalPausedTime
-            : 0;
-          const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
-          const totalDuration = pomodoroTimer.currentSession.duration * 60;
-          const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
+          const safeTotalPausedTime = sanitizePausedSeconds(pomodoroTimer.totalPausedTime);
+          const actualTimeLeft = computeTimeLeftSeconds({
+            startedAt: pomodoroTimer.currentSession.started,
+            durationMinutes: pomodoroTimer.currentSession.duration,
+            totalPausedSeconds: safeTotalPausedTime,
+            isRunning: pomodoroTimer.isRunning,
+            pausedAt: pomodoroTimer.pausedAt,
+          });
           
           // Only update if there's a significant difference to prevent unnecessary re-renders
           if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
@@ -428,16 +421,15 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle window focus to sync timer state
   useEffect(() => {
     const handleFocus = () => {
-      if (pomodoroTimer.currentSession && pomodoroTimer.isRunning) {
-        // Recalculate time left based on actual elapsed time minus paused time
-        const now = Date.now();
-        const elapsedSeconds = (now - pomodoroTimer.currentSession.started.getTime()) / 1000;
-        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime))
-          ? pomodoroTimer.totalPausedTime
-          : 0;
-        const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
-        const totalDuration = pomodoroTimer.currentSession.duration * 60;
-        const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
+      if (pomodoroTimer.currentSession) {
+        const safeTotalPausedTime = sanitizePausedSeconds(pomodoroTimer.totalPausedTime);
+        const actualTimeLeft = computeTimeLeftSeconds({
+          startedAt: pomodoroTimer.currentSession.started,
+          durationMinutes: pomodoroTimer.currentSession.duration,
+          totalPausedSeconds: safeTotalPausedTime,
+          isRunning: pomodoroTimer.isRunning,
+          pausedAt: pomodoroTimer.pausedAt,
+        });
         
         // Only update if there's a significant difference to prevent unnecessary re-renders
         if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
@@ -458,9 +450,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleBeforeUnload = () => {
       if (pomodoroTimer.currentSession) {
         // Force save the current state
-        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime)) 
-          ? pomodoroTimer.totalPausedTime 
-          : 0;
+        const safeTotalPausedTime = sanitizePausedSeconds(pomodoroTimer.totalPausedTime);
           
         const pomodoroState: PomodoroState = {
           isRunning: pomodoroTimer.isRunning,
@@ -691,7 +681,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionType: 'work',
       justCompleted: false,
       pausedAt: null, // Reset pausedAt when starting a new session
-      totalPausedTime: 0, // Reset totalPausedTime when starting a new session
+      totalPausedTime: 0,
     });
 
     // Open workspace URLs if they exist
@@ -706,6 +696,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev, 
       isRunning: false,
       pausedAt: new Date(), // Record when we paused
+      timeLeft: computeTimeLeftSeconds({
+        startedAt: prev.currentSession?.started ?? new Date(),
+        durationMinutes: prev.currentSession?.duration ?? 0,
+        totalPausedSeconds: sanitizePausedSeconds(prev.totalPausedTime),
+        isRunning: false,
+        pausedAt: new Date(),
+      }),
     }));
   };
 
@@ -731,9 +728,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const pauseDuration = Math.ceil((Date.now() - prev.pausedAt.getTime()) / 1000);
         
         // Ensure totalPausedTime is valid before adding to it
-        const currentTotalPausedTime = (typeof prev.totalPausedTime === 'number' && !isNaN(prev.totalPausedTime)) 
-          ? prev.totalPausedTime 
-          : 0;
+        const currentTotalPausedTime = sanitizePausedSeconds(prev.totalPausedTime);
         
         const newTotalPausedTime = currentTotalPausedTime + pauseDuration;
         
@@ -749,9 +744,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { 
         ...prev, 
         isRunning: true,
-        totalPausedTime: (typeof prev.totalPausedTime === 'number' && !isNaN(prev.totalPausedTime)) 
-          ? prev.totalPausedTime 
-          : 0,
+        totalPausedTime: sanitizePausedSeconds(prev.totalPausedTime),
       };
     });
   };

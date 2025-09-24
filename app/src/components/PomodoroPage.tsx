@@ -137,6 +137,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
 
   const progressBars = generateProgressBars();
 
+
   // Calculate progress percentage for circular timer
   const calculateProgress = () => {
     if (!pomodoroTimer.currentSession) return 0;

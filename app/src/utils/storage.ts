@@ -1,5 +1,6 @@
 import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '@/types/todo';
+import { computeTimeLeftSeconds, sanitizePausedSeconds } from '@/utils/pomodoroTime';
 
 const STORAGE_KEY = 'tabbie_user_data';
 const POMODORO_STATE_KEY = 'tabbie_pomodoro_state';
@@ -33,27 +34,16 @@ export const loadPomodoroState = (): PomodoroState | null => {
       const parsed = JSON.parse(storedState, reviveDate) as PomodoroState;
       
       // Ensure totalPausedTime is always a number
-      const safeTotalPausedTime = typeof parsed.totalPausedTime === 'number' ? parsed.totalPausedTime : 0;
+      const safeTotalPausedTime = sanitizePausedSeconds(parsed.totalPausedTime);
       
       // If there's a running session, calculate the actual time left
       if (parsed.isRunning && parsed.startedAt && parsed.currentSession) {
-        const now = Date.now();
-        const elapsedSeconds = Math.floor((now - parsed.startedAt) / 1000);
-        const totalDuration = parsed.currentSession.duration * 60; // convert to seconds
-        // Account for paused time when calculating actual time left
-        const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
-        const actualTimeLeft = Math.max(0, totalDuration - effectiveElapsedSeconds);
-        
-        // If session has actually completed, mark it as not running
-        if (actualTimeLeft === 0) {
-          return {
-            ...parsed,
-            isRunning: false,
-            timeLeft: 0,
-            justCompleted: true,
-            totalPausedTime: safeTotalPausedTime,
-          };
-        }
+        const actualTimeLeft = computeTimeLeftSeconds({
+          startedAt: parsed.startedAt,
+          durationMinutes: parsed.currentSession.duration,
+          totalPausedSeconds: safeTotalPausedTime,
+          isRunning: parsed.isRunning,
+        });
         
         return {
           ...parsed,
