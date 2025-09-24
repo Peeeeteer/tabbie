@@ -247,16 +247,16 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const now = Date.now();
         
         // Calculate actual elapsed time based on session start, accounting for paused time
-        const sessionElapsed = Math.floor((now - pomodoroTimer.currentSession!.started.getTime()) / 1000);
+        const sessionElapsedSeconds = (now - pomodoroTimer.currentSession!.started.getTime()) / 1000;
         
         // Ensure totalPausedTime is always a valid number
         const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime)) 
           ? pomodoroTimer.totalPausedTime 
           : 0;
         
-        const effectiveElapsed = sessionElapsed - safeTotalPausedTime; // Subtract paused time
+        const effectiveElapsedSeconds = sessionElapsedSeconds - safeTotalPausedTime; // Subtract paused time
         const totalDuration = pomodoroTimer.currentSession!.duration * 60;
-        const actualTimeLeft = totalDuration - effectiveElapsed;
+        const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
         
         // Ensure actualTimeLeft is a valid number
         const safeActualTimeLeft = (typeof actualTimeLeft === 'number' && !isNaN(actualTimeLeft)) 
@@ -402,9 +402,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           // Page is visible again, recalculate time for accuracy
           const now = Date.now();
-          const elapsedSeconds = Math.floor((now - pomodoroTimer.currentSession.started.getTime()) / 1000);
+          const elapsedSeconds = (now - pomodoroTimer.currentSession.started.getTime()) / 1000;
+          const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime))
+            ? pomodoroTimer.totalPausedTime
+            : 0;
+          const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
           const totalDuration = pomodoroTimer.currentSession.duration * 60;
-          const actualTimeLeft = Math.max(0, totalDuration - elapsedSeconds);
+          const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
           
           // Only update if there's a significant difference to prevent unnecessary re-renders
           if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
@@ -425,11 +429,15 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleFocus = () => {
       if (pomodoroTimer.currentSession && pomodoroTimer.isRunning) {
-        // Recalculate time left based on actual elapsed time
+        // Recalculate time left based on actual elapsed time minus paused time
         const now = Date.now();
-        const elapsedSeconds = Math.floor((now - pomodoroTimer.currentSession.started.getTime()) / 1000);
+        const elapsedSeconds = (now - pomodoroTimer.currentSession.started.getTime()) / 1000;
+        const safeTotalPausedTime = (typeof pomodoroTimer.totalPausedTime === 'number' && !isNaN(pomodoroTimer.totalPausedTime))
+          ? pomodoroTimer.totalPausedTime
+          : 0;
+        const effectiveElapsedSeconds = elapsedSeconds - safeTotalPausedTime;
         const totalDuration = pomodoroTimer.currentSession.duration * 60;
-        const actualTimeLeft = Math.max(0, totalDuration - elapsedSeconds);
+        const actualTimeLeft = Math.ceil(totalDuration - effectiveElapsedSeconds);
         
         // Only update if there's a significant difference to prevent unnecessary re-renders
         if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
@@ -462,7 +470,11 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           justCompleted: pomodoroTimer.justCompleted,
           currentTaskId: currentTaskId,
           startedAt: pomodoroTimer.currentSession.started.getTime(),
-          pausedAt: !pomodoroTimer.isRunning ? Date.now() : null,
+          // Preserve original pausedAt if already paused; don't overwrite with now,
+          // so we capture the full paused duration across tab closes
+          pausedAt: !pomodoroTimer.isRunning
+            ? (pomodoroTimer.pausedAt ? pomodoroTimer.pausedAt.getTime() : Date.now())
+            : null,
           totalPausedTime: safeTotalPausedTime,
         };
         savePomodoroState(pomodoroState);
@@ -715,7 +727,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPomodoroTimer(prev => {
       if (prev.pausedAt && prev.currentSession) {
         // Calculate how long we were paused
-        const pauseDuration = Math.floor((Date.now() - prev.pausedAt.getTime()) / 1000);
+        // Use precise seconds and ceil to avoid losing up to ~1s during resume
+        const pauseDuration = Math.ceil((Date.now() - prev.pausedAt.getTime()) / 1000);
         
         // Ensure totalPausedTime is valid before adding to it
         const currentTotalPausedTime = (typeof prev.totalPausedTime === 'number' && !isNaN(prev.totalPausedTime)) 
@@ -724,19 +737,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const newTotalPausedTime = currentTotalPausedTime + pauseDuration;
         
-        // Adjust the session start time to account for the pause
-        // This way the timer calculation will work correctly
-        const adjustedStartTime = new Date(prev.currentSession.started.getTime() + pauseDuration * 1000);
-        
+        // Only update totalPausedTime; do not shift the session start time
+        // The ticking logic already subtracts totalPausedTime when computing elapsed time
         return {
           ...prev,
           isRunning: true,
-          pausedAt: null, // Clear pause time
-          totalPausedTime: newTotalPausedTime, // Add to total paused time
-          currentSession: {
-            ...prev.currentSession,
-            started: adjustedStartTime, // Shift start time forward by pause duration
-          },
+          pausedAt: null,
+          totalPausedTime: newTotalPausedTime,
         };
       }
       return { 
