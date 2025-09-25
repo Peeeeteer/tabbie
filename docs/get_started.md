@@ -1,4 +1,4 @@
-# 🚀 Getting Started with Tabbie
+# 🚀 Getting Started with Tabbie (STIL WORKING ON IT, COME BACK ON 1. OKTOBER OR SOMETHNG)
 
 ### Hardware Kit
 Buy the complete kit on Amazon:
