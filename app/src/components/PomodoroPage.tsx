@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee, Bug, SkipForward, Plus } from 'lucide-react';
+import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee, Bug, SkipForward, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useTodo } from '@/contexts/TodoContext';
@@ -24,6 +24,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
     completeWorkSession,
     skipBreak,
     debugSetTimerTo10Seconds,
+    debugSetTimerTo14m45Overtime,
   } = useTodo();
 
   // Get current task from userData using currentTaskId
@@ -155,6 +156,23 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
   // Allow overdue state even when just completed, so user can see the appropriate buttons
   const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
   const isBreakOverdue = pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.timeLeft < 0;
+
+  const isAutoPausedForOvertime = !!pomodoroTimer.overtimeAutoPaused && !pomodoroTimer.isRunning;
+  const overtimeSeconds = pomodoroTimer.overtimeAutoPaused?.overtimeSeconds || 0;
+  const overtimeMinutesDisplay = Math.floor(overtimeSeconds / 60);
+  const overtimeSecondsDisplay = overtimeSeconds % 60;
+
+  React.useEffect(() => {
+    if (isAutoPausedForOvertime) {
+      if (typeof window !== 'undefined' && typeof window.focus === 'function') {
+        try {
+          window.focus();
+        } catch (error) {
+          console.warn('Unable to focus window after overtime autopause:', error);
+        }
+      }
+    }
+  }, [isAutoPausedForOvertime]);
 
   const formatTime = (seconds: number): string => {
     // Handle NaN, undefined, or invalid values
@@ -468,7 +486,16 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                     title="Set timer to 10 seconds for testing"
                     className="text-xs"
                   >
-                    ⏱️
+                    ⏱️10s
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={debugSetTimerTo14m45Overtime}
+                    title="Set timer to 14:45 overtime for testing"
+                    className="text-xs"
+                  >
+                    ⏱️14:45
                   </Button>
                 </div>
               </div>
@@ -560,9 +587,64 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                 </div>
               </div>
 
+              {/* Overtime autopause prompt */}
+              {isAutoPausedForOvertime && (
+                <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-5 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-orange-100 p-2 text-orange-600">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-orange-700">
+                        Session paused after {overtimeMinutesDisplay}:{overtimeSecondsDisplay.toString().padStart(2, '0')} overtime
+                      </p>
+                      <p className="mt-1 text-sm text-orange-700/90">
+                        Are you still here? Choose how you want to continue.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <Button
+                      onClick={resumePomodoro}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Continue {pomodoroTimer.sessionType === 'work' ? 'Working' : 'Break'}
+                    </Button>
+                    {pomodoroTimer.sessionType === 'work' ? (
+                      <Button
+                        onClick={completeWorkSession}
+                        variant="outline"
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Coffee className="mr-2 h-4 w-4" />
+                        Take Break
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={startNextSession}
+                        variant="outline"
+                        className="border-green-200 text-green-600 hover:bg-green-50"
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        Continue Working
+                      </Button>
+                    )}
+                    <Button
+                      onClick={stopPomodoro}
+                      variant="ghost"
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      <Square className="mr-2 h-4 w-4" />
+                      Stop Session
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Controls */}
               <div className="flex items-center justify-center gap-4">
-                {isWorkOverdue ? (
+                {isAutoPausedForOvertime ? null : isWorkOverdue ? (
                   // Show overdue work controls first - this takes priority over justCompleted
                   <>
                     <Button 
@@ -829,6 +911,16 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                     {pomodoroTimer.sessionType === 'work' 
                       ? userData.settings.workDuration 
                       : userData.settings.shortBreakDuration} min
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Status</span>
+                  <span className={`font-medium ${isAutoPausedForOvertime ? 'text-orange-600' : pomodoroTimer.isRunning ? 'text-green-600' : 'text-gray-700'}`}>
+                    {isAutoPausedForOvertime
+                      ? `Paused · ${overtimeMinutesDisplay}:${overtimeSecondsDisplay.toString().padStart(2, '0')} overtime`
+                      : pomodoroTimer.isRunning
+                      ? 'Running'
+                      : 'Paused'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

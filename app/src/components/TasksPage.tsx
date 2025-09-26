@@ -94,7 +94,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [editCategory, setEditCategory] = useState<string | undefined>('work');
   const [editWorkspaceUrls, setEditWorkspaceUrls] = useState<string[]>([]);
   const [editUrlInput, setEditUrlInput] = useState('');
-  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const autoSaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveTaskRef = React.useRef<() => void>(() => {});
   const [completedTasksDateFilter, setCompletedTasksDateFilter] = useState<'7days' | '30days' | 'all'>('30days');
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
 
@@ -379,6 +380,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     setViewingTask(task);
     setIsViewPanelOpen(true);
     setIsEditPanelOpen(false);
+    autoSaveTaskRef.current = () => {};
     setIsCreatePanelOpen(false);
   };
 
@@ -505,9 +507,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
 
   const handleCancelEdit = () => {
-    if (autoSaveTimeout) {
-      clearTimeout(autoSaveTimeout);
-      setAutoSaveTimeout(null);
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
     }
     setEditingTask(null);
     setEditTitle('');
@@ -517,9 +519,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     setIsEditPanelOpen(false);
   };
 
-  const autoSaveTask = () => {
+  const autoSaveTask = React.useCallback(() => {
     if (editingTask) {
-      // Get the current title value directly from the input to avoid stale state
       const currentTitle = titleInputRef.current?.value || editTitle;
       updateTask(editingTask.id, {
         title: currentTitle,
@@ -530,15 +531,29 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         workspaceUrls: editWorkspaceUrls,
       });
     }
-  };
+  }, [editingTask, editTitle, editDescription, editDueDate, editCategory, editEstimatedPomodoros, editWorkspaceUrls, updateTask]);
 
-  const scheduleAutoSave = () => {
-    if (autoSaveTimeout) {
-      clearTimeout(autoSaveTimeout);
+  React.useEffect(() => {
+    autoSaveTaskRef.current = autoSaveTask;
+  }, [autoSaveTask]);
+
+  React.useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const scheduleAutoSave = React.useCallback(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
     }
-    const timeoutId = setTimeout(autoSaveTask, 500);
-    setAutoSaveTimeout(timeoutId);
-  };
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveTaskRef.current();
+    }, 500);
+  }, []);
 
   // Handle outside clicks
   // Helper function to check if the click target should not close panels
@@ -1821,11 +1836,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               }}
               onBlur={() => {
                 // Cancel any pending auto-save to avoid conflicts and save immediately
-                if (autoSaveTimeout) {
-                  clearTimeout(autoSaveTimeout);
-                  setAutoSaveTimeout(null);
+                if (autoSaveTimeoutRef.current) {
+                  clearTimeout(autoSaveTimeoutRef.current);
+                  autoSaveTimeoutRef.current = null;
                 }
-                autoSaveTask();
+                autoSaveTaskRef.current();
               }}
               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
               autoFocus

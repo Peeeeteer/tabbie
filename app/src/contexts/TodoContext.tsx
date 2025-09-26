@@ -4,6 +4,12 @@ import { DEFAULT_CATEGORIES } from '@/types/todo';
 import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoroState, clearPomodoroState, type PomodoroState } from '@/utils/storage';
 import { computeTimeLeftSeconds, sanitizePausedSeconds } from '@/utils/pomodoroTime';
 
+type OvertimeAutoPausedState = {
+  sessionType: 'work' | 'shortBreak' | 'longBreak';
+  triggeredAt: Date;
+  overtimeSeconds: number;
+};
+
 interface TodoContextType {
   userData: UserData;
   selectedCategoryId: string | null;
@@ -17,6 +23,7 @@ interface TodoContextType {
     justCompleted: boolean; // New field to show completion state
     pausedAt: Date | null; // Track when paused
     totalPausedTime: number; // Total time paused in seconds
+    overtimeAutoPaused: OvertimeAutoPausedState | null;
   };
   
   // Category methods
@@ -43,6 +50,7 @@ interface TodoContextType {
   startNextSession: () => Promise<void>; // New method for manual next session start
   skipBreak: () => void; // New method to skip break and start next work session
   debugSetTimerTo10Seconds: () => void; // Debug function to set timer to 10 seconds
+  debugSetTimerTo14m45Overtime: () => void; // Debug function to jump to 14:45 overtime
   
   // Notes methods
   updateUserNotes: (type: 'global' | 'category', content: string, categoryId?: string) => void;
@@ -86,6 +94,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         justCompleted: savedState.justCompleted,
         pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null,
         totalPausedTime: safeTotalPausedTime,
+        overtimeAutoPaused: savedState.overtimeAutoPaused
+          ? {
+              sessionType: savedState.overtimeAutoPaused.sessionType,
+              triggeredAt: new Date(savedState.overtimeAutoPaused.triggeredAt),
+              overtimeSeconds: savedState.overtimeAutoPaused.overtimeSeconds,
+            }
+          : null,
       };
     }
     return {
@@ -96,6 +111,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       justCompleted: false,
       pausedAt: null as Date | null,
       totalPausedTime: 0,
+      overtimeAutoPaused: null,
     };
   });
 
@@ -286,31 +302,58 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
-          if (safeActualTimeLeft < 0) {
-            const overtimeMinutes = Math.floor(Math.abs(safeActualTimeLeft) / 60);
-            const timeSinceLastNotification = now - lastOvertimeNotification;
-            
-            if (overtimeMinutes > 0 && overtimeMinutes % 5 === 0 && timeSinceLastNotification > 4 * 60 * 1000) {
-              playNotificationSound();
-              if (prev.sessionType === 'work') {
-                showNotification(
-                  '⏰ Still Working!', 
-                  `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
-                );
-              } else if (prev.sessionType === 'shortBreak') {
-                showNotification(
-                  '⏰ Break Overdue!', 
-                  `You've been on break for ${overtimeMinutes} minutes longer than planned. Ready to get back to work?`
-                );
-              }
-              lastOvertimeNotification = now;
+          const overtimeSeconds = Math.abs(safeActualTimeLeft);
+          const hasExceededOvertimeThreshold = safeActualTimeLeft <= -900; // 15 minutes in seconds
+          const isAlreadyAutoPaused = prev.overtimeAutoPaused !== null;
+          const shouldAutoPause = hasExceededOvertimeThreshold && !isAlreadyAutoPaused;
+          const shouldNotifyOvertime = safeActualTimeLeft < 0;
+          const overtimeMinutes = Math.floor(overtimeSeconds / 60);
+          const timeSinceLastNotification = now - lastOvertimeNotification;
+          const isNotificationIntervalReached = overtimeMinutes > 0 && overtimeMinutes % 5 === 0 && timeSinceLastNotification > 4 * 60 * 1000;
+          const isWorkSession = prev.sessionType === 'work';
+          const isBreakSession = prev.sessionType === 'shortBreak';
+
+          if (shouldAutoPause) {
+            playNotificationSound();
+            showNotification(
+              isWorkSession ? '⏰ Focus Session Paused' : '⏰ Break Paused',
+              `You have been ${isWorkSession ? 'working' : 'on break'} ${overtimeMinutes} minutes overtime. Are you still there?`
+            );
+
+            return {
+              ...prev,
+              isRunning: false,
+              pausedAt: new Date(now),
+              timeLeft: safeActualTimeLeft,
+              overtimeAutoPaused: {
+                sessionType: prev.sessionType,
+                triggeredAt: new Date(now),
+                overtimeSeconds,
+              },
+            };
+          }
+
+          if (shouldNotifyOvertime && isNotificationIntervalReached && !shouldAutoPause) {
+            playNotificationSound();
+            if (isWorkSession) {
+              showNotification(
+                '⏰ Still Working!', 
+                `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
+              );
+            } else if (isBreakSession) {
+              showNotification(
+                '⏰ Break Overdue!', 
+                `You've been on break for ${overtimeMinutes} minutes longer than planned. Ready to get back to work?`
+              );
             }
+            lastOvertimeNotification = now;
           }
           
           return {
             ...prev,
             timeLeft: safeActualTimeLeft,
             totalPausedTime: safeTotalPausedTime,
+            overtimeAutoPaused: shouldNotifyOvertime ? prev.overtimeAutoPaused : null,
           };
         });
       }, 1000);
@@ -682,6 +725,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       justCompleted: false,
       pausedAt: null, // Reset pausedAt when starting a new session
       totalPausedTime: 0,
+      overtimeAutoPaused: null,
     });
 
     // Open workspace URLs if they exist
@@ -739,12 +783,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isRunning: true,
           pausedAt: null,
           totalPausedTime: newTotalPausedTime,
+          overtimeAutoPaused: null,
         };
       }
       return { 
         ...prev, 
         isRunning: true,
         totalPausedTime: sanitizePausedSeconds(prev.totalPausedTime),
+        overtimeAutoPaused: null,
       };
     });
   };
@@ -798,6 +844,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession: breakSession,
         sessionType: 'shortBreak',
         justCompleted: false,
+        overtimeAutoPaused: null,
       }));
       
       // Save state immediately for better recovery
@@ -830,6 +877,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession: workSession,
         sessionType: 'work',
         justCompleted: false,
+        overtimeAutoPaused: null,
       }));
       
       // Save state immediately for better recovery
@@ -855,6 +903,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         justCompleted: false,
         pausedAt: null,
         totalPausedTime: 0,
+        overtimeAutoPaused: null,
       });
       setCurrentTaskId(null);
       clearPomodoroState();
@@ -950,6 +999,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         justCompleted: false,
         pausedAt: null,
         totalPausedTime: 0,
+        overtimeAutoPaused: null,
       });
 
     }
@@ -1019,6 +1069,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           justCompleted: false,
           pausedAt: null,
           totalPausedTime: 0,
+          overtimeAutoPaused: null,
         });
       }
     }
@@ -1026,25 +1077,49 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const debugSetTimerTo10Seconds = () => {
     if (pomodoroTimer.currentSession) {
-      // Update the session start time to make it appear as if it started 10 seconds ago
       const now = new Date();
-      const tenSecondsAgo = new Date(now.getTime() - (pomodoroTimer.currentSession.duration * 60 - 10) * 1000);
-      
-      const updatedSession = {
-        ...pomodoroTimer.currentSession,
-        started: tenSecondsAgo,
-      };
+      const totalDurationSeconds = pomodoroTimer.currentSession.duration * 60;
+      const newStartedAt = new Date(now.getTime() - (totalDurationSeconds - 10) * 1000);
 
       setPomodoroTimer(prev => ({
         ...prev,
-        currentSession: updatedSession,
-        timeLeft: 10, // Set to 10 seconds
+        currentSession: {
+          ...prev.currentSession!,
+          started: newStartedAt,
+        },
+        timeLeft: 10,
+        isRunning: true,
+        pausedAt: null,
+        overtimeAutoPaused: null,
       }));
 
-      showNotification(
-        '🔧 Debug Mode', 
-        'Timer set to 10 seconds for testing'
-      );
+      showNotification('🔧 Debug Mode', 'Timer set to 10 seconds for testing');
+    }
+  };
+
+  const debugSetTimerTo14m45Overtime = () => {
+    if (pomodoroTimer.currentSession) {
+      const now = Date.now();
+      const targetTimeLeft = -885; // -14 minutes 45 seconds
+      const totalDurationSeconds = pomodoroTimer.currentSession.duration * 60;
+      const elapsedSeconds = totalDurationSeconds - targetTimeLeft;
+      const newStartedAt = new Date(now - elapsedSeconds * 1000);
+
+      setPomodoroTimer(prev => ({
+        ...prev,
+        currentSession: prev.currentSession
+          ? {
+              ...prev.currentSession,
+              started: newStartedAt,
+            }
+          : null,
+        timeLeft: targetTimeLeft,
+        isRunning: true,
+        pausedAt: null,
+        overtimeAutoPaused: null,
+      }));
+
+      showNotification('🔧 Debug Mode', 'Timer set to 14:45 overtime for testing');
     }
   };
 
@@ -1105,6 +1180,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startNextSession,
     skipBreak,
     debugSetTimerTo10Seconds,
+  debugSetTimerTo14m45Overtime,
     
     updateUserNotes,
   };

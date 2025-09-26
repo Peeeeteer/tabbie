@@ -24,6 +24,11 @@ export interface PomodoroState {
   startedAt: number | null; // timestamp when session started
   pausedAt: number | null; // timestamp when session was paused
   totalPausedTime: number; // total time paused in seconds
+  overtimeAutoPaused: {
+    sessionType: 'work' | 'shortBreak' | 'longBreak';
+    triggeredAt: number;
+    overtimeSeconds: number;
+  } | null;
 }
 
 // Load pomodoro state from localStorage
@@ -63,6 +68,12 @@ export const loadPomodoroState = (): PomodoroState | null => {
       return {
         ...parsed,
         totalPausedTime: safeTotalPausedTime,
+        overtimeAutoPaused: parsed.overtimeAutoPaused
+          ? {
+              ...parsed.overtimeAutoPaused,
+              triggeredAt: new Date(parsed.overtimeAutoPaused.triggeredAt).getTime(),
+            }
+          : null,
       };
     }
   } catch (error) {
