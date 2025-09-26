@@ -44,7 +44,7 @@ Powered by:
 
 ---
 
-## 🚀 Get Started
+## 🚀 Get Started (STIL WIP, should be finished by 1. Okt 2025)
 
 Start with the step-by-step guide:
 - 👉 See: [`docs/get_started.md`](docs/get_started.md)
