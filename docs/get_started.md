@@ -3,7 +3,7 @@
 ### Hardware Kit
 Buy the complete kit on Amazon:
 - **EU**: [Amazon EU Link](https://amzn.to/4jXdnxq) (~22 EUR)
-- **NA**: [Amazon NA Link](https://amzn.to/3GIhij3) (~25 USD)
+- **NA**: [Amazon NA Link](https://amzn.to//42Nb3lt) (~19.99 USD)
 
 
 ### 3D Printed Parts
