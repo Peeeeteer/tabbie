@@ -5,7 +5,7 @@ Ever wanted a **to-do app with a Cute Face**? One that lives on your desk?
 
 **That's Tabbie.**
 
-[🛠️ Make tabbie](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@LloydDecember1) · [👥 Join the community](https://www.reddit.com/r/deskbuddy/)
+[🛠️ Make Tabbie](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@LloydDecember1) · [👥 Join the community](https://www.reddit.com/r/deskbuddy/)
 
 </div>
 
