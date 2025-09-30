@@ -55,7 +55,8 @@ That guide covers:
 - Connecting the dashboard to your Tabbie
 - First run checklist
 
-**📚 Wanna learn?** Go here and get started → [`docs/learning/README.md`](docs/learning/README.md) — learn the fundamentals (LEDs, servos, OLED, WiFi, REST).
+**📚 Dont know anything about electronics?**  
+Go here and get started → [`docs/learning/README.md`](docs/learning/README.md) — This is my mini-roadmap that I did... try learning the same _(not sure if its the best and Im kinda stupid but yea)_
 
 ---
 
