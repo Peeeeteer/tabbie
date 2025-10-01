@@ -1,9 +1,24 @@
 # 🚀 Getting Started with Tabbie (STIL WORKING ON IT, COME BACK ON 1. OKTOBER 2025)
 
 ### Hardware Kit
-Buy the complete kit on Amazon:
-- **EU**: [Amazon EU Link](https://amzn.to/4jXdnxq) (~22 EUR)
-- **NA**: [Amazon NA Link](https://amzn.to//42Nb3lt) (~19.99 USD)
+
+You will need:
+- 0.96 INCH OLED 
+- ESP32 Dev Board (any size — just adjust PIN numbers in the code, I’ll show you where)
+
+If you dont have one, buy them somewhere... if you a Amazon person, use these refferal link, no fee applies and get 3% 
+
+**EU**
+- [ESP32 BIG](https://amzn.to/4mDWJ6Z) (PACK OF 2 ~14 EUR) 
+- [ESP32 SMALL](https://amzn.to/4nuHy1d) (PACK OF 3 ~19 EUR) 
+- [0.96 INCH OLED](https://amzn.to/46RyxIn) (PACK OF 3 ~10 EUR) 
+
+
+**NA**:
+- [ESP32 BIG](https://amzn.to/4mGymW4) (~13.99 USD)
+- [ESP32 SMALL](https://amzn.to/3IScObb) (~11.90 USD)
+- [0.96 INCH OLED](https://amzn.to/4mLU7nz) (~14.99 USD)
+
 
 
 ### 3D Printed Parts
