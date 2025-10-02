@@ -1,4 +1,4 @@
-# 🚀 Getting Started with Tabbie (STIL WORKING ON IT, COME BACK ON 1. OKTOBER 2025)
+# 🚀 Getting Started with Tabbie (STIL WORKING ON IT, COME BACK ON 5. OKTOBER 2025)
 
 ### Hardware Kit
 
