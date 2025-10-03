@@ -1,195 +1,234 @@
-# 🚀 Getting Started with Tabbie (STIL WORKING ON IT, COME BACK ON 5. OKTOBER 2025)
+# Getting Started with Tabbie
 
-### Hardware Kit
+> STILL WORKING ON THIS - COME BACK ON OCTOBER 5, 2025
 
-You will need:
-- 0.96 INCH OLED 
-- ESP32 Dev Board (any size — just adjust PIN numbers in the code, I’ll show you where)
+A mini Twitch streamer on your desk, cheering you on, but also keeping you focused. Lets make one
 
-If you dont have one, buy them somewhere... if you a Amazon person, use these refferal link, no fee applies and get 3% 
-
-**EU**
-- [ESP32 BIG](https://amzn.to/4mDWJ6Z) (PACK OF 2 ~14 EUR) 
-- [ESP32 SMALL](https://amzn.to/4nuHy1d) (PACK OF 3 ~19 EUR) 
-- [0.96 INCH OLED](https://amzn.to/46RyxIn) (PACK OF 3 ~10 EUR) 
-
-
-**NA**:
-- [ESP32 BIG](https://amzn.to/4mGymW4) (~13.99 USD)
-- [ESP32 SMALL](https://amzn.to/3IScObb) (~11.90 USD)
-- [0.96 INCH OLED](https://amzn.to/4mLU7nz) (~14.99 USD)
-
-
-
-### 3D Printed Parts
-Print the body parts from the STL files:
-- **Location**: `hardware/3d-models/`
-- **Files needed**: `tabbie-head.stl`, `tabbie-neck.stl`
-
-
-**Don't have a 3D printer?** 
-- Use a local 3D printing service
-- Or buy pre-printed parts (coming soon)
-
-### Software Requirements
-- **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
-- **PlatformIO** (for ESP32 programming) - [Download here](https://platformio.org/)
-- **Git** - [Download here](https://git-scm.com/)
 
 ---
 
-## 🔧 Step 1: Hardware Assembly
+## What You'll Need
 
-### 1.1 Install ESP32 Drivers
-Your ESP32 uses a CP2102 USB-to-UART chip. Install the drivers:
+### The Parts (~$17 USD / ~€15 EUR total)
+- **ESP32** (the robot's brain)
+- **1.3" OLED Screen** (the face)
+- **3D Printed Parts** (the body)
 
-**Windows:**
-1. Download CP2102 drivers from [Silicon Labs](https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads)
-2. Install and restart your computer
-3. Connect ESP32 via USB
-4. Check Device Manager - you should see "Silicon Labs CP210x USB to UART Bridge"
+### Where to Buy
 
-**macOS/Linux:**
-- Drivers usually install automatically
-- If not working, install via: `brew install --cask silicon-labs-vcp-driver`
+**If you live in Europe (EU):**
+- [ESP32 - Pack of 2](https://amzn.to/4mDWJ6Z) (~14 EUR) 
+- [OLED Screen - Pack of 3](https://amzn.to/4nxXHCO) (~18.99 EUR)
+- [PLA Filament for 3D printing](https://amzn.to/46QfHkC) (~14 EUR)
 
-### 1.2 Physical Assembly
-1. **Print the 3D parts** from `hardware/3d-models/`
-2. **Wire the components** according to the pinout:
-   - OLED Display: SDA → GPIO 21, SCL → GPIO 22
-   - Servo 1: Signal → GPIO 18
-   - Servo 2: Signal → GPIO 19
-   - Speaker: Signal → GPIO 25
-3. **Assemble the body** - insert ESP32 and components into the 3D printed case
-4. **Secure everything** with screws or hot glue
+**If you live in North America (USA/Canada):**
+- [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
+- [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
+- [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
+
+*These are affiliate links - I get 3% at no extra cost to you!*
+
+**Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy)
+
+
+
+## Lets start.  How to Build Tabbie
+
+The video covers everything for both Windows and Mac users. 
+**[Watch the step-by-step video here]** *(Thumbnail here)*
+
 
 ---
 
-## 💻 Step 2: Software Setup
+### STEP 1: Install & Download 
 
-### 2.1 Clone the Repository
+
+**>Install:**
+1. **Node.js** (v18 or newer) - [Download](https://nodejs.org/) - Runs the dashboard web app
+2. **Visual Studio Code** - [Download](https://code.visualstudio.com/) - Editor to view and modify code
+3. **PlatformIO** (for programming the ESP32) - [Download](https://platformio.org/) - Uploads firmware to ESP32
+4. **Git** - [Download Git](https://git-scm.com/)  To download via command line using `git clone`  
+
+
+**>Download:**
+
+**Option A: Using Git (recommended)**   
+
 ```bash
 git clone https://github.com/Peeeeteer/tabbie.git
 cd tabbie
 ```
 
-### 2.2 Set Up the Dashboard (React App)
-```bash
-# Navigate to the dashboard
-cd app/dashboard
+Youll be able to update very easly in the future by just running 
 
-# Install dependencies
+```bash
+cd tabbie
+git pull
+```
+
+**Option B: Download as ZIP**
+
+- Go to https://github.com/Peeeeteer/tabbie
+- Click the green “Code” button
+- Select “Download ZIP”
+- Extract it somewhere easy to find
+
+*[Image here showing how to download ZIP]*
+
+
+### STEP 2: Print the Body/Enclosure   
+
+1. Use the STL files from the `/hardware` folder & print
+      - `tabbie-head.stl`
+      - `tabbie-head.stl`
+      - `tabbie-head.stl`
+      - `tabbie-head.stl`
+      - `tabbie-head.stl`
+      - `tabbie-head.stl`
+
+Tip: Turn on supports for `Neck.stl` and `Top_case.stl` 
+
+
+### STEP 3: Install ESP32 Drivers
+
+Your ESP32 (brains) needs special drivers to talk to your computer.
+
+**Windows Users:**
+1. Download drivers from [Silicon Labs](https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads)
+2. Install them
+3. Plug in your ESP32 with a USB cable
+4. Open Device Manager - you should see "Silicon Labs CP210x USB to UART Bridge"
+
+**Mac/Linux Users:**
+- Usually works automatically when you plug it in
+- If it doesn't work, type this in Terminal: `brew install --cask silicon-labs-vcp-driver`
+
+---
+
+### STEP 4: Connect the Parts
+
+**Wiring Guide:**
+1. Connect the OLED screen to ESP32:
+   - SCK wire → GPIO 21 (D21)
+   - SDA wire → GPIO 22 (D22)
+   - VDD → 3.3V 
+   - GND → GND (Ground)
+
+2. Put ESP32 into the 3D printed base
+3. Thread wires through the neck piece
+4. Snap the screen into the head piece
+
+
+*[Short video here showing assembly]*
+
+**Optional:** Use glue to make it extra secure (but it should stay together without it)
+
+---
+
+### STEP 5: Set Up the React Dashboard
+
+Open your terminal/command and run:
+
+```bash
+# Go to the dashboard folder
+cd app
+
+# Install everything it needs
 npm install
 
-# Start the development server
+# Start it up
 npm run dev
 ```
 
-The dashboard will open at `http://localhost:3000`
+The dashboard will open at `http://localhost:8080` in your web browser.
 
-### 2.3 Flash the ESP32 Firmware
+---
 
-#### Option A: Using PlatformIO (Recommended)
+### STEP 6: Program Your ESP32
+
+1. **Navigate to the firmware folder:**
+
 ```bash
-# Navigate to firmware directory
 cd firmware
+```
 
-# Create environment file
-cp src/env.example .env
+2. **Set up your WiFi credentials:**
+   - Find the file `src/.env.example`
+   - Make a copy of it in the same location
+   - Rename the copy to `.env` (remove "example")
+   - Open `.env` in Visual Studio Code or any text editor
+   - Add your WiFi details: 
 
-# Edit .env with your WiFi credentials
-# WIFI_SSID=your_wifi_name
-# WIFI_PASSWORD=your_wifi_password
+```
+WIFI_SSID=your_wifi_name_here
+WIFI_PASSWORD=your_wifi_password_here
+```
 
-# Build and upload
+**Tip:** Make sure its the same Wifi that your computer is connected to 
+
+3. **Upload the code to your ESP32:**
+
+```bash
 pio run --target upload
 ```
 
-#### Option B: Using Arduino IDE
-1. Install ESP32 board support in Arduino IDE
-2. Open `firmware/src/main.cpp`
-3. Install required libraries:
-   - Adafruit SSD1306
-   - Adafruit GFX Library
-4. Upload to your ESP32
+**Tip:** If upload fails, hold down the BOOT button on your ESP32 while uploading
+and make sure that your are in still in the `firmware`directory when uploading 
 
-### 2.4 Configure WiFi
-1. **Create `.env` file** in `firmware/`:
-   ```env
-   WIFI_SSID=your_wifi_name
-   WIFI_PASSWORD=your_wifi_password
-   ```
-2. **Flash the firmware** with your credentials
-3. **Check the OLED display** - it will show the ESP32's IP address
 
 ---
 
-## 🔗 Step 3: Connect Everything
+### STEP 7: Connect Everything Together
 
-### 3.1 Find Your ESP32
-1. **Check the OLED display** - it shows the IP address (e.g., `192.168.1.100`)
-2. **Or scan your network** - the dashboard will auto-discover the ESP32
-
-### 3.2 Test the Connection
-1. **Open the dashboard** at `http://localhost:5173`
-2. **Click "Reconnect"** if the ESP32 isn't found automatically
-3. **Try changing faces** - you should see the ESP32's display change
-
-### 3.3 First Run Checklist
-- [ ] ESP32 powers on and shows IP address on OLED
-- [ ] Dashboard connects to ESP32 (green status indicator)
-- [ ] Face changes work (default ↔ focus)
-- [ ] Pomodoro timer starts and shows on ESP32
-- [ ] Serial monitor shows logs in dashboard
+1. **Open the dashboard** at `http://localhost:8080` in your browser
+2. **Go to the Tabbie Page**
+3. **Click "Reconnect"** if it doesn't find Tabbie automatically
+4. **Watch the magic!** Tabbie should start showing its idle animation
 
 ---
 
-## 🎯 Step 4: First Tasks
+### Let's Use Tabbie!
 
-### Try These Features:
-1. **Change Tabbie's face** - Click the face buttons in the dashboard
-2. **Start a Pomodoro** - Go to Pomodoro tab, set a task, and start
-3. **Add a task** - Go to Tasks tab and create your first todo
-4. **Check the logs** - Watch the serial monitor for ESP32 activity
+**Create Tasks**
+- Go to the Tasks tab
+- Add things you need to do
+- Check them off when you're done!
+Tabbie will be happy you created a task
 
-### Troubleshooting
-**ESP32 won't connect?**
-- Check WiFi credentials in `.env`
-- Ensure ESP32 and computer are on same network
-- Try manual IP entry in dashboard
+**Use Pomodoro Timer**
+- Go to the Pomodoro tab
+- Pick a task to work on
+- Start the timer
+Tabbie will show a focus animation to help you concentrate
 
-**Dashboard won't start?**
-- Run `npm install` in `app/dashboard/`
-- Check Node.js version (needs v18+)
-- Try `npm run dev` again
-
-**Firmware won't upload?**
-- Install CP2102 drivers
-- Hold BOOT button while uploading
-- Check USB cable (data, not just power)
+**Important:**  
+All your tasks/notes etc... are only saved on your computer, no one can access them.
 
 ---
 
-## 📚 Next Steps
+## Troubleshooting
 
-**Want to learn more?** Check out the step-by-step learning modules:
-- [`docs/learning/README.md`](learning/README.md) - Learn the fundamentals
-- Start with LED blinking, then move to servos, displays, and WiFi
+### ESP32 Won't Connect
+- Double-check your WiFi name and password in the `.env` file
+- Make sure your ESP32 and computer are on the same WiFi network
 
-**Need help?**
-- Check the [Issues](https://github.com/Peeeeteer/tabbie/issues) on GitHub
-- Join the community discussions
-- Watch the [build videos](https://www.youtube.com/@looyd1)
+### Dashboard Won't Start
+- Make sure you ran `npm install` in the `dashboard` folder
+- Check that you have Node.js v18 or newer (type `node --version` to check)
+- Try running `npm run dev` again from the `dashboard` folder
+
+### Can't Upload Code to ESP32
+- Install the CP2102 drivers (see Step 3)
+- Hold the BOOT button on ESP32 while uploading
+- Check your USB cable (some cables only charge, they don't transfer data)
+
+**Need more help?** Join the community:
+- [Discord](https://discord.gg/7er2Ysjc) - [Reddit](https://www.reddit.com/r/deskbuddy/) - [YouTube](https://www.youtube.com/@LloydDecember1) - [GitHub](https://github.com/Peeeeteer/tabbie)
 
 ---
 
-## 🎉 You're Ready!
+## That's It!
 
-Your Tabbie should now be working! The robot will:
-- ✅ Display faces and animations on the OLED
-- ✅ Respond to dashboard commands
-- ✅ Run Pomodoro timers
-- ✅ Manage your tasks
-- ✅ Show connection status and logs
+If this helped you, consider giving the project a star on [GitHub](https://github.com/Peeeeteer/tabbie)!
 
-**Happy building!** 🤖✨
+Happy building!
