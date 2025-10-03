@@ -44,7 +44,7 @@ Powered by:
 
 ---
 
-## 🚀 Get Started (STIL WIP, should be finished by 1. Okt 2025)
+## 🚀 Get Started (STIL WIP, should be finished by 6. Okt 2025)
 
 Start with the step-by-step guide:
 - 👉 See: [`docs/get_started.md`](docs/get_started.md)
@@ -55,9 +55,10 @@ That guide covers:
 - Connecting the dashboard to your Tabbie
 - First run checklist
 
+<!-- 
 **📚 Dont know anything about electronics?**  
 Go here and get started → [`docs/learning/README.md`](docs/learning/README.md) — This is my mini-roadmap that I did... try learning the same _(not sure if its the best and Im kinda stupid but yea)_
-
+-->
 ---
 
 ## 🗂️ Project Structure
@@ -68,12 +69,10 @@ tabbie/
 │
 ├── firmware/                 # Code that runs on devices
 │
-├── hardware/                 # Physical build assets
-│   └── 3d-models/            # STL/CAD files
+├── hardware/                 # Physical build assets (STL files)
 │
 ├── docs/                     # Docs (kept simple for now)
 │   ├── get_started.md
-│   └── learning/
 │
 ├── CONTRIBUTING.md
 └── README.md
