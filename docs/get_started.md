@@ -43,14 +43,14 @@ The video covers everything for both Windows and Mac users.
 ### STEP 1: Install & Download 
 
 
-**>Install:**
+>Install:
 1. **Node.js** (v18 or newer) - [Download](https://nodejs.org/) - Runs the dashboard web app
 2. **Visual Studio Code** - [Download](https://code.visualstudio.com/) - Editor to view and modify code
 3. **PlatformIO** (for programming the ESP32) - [Download](https://platformio.org/) - Uploads firmware to ESP32
 4. **Git** - [Download Git](https://git-scm.com/)  To download via command line using `git clone`  
 
 
-**>Download:**
+>Download:
 
 **Option A: Using Git (recommended)**   
 
