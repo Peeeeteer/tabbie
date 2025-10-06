@@ -9,21 +9,24 @@ A mini Twitch streamer on your desk, cheering you on, but also keeping you focus
 
 ## What You'll Need
 
-### The Parts (~$17 USD / ~€15 EUR total)
+### The Parts (~$18 USD / ~€16 EUR total)
 - **ESP32** (the robot's brain)
 - **1.3" OLED Screen** (the face)
 - **3D Printed Parts** (the body)
+- **Jumper Wires** (connecting everything)
 
 ### Where to Buy
 
 **If you live in Europe (EU):**
 - [ESP32 - Pack of 2](https://amzn.to/4mDWJ6Z) (~14 EUR) 
 - [OLED Screen - Pack of 3](https://amzn.to/4nxXHCO) (~18.99 EUR)
+- [JumperWires -  Full pack](https://amzn.to/4mOGZ0I) (~6.40 EUR)
 - [PLA Filament for 3D printing](https://amzn.to/46QfHkC) (~14 EUR)
 
 **If you live in North America (USA/Canada):**
 - [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
 - [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
+- [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
 - [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
 
 *These are affiliate links - I get 3% at no extra cost to you!*
