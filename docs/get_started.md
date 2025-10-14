@@ -15,27 +15,41 @@ A mini Twitch streamer on your desk, cheering you on, but also keeping you focus
 - **3D Printed Parts** (the body)
 - **Jumper Wires** (connecting everything)
 
-### Where to Buy
+I recommend buying the parts on **Amazon or Aliexpress**  
+**Amazon** is safe choice and fast shipping, but will be more expensive  
+**Aliexpress** is cheaper, but things sometimes arrive broken and shipping takes long  
 
-**If you live in Europe (EU):**
+**Amazon EU:**
 - [ESP32 - Pack of 2](https://amzn.to/4mDWJ6Z) (~14 EUR) 
 - [OLED Screen - Pack of 3](https://amzn.to/4nxXHCO) (~18.99 EUR)
 - [JumperWires -  Full pack](https://amzn.to/4mOGZ0I) (~6.40 EUR)
 - [PLA Filament for 3D printing](https://amzn.to/46QfHkC) (~14 EUR)
 
-**If you live in North America (USA/Canada):**
+**Amazon USA/Canada:**
 - [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
 - [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
 - [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
 - [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
 
+**Aliexpress Worldwide:**
+- [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
+- [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
+- [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
+- [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
+
+
+
 *These are affiliate links - I get 3% at no extra cost to you!*
 
-**Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy/kit)
+## **Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy/kit)
 
 
+<div align="center">
+  <p style="font-size: 36px; font-weight: bold;">
+    Let's start. How to Build Tabbie
+  </p>
+</div>
 
-## Lets start.  How to Build Tabbie
 
 The video covers everything for both Windows and Mac users. 
 **[Watch the step-by-step video here]** *(Thumbnail here)*
