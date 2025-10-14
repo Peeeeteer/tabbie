@@ -64,6 +64,7 @@ export interface UserData {
     sessionsUntilLongBreak: number;
     autoStartBreaks: boolean;
     autoStartPomodoros: boolean;
+    theme?: 'clean' | 'retro'; // UI theme preference
   };
 }
 
@@ -105,4 +106,5 @@ export const DEFAULT_SETTINGS = {
   sessionsUntilLongBreak: 4,
   autoStartBreaks: false,
   autoStartPomodoros: false,
+  theme: 'clean' as 'clean' | 'retro',
 }; 

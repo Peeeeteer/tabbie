@@ -14,7 +14,7 @@ import {
   Sidebar,
 } from "@/components/ui/sidebar"
 import React from "react"
-import { TodoProvider } from "@/contexts/TodoContext"
+import { TodoProvider, useTodo } from "@/contexts/TodoContext"
 import { DarkModeProvider } from "@/contexts/DarkModeContext"
 import CategorySidebar from "@/components/CategorySidebar"
 import TasksPage from "@/components/TasksPage"
@@ -26,10 +26,60 @@ import PomodoroPage from "@/components/PomodoroPage"
 import NotesPage from "@/components/NotesPage"
 import TabbiePage from "@/components/TabbiePage"
 import { ActivityStatsProvider } from "@/components/ActivityStatsProvider"
+import OnboardingModal from "@/components/OnboardingModal"
+import { updateSettings } from "@/utils/storage"
 
-export default function Page() {
+const ONBOARDING_STORAGE_KEY = 'tabbie_onboarding_completed';
+const ONBOARDING_FORCE_SHOW_KEY = 'tabbie_onboarding_force_show';
+
+function AppContent() {
+  const { userData } = useTodo();
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  
+  // Get theme from settings (default to 'clean')
+  const theme = (userData.settings?.theme as 'clean' | 'retro') || 'clean';
+  
+  // Debug: Log current theme
+  React.useEffect(() => {
+    console.log('🎨 Current theme:', theme);
+    console.log('📦 Settings:', userData.settings);
+  }, [theme, userData.settings]);
+
+  // Check if onboarding should be shown
+  React.useEffect(() => {
+    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    const forceShow = localStorage.getItem(ONBOARDING_FORCE_SHOW_KEY);
+    
+    // First time user: no flag AND no data
+    const isFirstTimeUser = 
+      !hasCompletedOnboarding && 
+      userData.tasks.length === 0 && 
+      userData.completedTasks.length === 0;
+    
+    // Force show: user clicked "View Again" in settings
+    const shouldForceShow = forceShow === 'true';
+    
+    if (isFirstTimeUser || shouldForceShow) {
+      setShowOnboarding(true);
+      // Clear force show flag immediately
+      if (shouldForceShow) {
+        localStorage.removeItem(ONBOARDING_FORCE_SHOW_KEY);
+      }
+    }
+  }, [userData.tasks.length, userData.completedTasks.length]);
+
+  const handleOnboardingComplete = (selectedDesign: 'clean' | 'retro') => {
+    // Save onboarding completion flag
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+    
+    // Save selected theme to settings using the updateSettings utility
+    updateSettings({ theme: selectedDesign });
+    
+    // Reload the page to apply the theme (this ensures TodoContext reloads with the new settings)
+    window.location.reload();
+  };
 
 
 
@@ -43,9 +93,13 @@ export default function Page() {
 
 
   return (
-    <DarkModeProvider>
-      <TodoProvider>
-        <SidebarProvider>
+    <>
+      <OnboardingModal 
+        isOpen={showOnboarding} 
+        onComplete={handleOnboardingComplete}
+      />
+      
+      <SidebarProvider>
         <Sidebar>
           <ActivityStatsProvider>
             {(activityStats) => (
@@ -55,6 +109,7 @@ export default function Page() {
                 currentView={currentView}
                 onViewChange={setCurrentView}
                 activityStats={activityStats}
+                theme={theme}
               />
             )}
           </ActivityStatsProvider>
@@ -95,31 +150,37 @@ export default function Page() {
             <DashboardPage 
               onNavigateToActivity={() => setCurrentPage('activity')}
               onPageChange={setCurrentPage}
+              theme={theme}
             />
           ) : currentPage === 'tasks' ? (
-            <TasksPage currentView={currentView} onViewChange={setCurrentView} onPageChange={setCurrentPage} />
+            <TasksPage 
+              currentView={currentView} 
+              onViewChange={setCurrentView} 
+              onPageChange={setCurrentPage}
+              theme={theme}
+            />
           ) : currentPage === 'reminders' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">🔔 Reminders</h2>
               <p className="text-muted-foreground">Coming soon</p>
             </div>
           ) : currentPage === 'events' ? (
-            <EventsPage />
+            <EventsPage theme={theme} />
           ) : currentPage === 'notifications' ? (
-            <NotificationsPage />
+            <NotificationsPage theme={theme} />
           ) : currentPage === 'pomodoro' ? (
-                            <PomodoroPage onPageChange={setCurrentPage} />
+            <PomodoroPage onPageChange={setCurrentPage} theme={theme} />
           ) : currentPage === 'notes' ? (
-                            <NotesPage onPageChange={setCurrentPage} />
+            <NotesPage onPageChange={setCurrentPage} theme={theme} />
           ) : currentPage === 'activity' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">📊 Insight</h2>
               <p className="text-muted-foreground mb-4">Coming soon - Local AI</p>
             </div>
           ) : currentPage === 'settings' ? (
-            <SettingsPage onPageChange={setCurrentPage} />
+            <SettingsPage onPageChange={setCurrentPage} theme={theme} />
           ) : currentPage === 'tabbie' ? (
-            <TabbiePage onPageChange={setCurrentPage} />
+            <TabbiePage onPageChange={setCurrentPage} theme={theme} />
           ) : (
             <>
           
@@ -170,7 +231,16 @@ export default function Page() {
       </SidebarInset>
 
       </SidebarProvider>
-    </TodoProvider>
+    </>
+  )
+}
+
+export default function Page() {
+  return (
+    <DarkModeProvider>
+      <TodoProvider>
+        <AppContent />
+      </TodoProvider>
     </DarkModeProvider>
   )
 }

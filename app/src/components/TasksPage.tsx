@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, SkipForward, Timer } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
   import {
     DndContext,
@@ -54,9 +60,10 @@ interface TasksPageProps {
   currentView: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+  theme?: 'clean' | 'retro';
 }
 
-const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPageChange }) => {
+const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPageChange, theme = 'clean' }) => {
   const {
     userData,
     addTask,
@@ -67,7 +74,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     resetCategoriesToDefault,
     reorderTasks,
     pomodoroTimer,
+    addCategory,
   } = useTodo();
+
+  // Category creation options
+  const categoryIcons = ['📝', '💼', '🎨', '🏠', '💪', '🎯', '📚', '🛒', '💡', '🎮', '🎵', '✈️', '🍔', '💰', '🔧', '📱'];
+  const categoryColors = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16',
+    '#F97316', '#14B8A6', '#6366F1', '#A855F7', '#EAB308', '#22C55E', '#F43F5E', '#06B6D4'
+  ];
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -97,6 +112,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const autoSaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveTaskRef = React.useRef<() => void>(() => {});
   const [completedTasksDateFilter, setCompletedTasksDateFilter] = useState<'7days' | '30days' | 'all'>('30days');
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('📝');
+  const [newCategoryColor, setNewCategoryColor] = useState('');
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
 
   // Function to reset the create task form
@@ -708,7 +727,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
   const renderCategoryTasks = (categoryId: string, icon: string, name: string) => {
     const tasks = getCategoryTasksByType(categoryId);
-    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId);
+    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId, theme);
   };
 
   const renderNext7DaysWithCrossDrag = () => {
@@ -744,7 +763,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   ) : (
                     <ChevronUp className="w-4 h-4 text-gray-500" />
                   )}
-                  <h3 className="font-semibold text-lg text-gray-800">Today</h3>
+                  <h3 className="font-semibold text-lg text-foreground">Today</h3>
                   {todayTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       {todayTasks.length}{overdueTasks.length > 0 && (
@@ -819,6 +838,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="today"
+                      theme={theme}
                     />
                   ))}
                 </SortableContext>
@@ -853,7 +873,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   ) : (
                     <ChevronUp className="w-4 h-4 text-gray-500" />
                   )}
-                  <h3 className="font-semibold text-lg text-gray-800">Tomorrow</h3>
+                  <h3 className="font-semibold text-lg text-foreground">Tomorrow</h3>
                   {tomorrowTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{tomorrowTasks.length}</span>
                   )}
@@ -905,6 +925,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="tomorrow"
+                      theme={theme}
                     />
                   ))}
                 </SortableContext>
@@ -939,7 +960,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   ) : (
                     <ChevronUp className="w-4 h-4 text-gray-500" />
                   )}
-                  <h3 className="font-semibold text-lg text-gray-800">Next 7 Days</h3>
+                  <h3 className="font-semibold text-lg text-foreground">Next 7 Days</h3>
                   {next7DaysTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{next7DaysTasks.length}</span>
                   )}
@@ -984,6 +1005,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="next7days"
+                      theme={theme}
                     />
                   ))}
                 </SortableContext>
@@ -1045,6 +1067,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       onDelete={() => deleteTask(task.id)}
                       isDraggable={true}
                       section="unscheduled"
+                      theme={theme}
                     />
                   ))}
                 </SortableContext>
@@ -1065,14 +1088,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         
         <DragOverlay>
           {activeDragTask ? (
-            <DragOverlayTaskItem task={activeDragTask} />
+            <DragOverlayTaskItem task={activeDragTask} theme={theme} />
           ) : null}
         </DragOverlay>
       </DndContext>
     );
   };
 
-  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string) => (
+  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string, themeOverride?: 'clean' | 'retro') => (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -1117,6 +1140,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   onDelete={() => deleteTask(task.id)}
                   isDraggable={true}
                   section={section}
+                  theme={theme}
                 />
               ))}
               {tasks.length === 0 && (
@@ -1145,6 +1169,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             onEdit={() => handleEditTask(task)}
             onStartPomodoro={() => handleStartPomodoro(task)}
             onDelete={() => deleteTask(task.id)}
+            theme={theme}
           />
         ))}
         {tasks.length === 0 && (
@@ -1166,14 +1191,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       case 'today':
         return (
           <div>
-            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount(), true, 'today')}
+            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount(), true, 'today', theme)}
           </div>
         );
       
       case 'tomorrow':
         return (
           <div>
-            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount(), true, 'tomorrow')}
+            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount(), true, 'tomorrow', theme)}
           </div>
         );
       
@@ -1221,7 +1246,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 </div>
               </div>
             </div>
-            {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed')}
+            {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed', theme)}
             
             {/* Load More button for completed tasks */}
             {getCompletedTaskCount() < getTotalCompletedTasksCount() && (
@@ -1279,22 +1304,30 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
-            <div ref={navigationRef} className="flex items-center justify-between border-b" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
+            <div ref={navigationRef} className="flex items-center justify-between border-b pb-2" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
               <div className="flex items-center space-x-6">
 
                 <button
                   onClick={() => onViewChange?.('next7days')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'next7days'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={
+                    theme === 'retro'
+                      ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
+                          currentView === 'next7days'
+                            ? 'bg-[#ffe164] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                        }`
+                      : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                          currentView === 'next7days'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`
+                  }
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Overview
                     {(getTodayTaskCount() + getTomorrowTaskCount() + getNext7DaysTaskCount() + getUnscheduledTaskCount()) > 0 && (
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                      <span className={theme === 'retro' ? "bg-black text-white px-2 py-0.5 rounded-md text-xs border border-black font-bold" : "bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs"}>
                         {getTodayTaskCount() + getTomorrowTaskCount() + getNext7DaysTaskCount() + getUnscheduledTaskCount()}
                       </span>
                     )}
@@ -1303,17 +1336,25 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 <button
                   onClick={() => onViewChange?.('today')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'today'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={
+                    theme === 'retro'
+                      ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
+                          currentView === 'today'
+                            ? 'bg-[#d4f1ff] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                        }`
+                      : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                          currentView === 'today'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`
+                  }
                 >
                   <div className="flex items-center gap-2">
                     <CalendarDays className="w-4 h-4" />
                     Today
                     {getTodayTaskCount() > 0 && (
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                      <span className={theme === 'retro' ? "bg-black text-white px-2 py-0.5 rounded-md text-xs border border-black font-bold" : "bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs"}>
                         {getTodayTaskCount()}
                       </span>
                     )}
@@ -1322,17 +1363,25 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 <button
                   onClick={() => onViewChange?.('tomorrow')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'tomorrow'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={
+                    theme === 'retro'
+                      ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
+                          currentView === 'tomorrow'
+                            ? 'bg-[#96f2d7] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                        }`
+                      : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                          currentView === 'tomorrow'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`
+                  }
                 >
                   <div className="flex items-center gap-2">
                     <CalendarDays className="w-4 h-4" />
                     Tomorrow
                     {getTomorrowTaskCount() > 0 && (
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                      <span className={theme === 'retro' ? "bg-black text-white px-2 py-0.5 rounded-md text-xs border border-black font-bold" : "bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs"}>
                         {getTomorrowTaskCount()}
                       </span>
                     )}
@@ -1341,11 +1390,19 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 <button
                   onClick={() => onViewChange?.('completed')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    currentView === 'completed'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={
+                    theme === 'retro'
+                      ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
+                          currentView === 'completed'
+                            ? 'bg-[#ffd4f4] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                        }`
+                      : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                          currentView === 'completed'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`
+                  }
                 >
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-4 h-4" />
@@ -1353,7 +1410,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     {getCompletedTaskCount() > 0 && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs cursor-help">
+                          <span className={theme === 'retro' ? "bg-black text-white px-2 py-0.5 rounded-md text-xs cursor-help border border-black font-bold" : "bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs cursor-help"}>
                             {getCompletedTaskCount()}
                           </span>
                         </TooltipTrigger>
@@ -1366,32 +1423,61 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 </button>
 
                 {/* Category Dropdown and Add Task Button - Next to other tabs */}
-                <div className="pb-3 flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <Select 
                     value={userData.categories.some(cat => cat.id === currentView) ? currentView : ''} 
                     onValueChange={(value) => onViewChange?.(value as any)}
                   >
-                    <SelectTrigger className="w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className={
+                      theme === 'retro'
+                        ? `w-36 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.12)] hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-1px] transition-all font-bold text-foreground ${userData.categories.some(cat => cat.id === currentView) ? 'bg-[#fff3b0] dark:bg-[#ffd700]/20' : ''}`
+                        : "w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    }>
                       <SelectValue placeholder="Categories" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent 
+                      align="start"
+                      className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.2)] bg-white dark:bg-gray-900 p-2" : ""}
+                    >
                       {userData.categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem 
+                          key={category.id} 
+                          value={category.id}
+                          className={theme === 'retro' ? "rounded-lg hover:bg-accent/50 font-bold cursor-pointer mb-1" : ""}
+                        >
                           <div className="flex items-center gap-2">
                             <span>{category.icon}</span>
                             <div 
-                              className="w-2 h-2 rounded-full flex-shrink-0" 
+                              className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black" : "w-2 h-2 rounded-full flex-shrink-0"}
                               style={{ backgroundColor: category.color }}
                             />
                             <span>{category.name}</span>
                             {getCategoryTaskCount(category.id) > 0 && (
-                              <span className="ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
+                              <span className={theme === 'retro' ? "ml-auto bg-black text-white px-2 py-0.5 rounded-md text-xs border border-black font-bold" : "ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs"}>
                                 {getCategoryTaskCount(category.id)}
                               </span>
                             )}
                           </div>
                         </SelectItem>
                       ))}
+                      <div 
+                        className={theme === 'retro' ? "mt-2 pt-2 border-t-2 border-gray-300 dark:border-gray-600" : "mt-1 pt-1 border-t"}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setIsAddCategoryModalOpen(true);
+                          }}
+                          className={
+                            theme === 'retro'
+                              ? "w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#ffe164] dark:hover:bg-[#ffd700]/20 font-bold text-foreground border-2 border-transparent hover:border-black dark:hover:border-white transition-all"
+                              : "w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent text-sm"
+                          }
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Create New Category</span>
+                        </button>
+                      </div>
                     </SelectContent>
                   </Select>
 
@@ -1415,7 +1501,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                         setTaskCategory(currentView);
                       }
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
+                    className={
+                      theme === 'retro'
+                        ? "px-4 py-2 bg-[#96f2d7] hover:bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px] transition-all font-black"
+                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
+                    }
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     New Task
@@ -1442,9 +1532,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         `}
       >
         {/* Panel Header */}
-        <div className="bg-card border-b border-border p-6 pb-0 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2 h-10">
-            <h2 className="text-xl font-semibold text-foreground">Create New Task</h2>
+        <div className={theme === 'retro' ? "bg-[#ffe164] border-b-2 border-black p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={theme === 'retro' ? "text-2xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>
+              {theme === 'retro' && <Plus className="w-6 h-6" />}
+              Create New Task
+            </h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1452,23 +1545,30 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 setIsCreatePanelOpen(false);
                 resetCreateTaskForm();
               }}
-              className="text-muted-foreground hover:text-foreground"
+              className={theme === 'retro' ? "text-gray-900 hover:bg-black/10 rounded-md h-8 w-8" : "text-muted-foreground hover:text-foreground"}
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <div className="text-xs text-gray-500 mb-4">
-            ✨ Changes are automatically saved as you type
-          </div>
+          {theme === 'retro' && (
+            <div className="text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+              Changes are automatically saved as you type
+            </div>
+          )}
+          {!theme || theme === 'clean' ? (
+            <div className="text-xs text-gray-500 mb-4">
+              Changes are automatically saved as you type
+            </div>
+          ) : null}
         </div>
 
         {/* Task Creation Form */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+          <div className={theme === 'retro' ? "p-4 space-y-4" : "p-6 space-y-6"}>
           {/* Category Selection */}
-          <div className="space-y-2">
+          <div className={theme === 'retro' ? "bg-[#fff3b0] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-900">Category</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Category</label>
               {userData.categories.length === 0 && (
                 <Button
                   type="button"
@@ -1484,7 +1584,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
             {userData.categories.length > 0 ? (
               <Select value={taskCategory || 'no-category'} onValueChange={(value) => setTaskCategory(value === 'no-category' ? undefined : value)}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md bg-white dark:bg-gray-900 font-bold focus:shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1516,33 +1616,35 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Title Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">What do you need to do?</label>
+          <div className={theme === 'retro' ? "bg-[#d4f1ff] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>What do you need to do?</label>
             <Input
               placeholder="Enter task title..."
               value={newTaskTitle}
               onChange={(e) => handleTaskTitleChange(e.target.value)}
               onKeyPress={(e) => handleKeyPress(e)}
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
+              className={theme === 'retro' ? "border-2 border-black dark:border-black rounded-lg bg-white font-bold focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
               autoFocus
             />
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">Description</label>
-            <RichTextEditor
-              content={newTaskDescription}
-              onChange={setNewTaskDescription}
-              placeholder="Add more details..."
-              className="min-h-[200px]"
-            />
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Description</label>
+            <div className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)]" : ""}>
+              <RichTextEditor
+                content={newTaskDescription}
+                onChange={setNewTaskDescription}
+                placeholder="Add more details..."
+                className="min-h-[200px]"
+              />
+            </div>
           </div>
 
           {/* Due Date & Time */}
-          <div className="space-y-3">
+          <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3"}>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-900">Due Date</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Due Date</label>
               {newTaskDueDate && (
                 <Button
                   type="button"
@@ -1567,7 +1669,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   today.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(today);
                 }}
-                className="h-8 text-xs"
+                className={
+                  theme === 'retro'
+                    ? `h-9 text-xs font-black rounded-lg ${
+                        newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                          ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]'
+                          : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'
+                      }`
+                    : "h-8 text-xs"
+                }
               >
                 Today
               </Button>
@@ -1581,7 +1691,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   tomorrow.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(tomorrow);
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
               >
                 Tomorrow
               </Button>
@@ -1595,7 +1705,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   threeDays.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(threeDays);
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
               >
                 3 Days
               </Button>
@@ -1609,7 +1719,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   nextWeek.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(nextWeek);
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
               >
                 Next Week
               </Button>
@@ -1628,11 +1738,20 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className="space-y-3 pt-2">
-            <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
+              {theme === 'retro' && <Timer className="w-4 h-4" />}
+              Estimated Pomodoros
+            </label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
-                <span className="text-2xl">🍅</span>
+                {theme === 'retro' ? (
+                  <div className="w-10 h-10 bg-white border-2 border-black rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+                    🍅
+                  </div>
+                ) : (
+                  <span className="text-2xl">🍅</span>
+                )}
                 <div className="flex-1">
                   <Slider
                     value={[newTaskEstimatedPomodoros]}
@@ -1643,11 +1762,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     className="w-full"
                   />
                 </div>
-                <span className="min-w-[3rem] text-center font-semibold text-blue-600">
+                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black text-2xl text-gray-900 bg-white border-2 border-black rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
                   {newTaskEstimatedPomodoros}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-1">
+              <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold flex items-center gap-2 bg-white border-2 border-black rounded-lg px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
                 <Clock className="w-3 h-3" />
                 Approximately {newTaskEstimatedPomodoros * 30} minutes of focused work
               </div>
@@ -1655,14 +1774,26 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Workspace URLs */}
-          <div className="space-y-3 pt-2 border-t border-gray-100">
-            <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <span className="text-lg">🔗</span>
-              Workspace URLs
-              <span className="text-xs text-gray-500 font-normal">(optional)</span>
+          <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2 border-t border-gray-100"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
+              {theme === 'retro' ? (
+                <>
+                  <div className="w-5 h-5 bg-white border-2 border-black rounded flex items-center justify-center">
+                    🔗
+                  </div>
+                  Workspace URLs
+                  <span className="text-xs text-gray-700 font-medium bg-white border border-black rounded px-2 py-0.5">optional</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">🔗</span>
+                  Workspace URLs
+                  <span className="text-xs text-gray-500 font-normal">(optional)</span>
+                </>
+              )}
             </label>
             <div className="space-y-3">
-              <div className="text-xs text-gray-600">
+              <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-2" : "text-xs text-gray-600"}>
                 Add URLs that will automatically open when you start a Pomodoro for this task
               </div>
               
@@ -1673,7 +1804,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   value={newUrlInput}
                   onChange={(e) => setNewUrlInput(e.target.value)}
                   placeholder="Enter URL (e.g., github.com/user/repo)"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={theme === 'retro' ? "flex-1 px-3 py-2 text-sm border-2 border-black rounded-lg focus:outline-none focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] bg-white font-bold" : "flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && newUrlInput.trim()) {
                       e.preventDefault();
@@ -1694,7 +1825,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     }
                   }}
                   disabled={!newUrlInput.trim() || newTaskWorkspaceUrls.includes(newUrlInput.trim())}
-                  className="px-3"
+                  className={theme === 'retro' ? "px-3 bg-black text-white border-2 border-black rounded-lg font-black hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "px-3"}
                 >
                   Add
                 </Button>
@@ -1703,14 +1834,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               {/* URL List */}
               {newTaskWorkspaceUrls.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs text-gray-600">
+                  <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold" : "text-xs text-gray-600"}>
                     URLs to open ({newTaskWorkspaceUrls.length}):
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {newTaskWorkspaceUrls.map((url, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                        <span className="text-xs">🔗</span>
-                        <span className="flex-1 text-sm text-gray-700 truncate" title={url}>
+                      <div key={index} className={theme === 'retro' ? "flex items-center gap-2 p-2 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,0.1)]" : "flex items-center gap-2 p-2 bg-gray-50 rounded border"}>
+                        <span className={theme === 'retro' ? "text-sm font-bold" : "text-xs"}>🔗</span>
+                        <span className={theme === 'retro' ? "flex-1 text-sm text-gray-900 truncate font-bold" : "flex-1 text-sm text-gray-700 truncate"} title={url}>
                           {url}
                         </span>
                         <Button
@@ -1720,7 +1851,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                           onClick={() => {
                             setNewTaskWorkspaceUrls(newTaskWorkspaceUrls.filter((_, i) => i !== index));
                           }}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          className={theme === 'retro' ? "h-7 w-7 p-0 text-gray-900 hover:text-red-600 hover:bg-red-100 rounded-md font-black text-lg" : "h-6 w-6 p-0 text-gray-400 hover:text-red-600"}
                         >
                           ×
                         </Button>
@@ -1746,30 +1877,40 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         `}
       >
         {/* Panel Header */}
-        <div className="bg-card border-b border-border p-6 pb-0 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2 h-10">
-            <h2 className="text-xl font-semibold text-foreground">Edit Task</h2>
+        <div className={theme === 'retro' ? "bg-[#ffe164] border-b-2 border-black p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={theme === 'retro' ? "text-2xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>
+              {theme === 'retro' && <Edit className="w-6 h-6" />}
+              Edit Task
+            </h2>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleCancelEdit}
-              className="text-gray-500 hover:text-gray-700"
+              className={theme === 'retro' ? "text-gray-900 hover:bg-black/10 rounded-md h-8 w-8" : "text-gray-500 hover:text-gray-700"}
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
-          <div className="text-xs text-gray-500 mb-4">
-            ✨ Changes are automatically saved as you type
-          </div>
+          {theme === 'retro' && (
+            <div className="text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+              Changes are automatically saved as you type
+            </div>
+          )}
+          {!theme || theme === 'clean' ? (
+            <div className="text-xs text-gray-500 mb-4">
+              Changes are automatically saved as you type
+            </div>
+          ) : null}
         </div>
 
         {/* Task Edit Form */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+          <div className={theme === 'retro' ? "p-4 space-y-4" : "p-6 space-y-6"}>
           {/* Category Selection */}
-          <div className="space-y-2">
+          <div className={theme === 'retro' ? "bg-[#fff3b0] dark:bg-[#ffd700]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-900">Category</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Category</label>
               {userData.categories.length === 0 && (
                 <Button
                   type="button"
@@ -1792,7 +1933,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   updateTask(editingTask.id, { categoryId: newCategory });
                 }
               }}>
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md bg-white dark:bg-gray-900 font-bold focus:shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1824,8 +1965,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Title Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">Title</label>
+          <div className={theme === 'retro' ? "bg-[#d4f1ff] dark:bg-[#00d4ff]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Title</label>
             <Input
               ref={titleInputRef}
               placeholder="Enter task title..."
@@ -1842,29 +1983,31 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 }
                 autoSaveTaskRef.current();
               }}
-              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"
+              className={theme === 'retro' ? "border-2 border-black dark:border-black rounded-lg bg-white dark:bg-gray-800 font-bold focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
               autoFocus
             />
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900">Description</label>
-            <RichTextEditor
-              content={editDescription}
-              onChange={(content) => {
-                setEditDescription(content);
-                scheduleAutoSave();
-              }}
-              placeholder="Add more details..."
-              className="min-h-[200px]"
-            />
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Description</label>
+            <div className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)]" : ""}>
+              <RichTextEditor
+                content={editDescription}
+                onChange={(content) => {
+                  setEditDescription(content);
+                  scheduleAutoSave();
+                }}
+                placeholder="Add more details..."
+                className="min-h-[200px]"
+              />
+            </div>
           </div>
 
           {/* Due Date & Time */}
-          <div className="space-y-3">
+          <div className={theme === 'retro' ? "bg-[#96f2d7] dark:bg-[#00e5a0]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3"}>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-900">Due Date</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Due Date</label>
               {editDueDate && (
                 <Button
                   type="button"
@@ -1893,7 +2036,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(today);
                   scheduleAutoSave();
                 }}
-                className="h-8 text-xs"
+                className={
+                  theme === 'retro'
+                    ? `h-9 text-xs font-black rounded-lg ${
+                        editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                          ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`
+                    : "h-8 text-xs"
+                }
               >
                 Today
               </Button>
@@ -1908,7 +2059,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(tomorrow);
                   scheduleAutoSave();
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
               >
                 Tomorrow
               </Button>
@@ -1923,7 +2074,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(threeDays);
                   scheduleAutoSave();
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
               >
                 3 Days
               </Button>
@@ -1938,7 +2089,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(nextWeek);
                   scheduleAutoSave();
                 }}
-                className="h-8 text-xs"
+                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
               >
                 Next Week
               </Button>
@@ -1960,11 +2111,20 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className="space-y-3 pt-2">
-            <label className="text-sm font-semibold text-gray-900">Estimated Pomodoros</label>
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
+              {theme === 'retro' && <Timer className="w-4 h-4" />}
+              Estimated Pomodoros
+            </label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
-                <span className="text-2xl">🍅</span>
+                {theme === 'retro' ? (
+                  <div className="w-10 h-10 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+                    🍅
+                  </div>
+                ) : (
+                  <span className="text-2xl">🍅</span>
+                )}
                 <div className="flex-1">
                   <Slider
                     value={[editEstimatedPomodoros]}
@@ -1989,11 +2149,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     className="w-full"
                   />
                 </div>
-                <span className="min-w-[3rem] text-center font-semibold text-blue-600">
+                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black text-2xl text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
                   {editEstimatedPomodoros}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-1">
+              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-300 font-bold flex items-center gap-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
                 <Clock className="w-3 h-3" />
                 Approximately {editEstimatedPomodoros * 30} minutes of focused work
               </div>
@@ -2001,14 +2161,26 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Workspace URLs */}
-          <div className="space-y-3 pt-2 border-t border-gray-100">
-            <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <span className="text-lg">🔗</span>
-              Workspace URLs
-              <span className="text-xs text-gray-500 font-normal">(optional)</span>
+          <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2 border-t border-gray-100"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
+              {theme === 'retro' ? (
+                <>
+                  <div className="w-5 h-5 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded flex items-center justify-center">
+                    🔗
+                  </div>
+                  Workspace URLs
+                  <span className="text-xs text-gray-700 dark:text-gray-300 font-medium bg-white dark:bg-gray-800 border border-black dark:border-white rounded px-2 py-0.5">optional</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">🔗</span>
+                  Workspace URLs
+                  <span className="text-xs text-gray-500 font-normal">(optional)</span>
+                </>
+              )}
             </label>
             <div className="space-y-3">
-              <div className="text-xs text-gray-600">
+              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-2" : "text-xs text-gray-600"}>
                 URLs that will automatically open when you start a Pomodoro for this task
               </div>
               
@@ -2019,7 +2191,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   value={editUrlInput}
                   onChange={(e) => setEditUrlInput(e.target.value)}
                   placeholder="Enter URL (e.g., github.com/user/repo)"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={theme === 'retro' ? "flex-1 px-3 py-2 text-sm border-2 border-black dark:border-white rounded-lg focus:outline-none focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] bg-white dark:bg-gray-800 font-bold" : "flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && editUrlInput.trim()) {
                       e.preventDefault();
@@ -2066,7 +2238,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     }
                   }}
                   disabled={!editUrlInput.trim() || editWorkspaceUrls.includes(editUrlInput.trim())}
-                  className="px-3"
+                  className={theme === 'retro' ? "px-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white rounded-lg font-black hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "px-3"}
                 >
                   Add
                 </Button>
@@ -2075,14 +2247,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               {/* URL List */}
               {editWorkspaceUrls.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs text-gray-600">
+                  <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-300 font-bold" : "text-xs text-gray-600"}>
                     URLs to open ({editWorkspaceUrls.length}):
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {editWorkspaceUrls.map((url, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                        <span className="text-xs">🔗</span>
-                        <span className="flex-1 text-sm text-gray-700 truncate" title={url}>
+                      <div key={index} className={theme === 'retro' ? "flex items-center gap-2 p-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,0.1)]" : "flex items-center gap-2 p-2 bg-gray-50 rounded border"}>
+                        <span className={theme === 'retro' ? "text-sm font-bold" : "text-xs"}>🔗</span>
+                        <span className={theme === 'retro' ? "flex-1 text-sm text-gray-900 dark:text-white truncate font-bold" : "flex-1 text-sm text-gray-700 truncate"} title={url}>
                           {url}
                         </span>
                         <Button
@@ -2105,7 +2277,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                               });
                             }
                           }}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          className={theme === 'retro' ? "h-7 w-7 p-0 text-gray-900 dark:text-white hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded-md font-black text-lg" : "h-6 w-6 p-0 text-gray-400 hover:text-red-600"}
                         >
                           ×
                         </Button>
@@ -2131,9 +2303,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         `}
       >
         {/* Panel Header */}
-        <div className="bg-card border-b border-border p-6">
+        <div className={theme === 'retro' ? "bg-[#d4f1ff] border-b-2 border-black p-6" : "bg-card border-b border-border p-6"}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Task Details</h2>
+            <h2 className={theme === 'retro' ? "text-xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>{theme === 'retro' && <span className="text-2xl">📋</span>}Task Details</h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -2141,7 +2313,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 setIsViewPanelOpen(false);
                 setViewingTask(null);
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className={theme === 'retro' ? "text-foreground hover:bg-accent/50 rounded-md" : "text-gray-500 hover:text-gray-700"}
             >
               <X className="w-5 h-5" />
             </Button>
@@ -2153,7 +2325,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               onClick={() => viewingTask && handleEditTask(viewingTask)}
               variant="outline"
               size="sm"
-              className="font-medium"
+              className={theme === 'retro' ? "font-bold border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] hover:translate-x-[-1px] hover:translate-y-[-1px]" : "font-medium"}
             >
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -2163,11 +2335,19 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               size="sm" 
               onClick={() => viewingTask && handleStartPomodoro(viewingTask)}
               disabled={pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id}
-              className={`font-medium ${
-                pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
-                  ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed'
-                  : ''
-              }`}
+              className={
+                theme === 'retro'
+                  ? `font-bold border-2 rounded-md ${
+                      pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 cursor-not-allowed'
+                        : 'border-black dark:border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] hover:translate-x-[-1px] hover:translate-y-[-1px]'
+                    }`
+                  : `font-medium ${
+                      pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
+                        ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed'
+                        : ''
+                    }`
+              }
             >
               {pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id ? (
                 <>
@@ -2366,10 +2546,127 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         )}
       </div>
 
+      {/* Create Category Modal */}
+      <Dialog open={isAddCategoryModalOpen} onOpenChange={setIsAddCategoryModalOpen}>
+        <DialogContent className={theme === 'retro' ? "sm:max-w-[500px] bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-[8px_8px_0_0_rgba(0,0,0,0.3)] dark:shadow-[8px_8px_0_0_rgba(255,255,255,0.2)]" : "sm:max-w-[500px]"}>
+          <DialogHeader>
+            <DialogTitle className={theme === 'retro' ? "text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2" : ""}>
+              {theme === 'retro' && <Plus className="w-6 h-6" />}
+              Create New Category
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            {/* Category Name */}
+            <div className={theme === 'retro' ? "bg-[#fff3b0] dark:bg-[#ffd700]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Category Name</label>
+              <Input
+                placeholder="e.g., Work, Personal, Fitness"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-lg bg-white dark:bg-gray-800 font-bold focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] h-11" : ""}
+                autoFocus
+              />
+            </div>
+
+            {/* Icon Selection */}
+            <div className={theme === 'retro' ? "bg-[#d4f1ff] dark:bg-[#00d4ff]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Icon</label>
+              <div className="grid grid-cols-8 gap-2">
+                {categoryIcons.map((icon: string) => (
+                  <button
+                    key={icon}
+                    onClick={() => setNewCategoryIcon(icon)}
+                    className={
+                      theme === 'retro'
+                        ? `w-10 h-10 text-lg rounded-lg border-2 transition-all ${
+                            newCategoryIcon === icon
+                              ? 'border-black dark:border-white bg-black dark:bg-white shadow-[3px_3px_0_0_rgba(0,0,0,0.3)]'
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-black dark:hover:border-white'
+                          }`
+                        : `w-9 h-9 text-base rounded border transition-colors ${
+                            newCategoryIcon === icon
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                          }`
+                    }
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Selection */}
+            <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Color</label>
+              <div className="grid grid-cols-8 gap-2">
+                {categoryColors.map((color: string) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewCategoryColor(color)}
+                    className={
+                      theme === 'retro'
+                        ? `w-10 h-10 rounded-lg border-2 transition-all ${
+                            newCategoryColor === color
+                              ? 'border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] scale-110'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:scale-105'
+                          }`
+                        : `w-9 h-9 rounded border-2 transition-transform hover:scale-110 ${
+                            newCategoryColor === color
+                              ? 'border-gray-800 shadow-sm'
+                              : 'border-gray-200'
+                          }`
+                    }
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={() => {
+                  if (newCategoryName.trim()) {
+                    const color = newCategoryColor || categoryColors[userData.categories.length % categoryColors.length];
+                    addCategory(newCategoryName.trim(), color, newCategoryIcon);
+                    setNewCategoryName('');
+                    setNewCategoryIcon('📝');
+                    setNewCategoryColor('');
+                    setIsAddCategoryModalOpen(false);
+                  }
+                }}
+                disabled={!newCategoryName.trim()}
+                className={
+                  theme === 'retro'
+                    ? "flex-1 bg-[#96f2d7] hover:bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px] transition-all font-black h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+                    : "flex-1"
+                }
+              >
+                Create Category
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setNewCategoryName('');
+                  setNewCategoryIcon('📝');
+                  setNewCategoryColor('');
+                  setIsAddCategoryModalOpen(false);
+                }}
+                className={
+                  theme === 'retro'
+                    ? "px-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white rounded-xl font-bold h-11 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    : ""
+                }
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-
-
-
     </TooltipProvider>
   );
 };
@@ -2382,11 +2679,13 @@ interface TaskItemProps {
   onStartPomodoro: () => void;
   onDelete: () => void;
   dragHandle?: React.ReactNode;
+  theme?: 'clean' | 'retro';
 }
 
 interface SortableTaskItemProps extends Omit<TaskItemProps, 'dragHandle'> {
   isDraggable: boolean;
   section?: string;
+  theme?: 'clean' | 'retro';
 }
 
 const DroppableSection: React.FC<{ 
@@ -2409,7 +2708,7 @@ const DroppableSection: React.FC<{
   );
 };
 
-const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
+const DragOverlayTaskItem: React.FC<{ task: Task; theme?: 'clean' | 'retro' }> = ({ task, theme = 'clean' }) => {
   const { userData } = useTodo();
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   
@@ -2426,7 +2725,7 @@ const DragOverlayTaskItem: React.FC<{ task: Task }> = ({ task }) => {
             {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
           </span>
           <div 
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
             style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
           />
         </div>
@@ -2456,6 +2755,7 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   onDelete,
   isDraggable,
   section,
+  theme = 'clean',
 }) => {
   const {
     attributes,
@@ -2486,6 +2786,7 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
         onEdit={onEdit}
         onStartPomodoro={onStartPomodoro}
         onDelete={onDelete}
+        theme={theme}
         dragHandle={isDraggable ? (
           <div
             {...attributes}
@@ -2510,6 +2811,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onStartPomodoro,
   onDelete,
   dragHandle,
+  theme = 'clean',
 }) => {
   const { userData, updateTask } = useTodo();
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
@@ -2600,13 +2902,35 @@ const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   // Minimal todo item - just title and checkbox
+  // Get colors based on category
+  const category = userData.categories.find(cat => cat.id === task.categoryId);
+  const getRetroCardColor = () => {
+    if (!category) return '#ffe164'; // default yellow
+    const colors = ['#ffe164', '#d4f1ff', '#ffd4f4', '#96f2d7', '#fff3b0'];
+    return colors[userData.categories.indexOf(category) % colors.length];
+  };
+  
+  const getDarkRetroCardColor = () => {
+    if (!category) return '#ffd700'; // default gold
+    const darkColors = ['#ffd700', '#00d4ff', '#ff69b4', '#00e5a0', '#ffd700'];
+    return darkColors[userData.categories.indexOf(category) % darkColors.length];
+  };
+  
   return (
     <div 
-      className={`group flex items-center gap-3 py-2 px-3 rounded-lg transition-colors cursor-pointer border ${
-        isOverdue 
-          ? 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30 hover:border-orange-500/50' 
-          : 'bg-card hover:bg-accent border-border hover:border-accent'
-      }`}
+      className={
+        theme === 'retro'
+          ? `group flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer border-2 ${
+              isOverdue
+                ? 'bg-[#ffcccb] border-black hover:border-black hover:translate-y-[-2px] shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)]'
+                : 'bg-white border-gray-300 hover:border-black hover:translate-y-[-2px] shadow-[4px_4px_0_0_rgba(0,0,0,0.08)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.12)]'
+            }`
+          : `group flex items-center gap-3 py-2 px-3 rounded-lg transition-colors cursor-pointer border ${
+              isOverdue 
+                ? 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30 hover:border-orange-500/50' 
+                : 'bg-card hover:bg-accent border-border hover:border-accent'
+            }`
+      }
       onClick={() => onView()}
     >
       {dragHandle}
@@ -2615,18 +2939,28 @@ const TaskItem: React.FC<TaskItemProps> = ({
           e.stopPropagation();
           onToggleComplete();
         }}
-        className={`
-          flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200
-          ${task.completed 
-            ? 'bg-blue-500 border-blue-500 text-white' 
-            : 'border-gray-300 hover:border-blue-400'
-          }
-        `}
+        className={
+          theme === 'retro'
+            ? `flex-shrink-0 w-5 h-5 rounded-md border-2 border-black flex items-center justify-center transition-all duration-200 shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${
+                task.completed 
+                  ? 'bg-black' 
+                  : 'bg-white dark:bg-gray-800'
+              }`
+            : `flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                task.completed 
+                  ? 'bg-blue-500 border-blue-500 text-white' 
+                  : 'border-gray-300 hover:border-blue-400'
+              }`
+        }
       >
         {task.completed && (
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
+          theme === 'retro' ? (
+            <div className="w-2 h-2 rounded-sm bg-white"></div>
+          ) : (
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          )
         )}
       </button>
       
@@ -2636,19 +2970,25 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
           </span>
           <div 
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
             style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
           />
         </div>
-        <span className={`
-          text-sm font-medium cursor-pointer
-          ${task.completed 
-            ? 'line-through text-muted-foreground' 
-            : isOverdue 
-              ? 'text-orange-600' 
-              : 'text-foreground'
-          }
-        `}>
+        <span className={
+          theme === 'retro'
+            ? `text-sm font-bold cursor-pointer ${
+                task.completed 
+                  ? 'line-through text-muted-foreground' 
+                  : 'text-foreground'
+              }`
+            : `text-sm font-medium cursor-pointer ${
+                task.completed 
+                  ? 'line-through text-muted-foreground' 
+                  : isOverdue 
+                    ? 'text-orange-600' 
+                    : 'text-foreground'
+              }`
+        }>
           {task.title}
         </span>
       </div>

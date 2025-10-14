@@ -5,9 +5,10 @@ import { useTodo } from '@/contexts/TodoContext';
 
 interface NotesPageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings' | 'notes') => void;
+  theme?: 'clean' | 'retro';
 }
 
-const NotesPage: React.FC<NotesPageProps> = ({ onPageChange }) => {
+const NotesPage: React.FC<NotesPageProps> = ({ onPageChange, theme = 'clean' }) => {
   const { userData, updateUserNotes } = useTodo();
   const [selectedView, setSelectedView] = useState<'all' | string>('all');
   const [noteContent, setNoteContent] = useState('');
@@ -139,11 +140,19 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange }) => {
                 {/* All Notes Tab */}
                 <button
                   onClick={() => setSelectedView('all')}
-                  className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    selectedView === 'all'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={
+                    theme === 'retro'
+                      ? `px-3 py-1.5 rounded-md font-bold text-sm transition-all whitespace-nowrap ${
+                          selectedView === 'all'
+                            ? 'bg-foreground text-background border-2 border-black dark:border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`
+                      : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                          selectedView === 'all'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`
+                  }
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-lg">📝</span>
@@ -156,11 +165,19 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange }) => {
                   <button
                     key={category.id}
                     onClick={() => setSelectedView(category.id)}
-                    className={`pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                      selectedView === category.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={
+                      theme === 'retro'
+                        ? `px-3 py-1.5 rounded-md font-bold text-sm transition-all whitespace-nowrap ${
+                            selectedView === category.id
+                              ? 'bg-foreground text-background border-2 border-black dark:border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]'
+                              : 'bg-transparent text-foreground border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                          }`
+                        : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                            selectedView === category.id
+                              ? 'border-blue-500 text-blue-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700'
+                          }`
+                    }
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{category.icon}</span>

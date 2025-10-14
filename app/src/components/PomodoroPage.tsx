@@ -8,9 +8,10 @@ import { testPomodoroPersistence, testPageRefreshScenario } from '@/utils/pomodo
 
 interface PomodoroPageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
+  theme?: 'clean' | 'retro';
 }
 
-const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
+const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clean' }) => {
   const {
     userData,
     currentTaskId,
@@ -214,16 +215,18 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
     const strokeDasharray = circumference;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
 
+    const isRetro = theme === 'retro';
+
     return (
-      <div className="relative">
+      <div className={isRetro ? "relative border-4 border-black rounded-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(255,255,255,0.3)]" : "relative"}>
         <svg width={size} height={size} className="transform -rotate-90">
           {/* Background circle */}
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgb(229 231 235)"
-            strokeWidth="8"
+            stroke={isRetro ? "rgb(255 255 255 / 0.3)" : "rgb(229 231 235)"}
+            strokeWidth={isRetro ? "12" : "8"}
             fill="none"
           />
           {/* Progress circle */}
@@ -232,11 +235,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
             cy={size / 2}
             r={radius}
             stroke={
-              isWorkOverdue ? "rgb(249 115 22)" : // orange for overdue work
-              isBreakOverdue ? "rgb(239 68 68)" : // red for overdue break (same as work)
-              pomodoroTimer.sessionType === 'work' ? "rgb(239 68 68)" : "rgb(34 197 94)"
+              isWorkOverdue ? (isRetro ? "rgb(255 128 0)" : "rgb(249 115 22)") : // orange for overdue work
+              isBreakOverdue ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : // red for overdue break
+              pomodoroTimer.sessionType === 'work' ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : (isRetro ? "rgb(0 229 160)" : "rgb(34 197 94)")
             }
-            strokeWidth="8"
+            strokeWidth={isRetro ? "12" : "8"}
             fill="none"
             strokeLinecap="round"
             strokeDasharray={strokeDasharray}
@@ -247,13 +250,13 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
         
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-6xl font-mono font-bold text-gray-900 mb-2">
+          <div className={isRetro ? "text-6xl font-mono font-black text-gray-900 dark:text-white mb-2" : "text-6xl font-mono font-bold text-gray-900 mb-2"}>
             {formatTime(pomodoroTimer.timeLeft)}
           </div>
-          <div className={`text-lg font-medium ${
-            isWorkOverdue ? 'text-orange-600' : 
-            isBreakOverdue ? 'text-red-600' :
-            pomodoroTimer.sessionType === 'work' ? 'text-red-600' : 'text-green-600'
+          <div className={`text-lg ${isRetro ? 'font-bold' : 'font-medium'} ${
+            isWorkOverdue ? 'text-orange-600 dark:text-orange-400' : 
+            isBreakOverdue ? 'text-red-600 dark:text-red-400' :
+            pomodoroTimer.sessionType === 'work' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
           }`}>
             {isWorkOverdue ? '⏰ Take Break' : 
              isBreakOverdue ? '⏰ Break Overdue' :
@@ -836,7 +839,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                           <Button 
                             onClick={pausePomodoro}
                             size="lg"
-                            className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+                            className={
+                              theme === 'retro'
+                                ? "bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 px-8 rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                : "bg-orange-600 hover:bg-orange-700 text-white px-8"
+                            }
                           >
                             <Pause className="w-5 h-5 mr-2" />
                             Pause
@@ -845,7 +852,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                           <Button 
                             onClick={resumePomodoro}
                             size="lg"
-                            className="bg-green-600 hover:bg-green-700 text-white px-8"
+                            className={
+                              theme === 'retro'
+                                ? "bg-[#96f2d7] dark:bg-[#00e5a0] text-gray-900 px-8 rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                : "bg-green-600 hover:bg-green-700 text-white px-8"
+                            }
                           >
                             <Play className="w-5 h-5 mr-2" />
                             Resume
@@ -855,7 +866,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange }) => {
                           onClick={stopPomodoro}
                           variant="outline"
                           size="lg"
-                          className="px-8 border-red-200 text-red-600 hover:bg-red-50"
+                          className={
+                            theme === 'retro'
+                              ? "px-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                              : "px-8 border-red-200 text-red-600 hover:bg-red-50"
+                          }
                         >
                           <Square className="w-5 h-5 mr-2" />
                           Stop

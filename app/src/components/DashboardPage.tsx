@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight, RefreshCw, RotateCcw } from 'lucide-react';
+import { Calendar, BarChart3, Target, Clock, CheckSquare, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Sparkles, Timer, StickyNote } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useTodo } from '@/contexts/TodoContext';
@@ -22,11 +22,13 @@ interface ActivityStats {
 interface DashboardPageProps {
   onNavigateToActivity?: () => void;
   onPageChange?: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'activity' | 'timetracking' | 'settings' | 'tabbie') => void;
+  theme?: 'clean' | 'retro';
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateToActivity,
   onPageChange,
+  theme = 'clean',
 }) => {
   const { userData } = useTodo();
   const [activityData, setActivityData] = useState<DayActivity[]>([]);
@@ -185,6 +187,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     return 'bg-green-700/90 hover:bg-green-700 text-green-900 dark:text-green-50';
   };
 
+  // Retro version with bold colors and borders
+  const getRetroActivityColor = (value: number): string => {
+    if (value === 0) return 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500';
+    if (value <= 2) return 'bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 shadow-[2px_2px_0_0_rgba(34,197,94,0.3)]';
+    if (value <= 4) return 'bg-green-200 dark:bg-green-800/40 border-2 border-green-400 dark:border-green-600 text-green-800 dark:text-green-300 shadow-[2px_2px_0_0_rgba(34,197,94,0.5)]';
+    if (value <= 6) return 'bg-green-300 dark:bg-green-700/50 border-2 border-green-500 dark:border-green-500 text-green-900 dark:text-green-200 shadow-[2px_2px_0_0_rgba(34,197,94,0.7)]';
+    if (value <= 8) return 'bg-green-400 dark:bg-green-600/60 border-2 border-green-600 dark:border-green-400 text-green-950 dark:text-green-100 shadow-[2px_2px_0_0_rgba(34,197,94,0.9)]';
+    return 'bg-green-500 dark:bg-green-500/70 border-2 border-green-700 dark:border-green-300 text-white dark:text-green-50 shadow-[3px_3px_0_0_rgba(34,197,94,1)]';
+  };
+
   // Format date for display
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -286,25 +298,40 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Activity Overview */}
           <div className="lg:col-span-2">
-            <div className="bg-card rounded-lg border p-3 shadow-sm">
-              <div className="mb-2">
+            <div className={
+              theme === 'retro'
+                ? "rounded-[24px] border-2 border-black bg-[#fff3b0] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,0.12)]"
+                : "bg-card rounded-lg border p-3 shadow-sm"
+            }>
+              <div className="mb-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-semibold">This Month</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {displayMode === 'tasks' ? stats.month.todos : stats.month.pomodoros} {displayMode}
-                    </p>
+                  <div className={theme === 'retro' ? "flex items-center gap-3" : ""}>
+                    {theme === 'retro' && (
+                      <div className="flex items-center justify-center w-10 h-10 bg-gray-900 rounded-lg">
+                        <Calendar className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className={theme === 'retro' ? "text-xl font-black text-gray-900" : "text-base font-semibold"}>This Month</h2>
+                      <p className={theme === 'retro' ? "text-sm text-gray-700 font-bold" : "text-xs text-muted-foreground"}>
+                        {displayMode === 'tasks' ? stats.month.todos : stats.month.pomodoros} {displayMode}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     {/* Display Mode Toggle */}
-                    <div className="flex border rounded-md mr-2">
+                    <div className={theme === 'retro' ? "flex gap-1 mr-2" : "flex border rounded-md mr-2"}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button 
-                            variant={displayMode === 'tasks' ? 'default' : 'ghost'}
+                            variant={theme === 'retro' ? 'default' : (displayMode === 'tasks' ? 'default' : 'ghost')}
                             size="sm"
                             onClick={() => setDisplayMode('tasks')}
-                            className="h-6 px-2 rounded-r-none"
+                            className={
+                              theme === 'retro'
+                                ? `h-7 px-3 ${displayMode === 'tasks' ? 'bg-foreground text-background border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] font-bold' : 'bg-transparent text-foreground border-2 border-gray-300 dark:border-gray-600 rounded-md hover:border-gray-400 dark:hover:border-gray-500'}`
+                                : "h-6 px-2 rounded-r-none"
+                            }
                           >
                             <CheckSquare className="h-3 w-3" />
                           </Button>
@@ -316,10 +343,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button 
-                            variant={displayMode === 'pomodoros' ? 'default' : 'ghost'}
+                            variant={theme === 'retro' ? 'default' : (displayMode === 'pomodoros' ? 'default' : 'ghost')}
                             size="sm"
                             onClick={() => setDisplayMode('pomodoros')}
-                            className="h-6 px-2 rounded-l-none border-l"
+                            className={
+                              theme === 'retro'
+                                ? `h-7 px-3 ${displayMode === 'pomodoros' ? 'bg-foreground text-background border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] font-bold' : 'bg-transparent text-foreground border-2 border-gray-300 dark:border-gray-600 rounded-md hover:border-gray-400 dark:hover:border-gray-500'}`
+                                : "h-6 px-2 rounded-l-none border-l"
+                            }
                           >
                             <Clock className="h-3 w-3" />
                           </Button>
@@ -355,47 +386,60 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
               <div className="space-y-1">
                 {/* Day headers */}
-                <div className="grid grid-cols-7 gap-1">
-                  {dayLabels.map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-muted-foreground py-0.5">
-                      {day.slice(0, 1)}
-                    </div>
-                  ))}
+                <div className="grid grid-cols-[auto_1fr] gap-2">
+                  <div className="w-6"></div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {dayLabels.map(day => (
+                      <div key={day} className="text-center text-xs font-medium text-muted-foreground py-0.5">
+                        {day.slice(0, 1)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Month calendar - 50% shorter */}
                 <div className="space-y-0.5">
-                  {monthWeeks.map((week, weekIndex) => (
-                    <div key={weekIndex} className="grid grid-cols-7 gap-1">
-                      {week.map((day, dayIndex) => (
-                        <div key={dayIndex} className="aspect-[2/1]">
-                          {day ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className={`w-full h-full rounded-sm transition-colors duration-200 cursor-pointer flex items-center justify-center text-xs font-semibold relative ${getActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros)}`}>
-                                  {displayMode === 'tasks' ? day.todos : day.pomodoros}
-                                  {isToday(day.date) && (
-                                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-white shadow-sm">
-                                    </div>
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <div className="text-sm">
-                                  <div className="font-medium">
-                                    {isToday(day.date) ? 'Today • ' : ''}{formatDate(day.date)}
-                                  </div>
-                                  <div>{day.todos} tasks • {day.pomodoros} pomodoros</div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <div className="w-full h-full"></div>
-                          )}
+                  {monthWeeks.map((week, weekIndex) => {
+                    const firstDay = week.find(d => d !== null);
+                    const dayOfMonth = firstDay ? new Date(firstDay.date).getDate() : '';
+                    
+                    return (
+                      <div key={weekIndex} className="grid grid-cols-[auto_1fr] gap-2">
+                        <div className="w-6 flex items-center justify-center text-xs font-bold text-muted-foreground">
+                          {dayOfMonth}
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        <div className="grid grid-cols-7 gap-1">
+                          {week.map((day, dayIndex) => (
+                            <div key={dayIndex} className={theme === 'retro' ? "aspect-square" : "aspect-[2/1]"}>
+                              {day ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className={`w-full h-full ${theme === 'retro' ? 'rounded-md' : 'rounded-sm'} transition-all duration-200 cursor-pointer flex items-center justify-center text-2xl font-bold relative ${theme === 'retro' ? getRetroActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros) : getActivityColor(displayMode === 'tasks' ? day.todos : day.pomodoros)} ${theme === 'retro' && day.todos + day.pomodoros > 0 ? 'hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]' : ''}`}>
+                                      {displayMode === 'tasks' ? day.todos : day.pomodoros}
+                                      {isToday(day.date) && (
+                                        <div className={theme === 'retro' ? "absolute -top-1 -right-1 w-3 h-3 bg-orange-400 dark:bg-orange-500 border-2 border-orange-600 dark:border-orange-400 rounded-full shadow-[2px_2px_0_0_rgba(249,115,22,1)]" : "absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-white shadow-sm"}>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <div className="text-sm">
+                                      <div className="font-medium">
+                                        {isToday(day.date) ? 'Today • ' : ''}{formatDate(day.date)}
+                                      </div>
+                                      <div>{day.todos} tasks • {day.pomodoros} pomodoros</div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <div className="w-full h-full"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -404,57 +448,108 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           {/* Right Column - Quick Stats & Actions */}
           <div className="space-y-4">
             {/* Quick Stats */}
-            <div className="bg-card rounded-lg border p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Today</span>
-                  <span className="font-medium">{stats.today.todos + stats.today.pomodoros}</span>
+            <div className={
+              theme === 'retro'
+                ? "rounded-[24px] border-2 border-black bg-[#d4f1ff] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,0.12)]"
+                : "bg-card rounded-lg border p-4 shadow-sm"
+            }>
+              <div className={theme === 'retro' ? "flex items-center gap-2 mb-4" : ""}>
+                {theme === 'retro' && (
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-900 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                <h3 className={theme === 'retro' ? "text-lg font-black text-gray-900" : "text-sm font-semibold mb-3"}>Quick Stats</h3>
+              </div>
+              <div className={theme === 'retro' ? "space-y-3" : "space-y-2"}>
+                <div className={theme === 'retro' ? "flex justify-between items-center p-3 bg-white rounded-xl border-2 border-black" : "flex justify-between text-sm"}>
+                  <span className={theme === 'retro' ? "font-bold text-gray-900" : "text-muted-foreground"}>Today</span>
+                  <span className={theme === 'retro' ? "text-2xl font-black text-gray-900" : "font-medium"}>{stats.today.todos + stats.today.pomodoros}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">This Week</span>
-                  <span className="font-medium">{stats.week.todos + stats.week.pomodoros}</span>
+                <div className={theme === 'retro' ? "flex justify-between items-center p-3 bg-white rounded-xl border-2 border-black" : "flex justify-between text-sm"}>
+                  <span className={theme === 'retro' ? "font-bold text-gray-900" : "text-muted-foreground"}>This Week</span>
+                  <span className={theme === 'retro' ? "text-2xl font-black text-gray-900" : "font-medium"}>{stats.week.todos + stats.week.pomodoros}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">This Month</span>
-                  <span className="font-medium">{stats.month.todos + stats.month.pomodoros}</span>
+                <div className={theme === 'retro' ? "flex justify-between items-center p-3 bg-white rounded-xl border-2 border-black" : "flex justify-between text-sm"}>
+                  <span className={theme === 'retro' ? "font-bold text-gray-900" : "text-muted-foreground"}>This Month</span>
+                  <span className={theme === 'retro' ? "text-2xl font-black text-gray-900" : "font-medium"}>{stats.month.todos + stats.month.pomodoros}</span>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-card rounded-lg border p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
-              <div className="space-y-3">
-                <Button 
-                  className="w-full flex items-center justify-start gap-3 h-12 bg-accent hover:bg-accent/80 text-accent-foreground border-accent"
-                  variant="outline"
-                  onClick={() => onPageChange?.('tasks')}
-                >
-                  <div className="flex items-center justify-center w-8 h-8 bg-accent/20 rounded-lg">
-                    <CheckSquare className="h-4 w-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Add Task</div>
-                    <div className="text-xs text-muted-foreground">Create a new to-do item</div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  className="w-full flex items-center justify-start gap-3 h-12 bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
-                  variant="outline"
-                  onClick={() => onPageChange?.('pomodoro')}
-                >
-                  <div className="flex items-center justify-center w-8 h-8 bg-primary/20 rounded-lg">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Start Pomodoro</div>
-                    <div className="text-xs text-muted-foreground">Begin a focus session</div>
-                  </div>
-                </Button>
+            {theme === 'retro' ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-black text-gray-900 uppercase tracking-wide">Quick Actions</h3>
+                <div className="grid gap-4">
+                  <button
+                    onClick={() => onPageChange?.('tasks')}
+                    className="text-left rounded-[24px] border-2 border-black bg-[#ffe164] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,0.12)] hover:shadow-[12px_12px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-2px] transition-all"
+                  >
+                    <div className="flex items-center justify-center w-12 h-12 bg-gray-900 rounded-xl mb-3">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-black text-xl text-gray-900 mb-1">Add Task</h4>
+                    <p className="text-sm text-gray-700 font-medium">Create something awesome</p>
+                  </button>
+                  
+                  <button
+                    onClick={() => onPageChange?.('pomodoro')}
+                    className="text-left rounded-[24px] border-2 border-black bg-[#96f2d7] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,0.12)] hover:shadow-[12px_12px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-2px] transition-all"
+                  >
+                    <div className="flex items-center justify-center w-12 h-12 bg-gray-900 rounded-xl mb-3">
+                      <Timer className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-black text-xl text-gray-900 mb-1">Start Pomodoro</h4>
+                    <p className="text-sm text-gray-700 font-medium">Focus time, let's go!</p>
+                  </button>
+                  
+                  <button
+                    onClick={() => onPageChange?.('notes')}
+                    className="text-left rounded-[24px] border-2 border-black bg-[#ffd4f4] p-6 shadow-[10px_10px_0_0_rgba(0,0,0,0.12)] hover:shadow-[12px_12px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-2px] transition-all"
+                  >
+                    <div className="flex items-center justify-center w-12 h-12 bg-gray-900 rounded-xl mb-3">
+                      <StickyNote className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-black text-xl text-gray-900 mb-1">Quick Note</h4>
+                    <p className="text-sm text-gray-700 font-medium">Capture your thoughts</p>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-card rounded-lg border p-4 shadow-sm">
+                <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
+                <div className="space-y-3">
+                  <Button 
+                    className="w-full flex items-center justify-start gap-3 h-12 bg-accent hover:bg-accent/80 text-accent-foreground border-accent"
+                    variant="outline"
+                    onClick={() => onPageChange?.('tasks')}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-accent/20 rounded-lg">
+                      <CheckSquare className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium text-sm">Add Task</div>
+                      <div className="text-xs text-muted-foreground">Create a new to-do item</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    className="w-full flex items-center justify-start gap-3 h-12 bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+                    variant="outline"
+                    onClick={() => onPageChange?.('pomodoro')}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-primary/20 rounded-lg">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium text-sm">Start Pomodoro</div>
+                      <div className="text-xs text-muted-foreground">Begin a focus session</div>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>

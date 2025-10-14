@@ -7,6 +7,7 @@ import { useTodo } from '@/contexts/TodoContext';
 
 interface TabbiePageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings' | 'notes') => void;
+  theme?: 'clean' | 'retro';
 }
 
 interface TabbieStatus {
@@ -20,7 +21,7 @@ interface TabbieStatus {
 
 const TABBIE_HOSTNAME = "tabbie.local";
 
-const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
+const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [tabbieStatus, setTabbieStatus] = useState<TabbieStatus | null>(null);
@@ -182,13 +183,17 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
           
           {/* Connection Section */}
           {!isConnected && (
-            <Card>
+            <Card className={
+              theme === 'retro'
+                ? "bg-[#ffd4f4]/30 dark:bg-[#ff69b4]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
+                : ""
+            }>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
                   <WifiOff className="h-5 w-5" />
                   Connect to Tabbie
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
                   Follow these steps to connect to your Tabbie device
                 </CardDescription>
               </CardHeader>
@@ -259,9 +264,13 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
 
           {/* Status Section */}
           {isConnected && tabbieStatus && (
-            <Card>
+            <Card className={
+              theme === 'retro'
+                ? "bg-[#96f2d7]/30 dark:bg-[#00e5a0]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
+                : ""
+            }>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   Tabbie Status
                 </CardTitle>
@@ -348,10 +357,14 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange }) => {
           )}
 
           {/* Integration Info */}
-          <Card>
+          <Card className={
+            theme === 'retro'
+              ? "bg-[#d4f1ff]/30 dark:bg-[#00d4ff]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
+              : ""
+          }>
             <CardHeader>
-              <CardTitle>🔗 Dashboard Integration</CardTitle>
-              <CardDescription>
+              <CardTitle className={theme === 'retro' ? "font-bold text-foreground" : ""}>🔗 Dashboard Integration</CardTitle>
+              <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
                 Tabbie automatically syncs with your productivity workflow
               </CardDescription>
             </CardHeader>

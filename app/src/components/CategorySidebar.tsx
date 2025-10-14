@@ -40,6 +40,7 @@ interface CategorySidebarProps {
   activityStats?: {
     totalPomodoros: number;
   };
+  theme?: 'clean' | 'retro';
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
@@ -47,7 +48,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   onPageChange, 
   currentView: _currentView,
   onViewChange,
-  activityStats
+  activityStats,
+  theme = 'clean'
 }) => {
   const {
     userData,
@@ -181,19 +183,33 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Dashboard Button */}
+        {theme === 'retro' && (
+          <div className="px-2 pt-3 pb-2">
+            <Button
+              onClick={() => onPageChange('dashboard')}
+              className="w-full h-12 bg-[#ffe164] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] font-black hover:translate-y-[-2px] transition-all text-base"
+            >
+              Dashboard
+            </Button>
+          </div>
+        )}
+        
         {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('dashboard')}
-                isActive={currentPage === 'dashboard'}
-              >
-                <Monitor className="w-4 h-4" />
-                <span>Dashboard</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+        <SidebarGroup className={theme === 'retro' ? "mt-2" : ""}>
+          <SidebarGroupLabel className={theme === 'retro' ? "text-xs font-black uppercase tracking-wider text-foreground mb-2" : ""}>Main</SidebarGroupLabel>
+          <SidebarMenu className={theme === 'retro' ? "gap-3" : ""}>
+            {!theme || theme !== 'retro' ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => onPageChange('dashboard')}
+                  isActive={currentPage === 'dashboard'}
+                >
+                  <Monitor className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
             
             
             <SidebarMenuItem>
@@ -203,11 +219,22 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   onViewChange?.('next7days');
                 }}
                 isActive={currentPage === 'tasks'}
+                className={
+                  theme === 'retro' && currentPage === 'tasks'
+                    ? "h-12 px-4 bg-[#d4f1ff] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro'
+                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#d4f1ff]/30 hover:border-black rounded-xl font-bold transition-all"
+                    : ""
+                }
               >
                 <CheckSquare className="w-4 h-4" />
                 <span>Tasks</span>
                 {getTotalTaskCount() > 0 && (
-                  <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                  <span className={
+                    theme === 'retro'
+                      ? "ml-auto text-xs bg-foreground text-background px-2 py-0.5 rounded-md border-2 border-black dark:border-white font-bold shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.3)]"
+                      : "ml-auto text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded"
+                  }>
                     {getTotalTaskCount()}
                   </span>
                 )}
@@ -218,11 +245,22 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('pomodoro')}
                 isActive={currentPage === 'pomodoro'}
+                className={
+                  theme === 'retro' && currentPage === 'pomodoro'
+                    ? "h-12 px-4 bg-[#ffd4f4] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro'
+                    ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all"
+                    : ""
+                }
               >
                 <Clock className="w-4 h-4" />
                 <span>Pomodoro</span>
                 {pomodoroTimer.isRunning && (
-                  <span className="ml-auto mr-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse">
+                  <span className={
+                    theme === 'retro'
+                      ? "ml-auto mr-1.5 w-2.5 h-2.5 bg-orange-500 dark:bg-orange-400 border-2 border-black dark:border-white rounded-sm animate-pulse shadow-[1px_1px_0_0_rgba(0,0,0,0.5)]"
+                      : "ml-auto mr-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse"
+                  }>
                   </span>
                 )}
               </SidebarMenuButton>
@@ -232,6 +270,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('notes')}
                 isActive={currentPage === 'notes'}
+                className={
+                  theme === 'retro' && currentPage === 'notes'
+                    ? "h-12 px-4 bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <BookOpen className="w-4 h-4" />
                 <span>Notes</span>
@@ -242,6 +285,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('reminders')}
                 isActive={currentPage === 'reminders'}
+                className={
+                  theme === 'retro' && currentPage === 'reminders'
+                    ? "h-12 px-4 bg-[#fff3b0] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <Bell className="w-4 h-4" />
                 <span>Reminders</span>
@@ -252,6 +300,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('events')}
                 isActive={currentPage === 'events'}
+                className={
+                  theme === 'retro' && currentPage === 'events'
+                    ? "bg-[#d4f1ff]/20 dark:bg-[#00d4ff]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <Zap className="w-4 h-4" />
                 <span>Events</span>
@@ -262,6 +315,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('notifications')}
                 isActive={currentPage === 'notifications'}
+                className={
+                  theme === 'retro' && currentPage === 'notifications'
+                    ? "h-12 px-4 bg-[#ffd4f4] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <Bell className="w-4 h-4" />
                 <span>Notifications</span>
@@ -272,6 +330,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('activity')}
                 isActive={currentPage === 'activity'}
+                className={
+                  theme === 'retro' && currentPage === 'activity'
+                    ? "h-12 px-4 bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Insight</span>
@@ -282,6 +345,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               <SidebarMenuButton 
                 onClick={() => onPageChange('tabbie')}
                 isActive={currentPage === 'tabbie'}
+                className={
+                  theme === 'retro' && currentPage === 'tabbie'
+                    ? "bg-[#ffe164]/20 dark:bg-[#ffd700]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                }
               >
                 <Bot className="w-4 h-4" />
                 <span>Tabbie</span>
@@ -292,7 +360,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
 
 
         {/* Categories */}
-          <SidebarGroup>
+          <SidebarGroup className={theme === 'retro' ? "mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-700" : ""}>
             <div className="flex items-center justify-between px-2">
               <div className="flex items-center gap-2">
                 <button
@@ -304,7 +372,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   ) : (
                     <ChevronDown className="w-3 h-3" />
                   )}
-                  <SidebarGroupLabel className="cursor-pointer">Categories</SidebarGroupLabel>
+                  <SidebarGroupLabel className={theme === 'retro' ? "cursor-pointer text-xs font-black uppercase tracking-wider text-foreground" : "cursor-pointer"}>Categories</SidebarGroupLabel>
                 </button>
                 {userData.categories.length > 0 && (
                   <span className="text-xs text-muted-foreground">
@@ -464,14 +532,18 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                             onViewChange?.(category.id as any);
                           }}
                           isActive={_currentView === category.id}
-                          className="flex-1"
+                          className={
+                            theme === 'retro' && _currentView === category.id
+                              ? "flex-1 bg-accent/50 text-foreground border-2 border-gray-400 dark:border-gray-600 rounded-md shadow-[1px_1px_0_0_rgba(0,0,0,0.2)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.1)] font-medium"
+                              : theme === 'retro' ? "flex-1 border-2 border-transparent hover:bg-accent/30 hover:border-gray-300 dark:hover:border-gray-700 rounded-md" : "flex-1"
+                          }
                         >
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 flex items-center justify-center text-sm">
                               {category.icon}
                             </div>
                             <div 
-                              className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+                              className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
                               style={{ backgroundColor: category.color }}
                             />
                           </div>
@@ -480,7 +552,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                             {taskCount > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded cursor-help">{taskCount}</span>
+                                  <span className={
+                                    theme === 'retro'
+                                      ? "bg-foreground text-background px-2 py-0.5 rounded-md border border-foreground font-bold shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.2)] cursor-help"
+                                      : "bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded cursor-help"
+                                  }>{taskCount}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{taskCount} active task{taskCount !== 1 ? 's' : ''}</p>
@@ -490,7 +566,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                             {completedCount > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="text-green-600 cursor-help">+{completedCount}</span>
+                                  <span className={
+                                    theme === 'retro'
+                                      ? "text-green-600 dark:text-green-400 font-bold cursor-help"
+                                      : "text-green-600 cursor-help"
+                                  }>+{completedCount}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{completedCount} completed in last 2 weeks</p>
@@ -702,13 +782,17 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center justify-between w-full px-3 py-2">
-              <SidebarMenuButton onClick={() => onPageChange('settings')} className="flex-1">
+              <SidebarMenuButton 
+                onClick={() => onPageChange('settings')} 
+                className={
+                  theme === 'retro' && currentPage === 'settings'
+                    ? "flex-1 bg-[#ffd4f4]/20 dark:bg-[#ff69b4]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"
+                    : theme === 'retro' ? "flex-1 border-2 border-transparent hover:bg-accent/50 hover:border-gray-400 dark:hover:border-gray-600 rounded-md font-medium" : "flex-1"
+                }
+              >
                 <Settings2 className="w-4 h-4" />
                 <span>Settings</span>
               </SidebarMenuButton>
-              <div className="ml-2">
-                <DarkModeToggle variant="switch" size="sm" showIcon={false} />
-              </div>
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
