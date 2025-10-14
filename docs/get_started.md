@@ -31,7 +31,7 @@ A mini Twitch streamer on your desk, cheering you on, but also keeping you focus
 
 *These are affiliate links - I get 3% at no extra cost to you!*
 
-**Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy)
+**Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy/kit)
 
 
 
