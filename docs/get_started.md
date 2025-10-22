@@ -1,6 +1,6 @@
 # Getting Started with Tabbie
 
-> STILL WORKING ON THIS - COME BACK ON OCTOBER 22, 2025
+> STILL WORKING ON THIS - COME BACK ON NOVEMBER 1, 2025 (_but you can alrdy grab the parts on amazon now if you want save time)_
 
 A mini Twitch streamer on your desk, cheering you on, but also keeping you focused. Lets make one
 
