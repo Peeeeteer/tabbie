@@ -188,7 +188,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
           <div className="px-2 pt-3 pb-2">
             <Button
               onClick={() => onPageChange('dashboard')}
-              className="w-full h-12 bg-[#ffe164] dark:bg-yellow-900/30 text-gray-900 dark:text-gray-100 hover:bg-[#fff9c4] dark:hover:bg-yellow-900/40 hover:text-gray-900 dark:hover:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] dark:hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.4)] font-black hover:translate-y-[-2px] transition-all text-base"
+              className="w-full h-12 bg-[#ffe164] dark:bg-[#ffd633] text-gray-900 dark:text-gray-900 hover:bg-[#fff9c4] dark:hover:bg-[#ffe164] hover:text-gray-900 dark:hover:text-gray-900 border-2 border-black dark:border-gray-600 rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] dark:hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.4)] font-black hover:translate-y-[-2px] transition-all text-base"
             >
               Dashboard
             </Button>

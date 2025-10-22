@@ -2,19 +2,16 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 
-// OLED display configuration
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET     -1
-#define SCREEN_ADDRESS 0x3C
+// Animation data
+#include "idle01.h"
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// OLED display configuration - Using U8g2 with SH1106 driver
+U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 // Web server on port 80
 WebServer server(80);
@@ -83,19 +80,13 @@ void setup() {
 void setupDisplay() {
   Wire.begin(21, 22);
   
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("❌ SSD1306 allocation failed"));
-    for(;;);
-  }
+  display.begin();
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
+  display.drawStr(0, 10, "Tabbie Starting...");
+  display.sendBuffer();
   
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println(F("Tabbie Starting..."));
-  display.display();
-  
-  Serial.println("✅ OLED Display initialized");
+  Serial.println("✅ OLED Display initialized (U8g2 SH1106)");
 }
 
 void setupWiFiMode() {
@@ -380,7 +371,7 @@ void loop() {
     }
   }
   
-  delay(50);
+  delay(5);
 }
 
 void handleCORS() {
@@ -620,13 +611,6 @@ void handleAnimation() {
 }
 
 void updateDisplay() {
-  static unsigned long lastUpdate = 0;
-  
-  if (millis() - lastUpdate < 200) {
-    return;
-  }
-  lastUpdate = millis();
-  
   if (isInSetupMode) {
     drawSetupMode();
   } else if (wifiStatus == "connecting" || wifiStatus == "reconnecting") {
@@ -648,206 +632,192 @@ void drawSetupMode() {
   static int frame = 0;
   frame++;
   
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
   
+  int y = 10;
   if (lastError.length() > 0) {
-    display.println(F("WiFi Error!"));
-    display.println();
+    display.drawStr(0, y, "WiFi Error!");
+    y += 12;
   } else {
-    display.println(F("WiFi Setup"));
-    display.println();
+    display.drawStr(0, y, "WiFi Setup");
+    y += 12;
   }
   
-  display.println(F("1. Connect to WiFi:"));
-  display.println(F("   Tabbie-Setup"));
-  display.println();
-  display.println(F("2. Visit:"));
-  display.println(F("   192.168.4.1"));
+  y += 2;
+  display.drawStr(0, y, "1. Connect to WiFi:");
+  y += 10;
+  display.drawStr(0, y, "   Tabbie-Setup");
+  y += 12;
+  display.drawStr(0, y, "2. Visit:");
+  y += 10;
+  display.drawStr(0, y, "   192.168.4.1");
   
   // Blinking indicator
   if ((frame / 10) % 2 == 0) {
-    display.drawPixel(125, 2, SSD1306_WHITE);
-    display.drawPixel(126, 2, SSD1306_WHITE);
-    display.drawPixel(127, 2, SSD1306_WHITE);
+    display.drawPixel(125, 2);
+    display.drawPixel(126, 2);
+    display.drawPixel(127, 2);
   }
   
-  display.display();
+  display.sendBuffer();
 }
 
 void drawConnecting() {
   static int frame = 0;
   frame++;
   
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println(F("Connecting..."));
-  display.println();
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
+  
+  display.drawStr(0, 10, "Connecting...");
   
   String savedSSID = preferences.getString("wifi_ssid", "");
   if (savedSSID.length() > 15) {
     savedSSID = savedSSID.substring(0, 12) + "...";
   }
-  display.println(savedSSID);
+  display.drawStr(0, 24, savedSSID.c_str());
   
   // Animated dots
-  display.setCursor(0, 35);
+  String dots = "";
   for (int i = 0; i < (frame / 5) % 4; i++) {
-    display.print(".");
+    dots += ".";
   }
+  display.drawStr(0, 40, dots.c_str());
   
-  display.display();
+  display.sendBuffer();
 }
 
 void drawConnected() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println(F("Connected!"));
-  display.println();
-  display.println(WiFi.SSID());
-  display.println();
-  display.println(WiFi.localIP());
-  display.display();
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
+  
+  display.drawStr(0, 10, "Connected!");
+  display.drawStr(0, 24, WiFi.SSID().c_str());
+  display.drawStr(0, 38, WiFi.localIP().toString().c_str());
+  
+  display.sendBuffer();
 }
 
 void drawError() {
   static int frame = 0;
   frame++;
   
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println(F("WiFi Error!"));
-  display.println();
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
   
+  display.drawStr(0, 10, "WiFi Error!");
+  
+  int y = 24;
   if (lastError.length() > 0) {
     String error = lastError;
-    if (error.length() > 42) {
-      error = error.substring(0, 39) + "...";
+    if (error.length() > 21) {
+      error = error.substring(0, 18) + "...";
     }
-    display.println(error);
+    display.drawStr(0, y, error.c_str());
   } else {
-    display.println(F("Check WiFi config"));
+    display.drawStr(0, y, "Check WiFi config");
   }
   
-  display.println();
-  display.println(F("Restarting..."));
+  display.drawStr(0, 48, "Restarting...");
   
   // Blinking error indicator
   if ((frame / 8) % 2 == 0) {
-    display.fillCircle(5, 5, 2, SSD1306_WHITE);
+    display.drawDisc(5, 5, 2);
   }
   
-  display.display();
+  display.sendBuffer();
 }
 
 void drawIdleAnimation() {
-  static int frame = 0;
-  frame++;
+  static int currentFrame = 0;
+  static unsigned long lastFrameTime = 0;
   
-  display.clearDisplay();
+  unsigned long currentTime = millis();
   
-  // Tabbie face
-  display.setTextSize(2);
-  display.setCursor(45, 10);
-  display.println(F("(-.-)"));
-  
-  // Status
-  display.setTextSize(1);
-  display.setCursor(25, 35);
-  display.println(F("Ready"));
-  
-  // Network info
-  display.setCursor(0, 50);
-  String ssid = WiFi.SSID();
-  if (ssid.length() > 15) {
-    ssid = ssid.substring(0, 12) + "...";
+  // Update frame at 24fps (42ms per frame)
+  if (currentTime - lastFrameTime >= 42) {
+    display.clearBuffer();
+    
+    const uint8_t* frameData = sketch_04_frames[currentFrame];
+    display.drawBitmap(0, 0, 128 / 8, 64, frameData);
+    
+    display.sendBuffer();
+    
+    currentFrame++;
+    if (currentFrame >= SKETCH_04_FRAME_COUNT) {
+      currentFrame = 0;
+    }
+    
+    lastFrameTime = currentTime;
   }
-  display.println(ssid);
-  
-  // Breathing animation
-  if ((frame / 20) % 2 == 0) {
-    display.drawPixel(64, 55, SSD1306_WHITE);
-  }
-  
-  display.display();
 }
 
 void drawPomodoroAnimation() {
   static int frame = 0;
   frame++;
   
-  display.clearDisplay();
+  display.clearBuffer();
   
   // Focused face
-  display.setTextSize(2);
-  display.setCursor(45, 5);
-  display.println(F("(>.<)"));
+  display.setFont(u8g2_font_10x20_tf);
+  display.drawStr(45, 20, "(>.<)");
   
   // Task name
-  display.setTextSize(1);
-  display.setCursor(0, 25);
+  display.setFont(u8g2_font_6x10_tf);
   String taskDisplay = currentTask;
   if (taskDisplay.length() > 21) {
     taskDisplay = taskDisplay.substring(0, 18) + "...";
   }
-  display.println(taskDisplay);
+  display.drawStr(0, 35, taskDisplay.c_str());
   
   // Focus indicator
-  display.setCursor(30, 40);
-  display.println(F("FOCUS!"));
+  display.drawStr(30, 48, "FOCUS!");
   
-  display.setCursor(85, 40);
   if ((frame / 10) % 2 == 0) {
-    display.println(F("[*]"));
+    display.drawStr(85, 48, "[*]");
   } else {
-    display.println(F("[!]"));
+    display.drawStr(85, 48, "[!]");
   }
   
   // Progress bar
   int progress = (frame * 2) % 128;
-  display.drawRect(0, 55, 128, 8, SSD1306_WHITE);
-  display.fillRect(1, 56, progress, 6, SSD1306_WHITE);
+  display.drawFrame(0, 55, 128, 8);
+  display.drawBox(1, 56, progress, 6);
   
-  display.display();
+  display.sendBuffer();
 }
 
 void drawTaskCompleteAnimation() {
   static int frame = 0;
   frame++;
   
-  display.clearDisplay();
+  display.clearBuffer();
   
   // Happy face
-  display.setTextSize(2);
-  display.setCursor(45, 5);
-  display.println(F("(^.^)"));
+  display.setFont(u8g2_font_10x20_tf);
+  display.drawStr(45, 20, "(^.^)");
   
   // Celebration
-  display.setTextSize(1);
-  display.setCursor(20, 30);
-  display.println(F("Great job!"));
+  display.setFont(u8g2_font_6x10_tf);
+  display.drawStr(20, 35, "Great job!");
   
   // Task completed
-  display.setCursor(0, 45);
   String taskDisplay = currentTask;
   if (taskDisplay.length() > 21) {
     taskDisplay = taskDisplay.substring(0, 18) + "...";
   }
-  display.println(taskDisplay);
+  display.drawStr(0, 50, taskDisplay.c_str());
   
   // Sparkle animation
   if (frame % 20 < 10) {
-    display.drawPixel(20, 15, SSD1306_WHITE);
-    display.drawPixel(100, 20, SSD1306_WHITE);
-    display.drawPixel(15, 50, SSD1306_WHITE);
-    display.drawPixel(110, 45, SSD1306_WHITE);
+    display.drawPixel(20, 15);
+    display.drawPixel(100, 20);
+    display.drawPixel(15, 50);
+    display.drawPixel(110, 45);
   }
   
-  display.display();
+  display.sendBuffer();
   
   // Auto return to idle after 5 seconds
   if (millis() - animationStartTime > 5000) {

@@ -48,10 +48,13 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
     if (isConnected && pomodoroTimer.isRunning) {
       const currentTask = userData.tasks.find(t => t.id === pomodoroTimer.currentTaskId);
       sendAnimation('pomodoro', currentTask?.title || 'Focus Session');
+    } else if (isConnected && pomodoroTimer.justCompleted) {
+      const currentTask = userData.tasks.find(t => t.id === pomodoroTimer.currentTaskId);
+      sendAnimation('complete', currentTask?.title || 'Task Complete!');
     } else if (isConnected && !pomodoroTimer.isRunning) {
       sendAnimation('idle');
     }
-  }, [pomodoroTimer.isRunning, pomodoroTimer.currentTaskId, isConnected]);
+  }, [pomodoroTimer.isRunning, pomodoroTimer.justCompleted, pomodoroTimer.currentTaskId, isConnected]);
 
   const checkConnection = async () => {
     setIsConnecting(true);
