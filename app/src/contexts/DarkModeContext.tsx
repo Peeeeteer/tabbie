@@ -1,9 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { loadUserData, updateSettings } from '@/utils/storage';
+
+type ThemeMode = 'light' | 'dark' | 'auto';
 
 interface DarkModeContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   setDarkMode: (dark: boolean) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const DarkModeContext = createContext<DarkModeContextType | undefined>(undefined);
@@ -16,30 +21,59 @@ export const useDarkMode = () => {
   return context;
 };
 
+// Helper function to determine if current time should be dark mode
+// Dark mode: 6 PM (18:00) to 6 AM (06:00)
+// Light mode: 6 AM (06:00) to 6 PM (18:00)
+const shouldBeDarkBasedOnTime = (): boolean => {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 6;
+};
+
 export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    const userData = loadUserData();
+    return userData.settings.themeMode || 'auto';
+  });
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage first, then system preference
-    const saved = localStorage.getItem('darkMode');
-    if (saved !== null) {
-      return JSON.parse(saved);
-    }
-    // Check system preference
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const userData = loadUserData();
+    const mode = userData.settings.themeMode || 'auto';
+    
+    if (mode === 'light') return false;
+    if (mode === 'dark') return true;
+    // Auto mode - check time
+    return shouldBeDarkBasedOnTime();
   });
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    // When toggling, switch to manual mode
+    const newMode = isDarkMode ? 'light' : 'dark';
+    setThemeModeState(newMode);
+    setIsDarkMode(!isDarkMode);
+    updateSettings({ themeMode: newMode });
   };
 
   const setDarkMode = (dark: boolean) => {
     setIsDarkMode(dark);
   };
 
-  useEffect(() => {
-    // Save to localStorage
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    updateSettings({ themeMode: mode });
     
-    // Apply to document
+    // Apply the mode immediately
+    if (mode === 'light') {
+      setIsDarkMode(false);
+    } else if (mode === 'dark') {
+      setIsDarkMode(true);
+    } else {
+      // Auto mode - check time
+      setIsDarkMode(shouldBeDarkBasedOnTime());
+    }
+  };
+
+  // Apply dark mode class to document
+  useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -47,24 +81,28 @@ export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [isDarkMode]);
 
-  // Listen for system preference changes
+  // Check time every minute if in auto mode
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't manually set a preference
-      if (localStorage.getItem('darkMode') === null) {
-        setIsDarkMode(e.matches);
+    if (themeMode !== 'auto') return;
+
+    const checkTime = () => {
+      const shouldBeDark = shouldBeDarkBasedOnTime();
+      if (shouldBeDark !== isDarkMode) {
+        setIsDarkMode(shouldBeDark);
       }
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+    // Check every minute
+    const interval = setInterval(checkTime, 60000);
+    return () => clearInterval(interval);
+  }, [themeMode, isDarkMode]);
 
   const value: DarkModeContextType = {
     isDarkMode,
     toggleDarkMode,
     setDarkMode,
+    themeMode,
+    setThemeMode,
   };
 
   return (

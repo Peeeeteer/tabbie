@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, SkipForward, Timer } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, X, CalendarDays, RotateCcw, MoreVertical, Edit, Play, Trash2, Eye, GripVertical, ChevronDown, ChevronUp, Timer } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +75,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     reorderTasks,
     pomodoroTimer,
     addCategory,
+    deleteCategory,
   } = useTodo();
 
   // Category creation options
@@ -117,6 +118,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const [newCategoryIcon, setNewCategoryIcon] = useState('📝');
   const [newCategoryColor, setNewCategoryColor] = useState('');
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
+  const [deletingCategory, setDeletingCategory] = useState<{ id: string; name: string; taskCount: number } | null>(null);
 
   // Function to reset the create task form
   const resetCreateTaskForm = () => {
@@ -147,14 +149,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   // Timezone-aware date utilities
   const getLocalDate = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  };
-
-  const getLocalDateString = (date: Date) => {
-    return new Intl.DateTimeFormat('en-CA', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    }).format(date);
   };
 
   const today = getLocalDate(new Date());
@@ -207,10 +201,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     }).sort((a, b) => a.order - b.order);
   };
 
-  const getAllTasks = () => {
-    return userData.tasks.filter(task => !task.completed).sort((a, b) => a.order - b.order);
-  };
-
   const getCompletedTasks = () => {
     const now = new Date();
     const sevenDaysAgo = getLocalDate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
@@ -255,7 +245,6 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const getTodayTaskCount = () => getTodayTasks().length;
   const getTomorrowTaskCount = () => getTomorrowTasks().length;
   const getNext7DaysTaskCount = () => getNext7DaysTasks().length;
-  const getAllTaskCount = () => getAllTasks().length;
   const getCompletedTaskCount = () => getCompletedTasks().length;
   
   const getTotalCompletedTasksCount = () => {
@@ -685,13 +674,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     return getCategoryTasksByType(categoryType).length;
   };
 
-  const getTasksWithoutCategory = () => {
-    return userData.tasks.filter(task => !task.completed && !task.categoryId);
-  };
 
-  const getTasksWithoutCategoryCount = () => {
-    return getTasksWithoutCategory().length;
-  };
 
   const getUnscheduledTasks = () => {
     const now = new Date();
@@ -727,7 +710,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
   const renderCategoryTasks = (categoryId: string, icon: string, name: string) => {
     const tasks = getCategoryTasksByType(categoryId);
-    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId, theme);
+    return renderTaskSection(`${icon} ${name}`, tasks, undefined, tasks.length, true, categoryId);
   };
 
   const renderNext7DaysWithCrossDrag = () => {
@@ -1040,7 +1023,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   ) : (
                     <ChevronUp className="w-4 h-4 text-gray-500" />
                   )}
-                  <h3 className="font-semibold text-lg text-gray-800">Unscheduled</h3>
+                  <h3 className={
+                    theme === 'retro'
+                      ? "font-black text-lg text-gray-800 dark:text-gray-100"
+                      : "font-semibold text-lg text-gray-800 dark:text-gray-100"
+                  }>Unscheduled</h3>
                   {unscheduledTasks.length > 0 && (
                     <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{unscheduledTasks.length}</span>
                   )}
@@ -1095,7 +1082,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     );
   };
 
-  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string, themeOverride?: 'clean' | 'retro') => (
+  const renderTaskSection = (title: string, tasks: Task[], sectionDate?: Date, count?: number, isDraggable: boolean = false, section?: string) => (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -1154,7 +1141,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           
           <DragOverlay>
             {activeDragTask ? (
-              <DragOverlayTaskItem task={activeDragTask} />
+              <DragOverlayTaskItem task={activeDragTask} theme={theme} />
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -1191,14 +1178,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       case 'today':
         return (
           <div>
-            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount(), true, 'today', theme)}
+            {renderTaskSection('Today', getTodayTasks(), today, getTodayTaskCount(), true, 'today')}
           </div>
         );
       
       case 'tomorrow':
         return (
           <div>
-            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount(), true, 'tomorrow', theme)}
+            {renderTaskSection('Tomorrow', getTomorrowTasks(), tomorrow, getTomorrowTaskCount(), true, 'tomorrow')}
           </div>
         );
       
@@ -1209,44 +1196,68 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         return (
           <div>
             {/* Date Filter for Completed Tasks */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className={theme === 'retro' ? "mb-6 p-4 bg-gray-50 dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm" : "mb-6 p-4 bg-gray-50 rounded-lg"}>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-700">Filter by completion date:</h3>
+                <h3 className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-100" : "text-sm font-medium text-gray-700"}>Filter by completion date:</h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleCompletedTasksDateFilterChange('7days')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      completedTasksDateFilter === '7days'
-                        ? 'bg-primary/20 text-primary border border-primary/30'
-                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
-                    }`}
+                    className={
+                      theme === 'retro'
+                        ? `px-3 py-1 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md transition-colors border-2 dark:border shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none ${
+                            completedTasksDateFilter === '7days'
+                              ? 'bg-black dark:bg-blue-500 text-white border-black dark:border-blue-500'
+                              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`
+                        : `px-3 py-1 text-xs rounded-md transition-colors ${
+                            completedTasksDateFilter === '7days'
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-card text-muted-foreground border border-border hover:bg-accent'
+                          }`
+                    }
                   >
                     Last 7 days
                   </button>
                   <button
                     onClick={() => handleCompletedTasksDateFilterChange('30days')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      completedTasksDateFilter === '30days'
-                        ? 'bg-primary/20 text-primary border border-primary/30'
-                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
-                    }`}
+                    className={
+                      theme === 'retro'
+                        ? `px-3 py-1 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md transition-colors border-2 dark:border shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none ${
+                            completedTasksDateFilter === '30days'
+                              ? 'bg-black dark:bg-blue-500 text-white border-black dark:border-blue-500'
+                              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`
+                        : `px-3 py-1 text-xs rounded-md transition-colors ${
+                            completedTasksDateFilter === '30days'
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-card text-muted-foreground border border-border hover:bg-accent'
+                          }`
+                    }
                   >
                     Last 30 days
                   </button>
                   <button
                     onClick={() => handleCompletedTasksDateFilterChange('all')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      completedTasksDateFilter === 'all'
-                        ? 'bg-primary/20 text-primary border border-primary/30'
-                        : 'bg-card text-muted-foreground border border-border hover:bg-accent'
-                    }`}
+                    className={
+                      theme === 'retro'
+                        ? `px-3 py-1 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md transition-colors border-2 dark:border shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none ${
+                            completedTasksDateFilter === 'all'
+                              ? 'bg-black dark:bg-blue-500 text-white border-black dark:border-blue-500'
+                              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`
+                        : `px-3 py-1 text-xs rounded-md transition-colors ${
+                            completedTasksDateFilter === 'all'
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-card text-muted-foreground border border-border hover:bg-accent'
+                          }`
+                    }
                   >
                     All time
                   </button>
                 </div>
               </div>
             </div>
-            {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed', theme)}
+            {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed')}
             
             {/* Load More button for completed tasks */}
             {getCompletedTaskCount() < getTotalCompletedTasksCount() && (
@@ -1305,7 +1316,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
             {/* View Navigation Tabs - Aligned with Sidebar */}
             <div ref={navigationRef} className="flex items-center justify-between border-b pb-2" style={{ marginLeft: '-24px', paddingLeft: '24px', marginRight: '-24px', paddingRight: '24px' }}>
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
 
                 <button
                   onClick={() => onViewChange?.('next7days')}
@@ -1313,8 +1324,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     theme === 'retro'
                       ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
                           currentView === 'next7days'
-                            ? 'bg-[#ffe164] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
-                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                            ? 'bg-[#ffe164] dark:bg-yellow-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black dark:hover:border-gray-600'
                         }`
                       : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           currentView === 'next7days'
@@ -1340,8 +1351,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     theme === 'retro'
                       ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
                           currentView === 'today'
-                            ? 'bg-[#d4f1ff] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
-                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                            ? 'bg-[#d4f1ff] dark:bg-blue-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black dark:hover:border-gray-600'
                         }`
                       : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           currentView === 'today'
@@ -1367,8 +1378,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     theme === 'retro'
                       ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
                           currentView === 'tomorrow'
-                            ? 'bg-[#96f2d7] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
-                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                            ? 'bg-[#96f2d7] dark:bg-teal-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black dark:hover:border-gray-600'
                         }`
                       : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           currentView === 'tomorrow'
@@ -1394,8 +1405,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     theme === 'retro'
                       ? `px-4 py-2 font-black text-sm transition-all whitespace-nowrap rounded-xl ${
                           currentView === 'completed'
-                            ? 'bg-[#ffd4f4] text-gray-900 border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px]'
-                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black'
+                            ? 'bg-[#ffd4f4] dark:bg-pink-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px]'
+                            : 'bg-transparent text-foreground border-2 border-transparent hover:border-black dark:hover:border-gray-600'
                         }`
                       : `pb-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                           currentView === 'completed'
@@ -1430,8 +1441,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   >
                     <SelectTrigger className={
                       theme === 'retro'
-                        ? `w-36 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.12)] hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-1px] transition-all font-bold text-foreground ${userData.categories.some(cat => cat.id === currentView) ? 'bg-[#fff3b0] dark:bg-[#ffd700]/20' : ''}`
-                        : "w-32 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        ? `w-48 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-xl shadow-[3px_3px_0_0_rgba(0,0,0,0.12)] hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:translate-y-[-1px] transition-all font-bold text-foreground ${userData.categories.some(cat => cat.id === currentView) ? 'bg-[#fff3b0] dark:bg-[#ffd700]/20' : ''}`
+                        : "w-40 h-8 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     }>
                       <SelectValue placeholder="Categories" />
                     </SelectTrigger>
@@ -1439,27 +1450,46 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                       align="start"
                       className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.2)] bg-white dark:bg-gray-900 p-2" : ""}
                     >
-                      {userData.categories.map((category) => (
-                        <SelectItem 
-                          key={category.id} 
-                          value={category.id}
-                          className={theme === 'retro' ? "rounded-lg hover:bg-accent/50 font-bold cursor-pointer mb-1" : ""}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span>{category.icon}</span>
-                            <div 
-                              className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black" : "w-2 h-2 rounded-full flex-shrink-0"}
-                              style={{ backgroundColor: category.color }}
-                            />
-                            <span>{category.name}</span>
-                            {getCategoryTaskCount(category.id) > 0 && (
-                              <span className={theme === 'retro' ? "ml-auto bg-black text-white px-2 py-0.5 rounded-md text-xs border border-black font-bold" : "ml-auto bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs"}>
-                                {getCategoryTaskCount(category.id)}
-                              </span>
-                            )}
+                      {userData.categories.map((category) => {
+                        const taskCount = getCategoryTaskCount(category.id);
+                        return (
+                          <div key={category.id} className="flex items-center gap-1 mb-1 group">
+                            <SelectItem 
+                              value={category.id}
+                              className={theme === 'retro' ? "flex-1 rounded-lg hover:bg-accent/50 font-bold cursor-pointer" : "flex-1"}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>{category.icon}</span>
+                                <div 
+                                  className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-2 h-2 rounded-full flex-shrink-0"}
+                                  style={{ backgroundColor: category.color }}
+                                />
+                                <span>{category.name}</span>
+                                {taskCount > 0 && (
+                                  <span className={theme === 'retro' ? "ml-auto bg-black dark:bg-white text-white dark:text-black px-2 py-0.5 rounded-md text-xs border border-black dark:border-white font-bold" : "ml-auto bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs"}>
+                                    {taskCount}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDeletingCategory({ id: category.id, name: category.name, taskCount });
+                              }}
+                              className={
+                                theme === 'retro'
+                                  ? "h-8 w-8 p-0 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 border-2 border-transparent hover:border-red-300 dark:hover:border-red-700 rounded-md transition-colors"
+                                  : "h-8 w-8 p-0 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                              }
+                              type="button"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-                        </SelectItem>
-                      ))}
+                        );
+                      })}
                       <div 
                         className={theme === 'retro' ? "mt-2 pt-2 border-t-2 border-gray-300 dark:border-gray-600" : "mt-1 pt-1 border-t"}
                       >
@@ -1503,7 +1533,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     }}
                     className={
                       theme === 'retro'
-                        ? "px-4 py-2 bg-[#96f2d7] hover:bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px] transition-all font-black"
+                        ? "px-4 py-2 bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px] transition-all font-black"
                         : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-8"
                     }
                   >
@@ -1526,13 +1556,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={createPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
-          transform transition-transform duration-300 ease-in-out z-50 flex flex-col
+          fixed top-0 right-0 h-full w-[480px] bg-card border-l border-border 
+          transform transition-transform duration-300 ease-in-out z-40 flex flex-col
           ${isCreatePanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className={theme === 'retro' ? "bg-[#ffe164] border-b-2 border-black p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
+        <div className={theme === 'retro' ? "bg-[#FFE164] border-b-2 border-black dark:border-gray-600 p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
           <div className="flex items-center justify-between mb-3">
             <h2 className={theme === 'retro' ? "text-2xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>
               {theme === 'retro' && <Plus className="w-6 h-6" />}
@@ -1551,7 +1581,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </Button>
           </div>
           {theme === 'retro' && (
-            <div className="text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+            <div className="text-xs text-gray-900 font-bold bg-[#FFE164] border-2 border-black dark:border-gray-700 rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
               Changes are automatically saved as you type
             </div>
           )}
@@ -1566,9 +1596,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         <div className="flex-1 overflow-y-auto">
           <div className={theme === 'retro' ? "p-4 space-y-4" : "p-6 space-y-6"}>
           {/* Category Selection */}
-          <div className={theme === 'retro' ? "bg-[#fff3b0] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm" : "space-y-2"}>
             <div className="flex items-center justify-between">
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Category</label>
+              <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Category</label>
               {userData.categories.length === 0 && (
                 <Button
                   type="button"
@@ -1584,7 +1614,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </div>
             {userData.categories.length > 0 ? (
               <Select value={taskCategory || 'no-category'} onValueChange={(value) => setTaskCategory(value === 'no-category' ? undefined : value)}>
-                <SelectTrigger className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md bg-white dark:bg-gray-900 font-bold focus:shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
+                <SelectTrigger className={theme === 'retro' ? "border-2 dark:border border-black dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 font-bold dark:font-normal focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent focus:shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-none" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1616,22 +1646,22 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Title Input */}
-          <div className={theme === 'retro' ? "bg-[#d4f1ff] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>What do you need to do?</label>
+          <div className={theme === 'retro' ? "bg-[#d4f1ff] dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-700 rounded-xl dark:rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>What do you need to do?</label>
             <Input
               placeholder="Enter task title..."
               value={newTaskTitle}
               onChange={(e) => handleTaskTitleChange(e.target.value)}
               onKeyPress={(e) => handleKeyPress(e)}
-              className={theme === 'retro' ? "border-2 border-black dark:border-black rounded-lg bg-white font-bold focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
+              className={theme === 'retro' ? "border-2 dark:border border-black dark:border-gray-600 rounded-lg dark:rounded-md bg-white dark:bg-gray-900 font-bold dark:font-normal focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-none text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
               autoFocus
             />
           </div>
 
           {/* Description */}
-          <div className={theme === 'retro' ? "bg-[#ffd4f4] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Description</label>
-            <div className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)]" : ""}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Description</label>
+            <div className={theme === 'retro' ? "border border-gray-300 dark:border-gray-600 rounded-md" : ""}>
               <RichTextEditor
                 content={newTaskDescription}
                 onChange={setNewTaskDescription}
@@ -1642,9 +1672,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Due Date & Time */}
-          <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3"}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3" : "space-y-3"}>
             <div className="flex items-center justify-between">
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900" : "text-sm font-semibold text-gray-900"}>Due Date</label>
+              <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Due Date</label>
               {newTaskDueDate && (
                 <Button
                   type="button"
@@ -1671,10 +1701,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 }}
                 className={
                   theme === 'retro'
-                    ? `h-9 text-xs font-black rounded-lg ${
+                    ? `h-9 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md ${
                         newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                          ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]'
-                          : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'
+                          ? 'bg-black dark:bg-blue-500 text-white border-2 dark:border border-black dark:border-blue-500 shadow-[3px_3px_0_0_rgba(0,0,0,0.25)] dark:shadow-none'
+                          : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-2 dark:border border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`
                     : "h-8 text-xs"
                 }
@@ -1691,7 +1721,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   tomorrow.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(tomorrow);
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-black dark:bg-blue-500 text-white border-2 dark:border border-black dark:border-blue-500 shadow-[3px_3px_0_0_rgba(0,0,0,0.25)] dark:shadow-none' : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-2 dark:border border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 Tomorrow
               </Button>
@@ -1705,7 +1735,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   threeDays.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(threeDays);
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-black dark:bg-blue-500 text-white border-2 dark:border border-black dark:border-blue-500 shadow-[3px_3px_0_0_rgba(0,0,0,0.25)] dark:shadow-none' : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-2 dark:border border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 3 Days
               </Button>
@@ -1719,7 +1749,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   nextWeek.setHours(9, 0, 0, 0);
                   setNewTaskDueDate(nextWeek);
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-black text-white border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white text-gray-900 border-2 border-black hover:bg-gray-100'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md ${newTaskDueDate && format(newTaskDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-black dark:bg-blue-500 text-white border-2 dark:border border-black dark:border-blue-500 shadow-[3px_3px_0_0_rgba(0,0,0,0.25)] dark:shadow-none' : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-2 dark:border border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 Next Week
               </Button>
@@ -1738,15 +1768,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className={theme === 'retro' ? "bg-[#ffd4f4] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-700 rounded-xl dark:rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm space-y-3" : "space-y-3 pt-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-300 flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
               {theme === 'retro' && <Timer className="w-4 h-4" />}
               Estimated Pomodoros
             </label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
                 {theme === 'retro' ? (
-                  <div className="w-10 h-10 bg-white border-2 border-black rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+                  <div className="w-10 h-10 bg-white dark:bg-gray-800 border-2 border-black dark:border-gray-600 rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-sm">
                     🍅
                   </div>
                 ) : (
@@ -1762,11 +1792,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     className="w-full"
                   />
                 </div>
-                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black text-2xl text-gray-900 bg-white border-2 border-black rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
+                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black dark:font-bold text-2xl dark:text-xl text-gray-900 dark:text-blue-400 bg-white dark:bg-blue-900/30 border-2 dark:border-0 border-black rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-none" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
                   {newTaskEstimatedPomodoros}
                 </span>
               </div>
-              <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold flex items-center gap-2 bg-white border-2 border-black rounded-lg px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
+              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-400 font-bold dark:font-normal flex items-center gap-2 bg-white dark:bg-gray-900 border-2 dark:border-0 border-black rounded-lg dark:rounded-md px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
                 <Clock className="w-3 h-3" />
                 Approximately {newTaskEstimatedPomodoros * 30} minutes of focused work
               </div>
@@ -1774,15 +1804,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Workspace URLs */}
-          <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2 border-t border-gray-100"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
+          <div className={theme === 'retro' ? "bg-[#96f2d7] dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-700 rounded-xl dark:rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm space-y-3" : "space-y-3 pt-2 border-t border-gray-100"}>
+            <label className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-300 flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
               {theme === 'retro' ? (
                 <>
-                  <div className="w-5 h-5 bg-white border-2 border-black rounded flex items-center justify-center">
+                  <div className="w-5 h-5 bg-white dark:bg-gradient-to-br dark:from-green-500 dark:to-teal-500 border-2 dark:border-0 border-black rounded flex items-center justify-center text-sm">
                     🔗
                   </div>
                   Workspace URLs
-                  <span className="text-xs text-gray-700 font-medium bg-white border border-black rounded px-2 py-0.5">optional</span>
+                  <span className="text-xs text-gray-700 dark:text-gray-400 font-medium dark:font-normal bg-white dark:bg-gray-700 border dark:border-0 border-black rounded px-2 py-0.5">optional</span>
                 </>
               ) : (
                 <>
@@ -1793,7 +1823,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               )}
             </label>
             <div className="space-y-3">
-              <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-2" : "text-xs text-gray-600"}>
+              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-400 font-bold dark:font-normal bg-white dark:bg-gray-900 border-2 dark:border-0 border-black rounded-lg dark:rounded-md px-3 py-2" : "text-xs text-gray-600"}>
                 Add URLs that will automatically open when you start a Pomodoro for this task
               </div>
               
@@ -1804,7 +1834,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   value={newUrlInput}
                   onChange={(e) => setNewUrlInput(e.target.value)}
                   placeholder="Enter URL (e.g., github.com/user/repo)"
-                  className={theme === 'retro' ? "flex-1 px-3 py-2 text-sm border-2 border-black rounded-lg focus:outline-none focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] bg-white font-bold" : "flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"}
+                  className={theme === 'retro' ? "flex-1 px-3 py-2 text-sm border-2 dark:border border-black dark:border-gray-600 rounded-lg dark:rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-none bg-white dark:bg-gray-900 font-bold dark:font-normal" : "flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && newUrlInput.trim()) {
                       e.preventDefault();
@@ -1825,7 +1855,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     }
                   }}
                   disabled={!newUrlInput.trim() || newTaskWorkspaceUrls.includes(newUrlInput.trim())}
-                  className={theme === 'retro' ? "px-3 bg-black text-white border-2 border-black rounded-lg font-black hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "px-3"}
+                  className={theme === 'retro' ? "px-3 bg-black dark:bg-blue-500 text-white border-2 dark:border border-black dark:border-blue-500 rounded-lg dark:rounded-md font-black dark:font-semibold hover:bg-gray-800 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-none" : "px-3"}
                 >
                   Add
                 </Button>
@@ -1834,14 +1864,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               {/* URL List */}
               {newTaskWorkspaceUrls.length > 0 && (
                 <div className="space-y-2">
-                  <div className={theme === 'retro' ? "text-xs text-gray-700 font-bold" : "text-xs text-gray-600"}>
+                  <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-400 font-bold dark:font-semibold" : "text-xs text-gray-600"}>
                     URLs to open ({newTaskWorkspaceUrls.length}):
                   </div>
                   <div className="space-y-2">
                     {newTaskWorkspaceUrls.map((url, index) => (
-                      <div key={index} className={theme === 'retro' ? "flex items-center gap-2 p-2 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,0.1)]" : "flex items-center gap-2 p-2 bg-gray-50 rounded border"}>
-                        <span className={theme === 'retro' ? "text-sm font-bold" : "text-xs"}>🔗</span>
-                        <span className={theme === 'retro' ? "flex-1 text-sm text-gray-900 truncate font-bold" : "flex-1 text-sm text-gray-700 truncate"} title={url}>
+                      <div key={index} className={theme === 'retro' ? "flex items-center gap-2 p-2 bg-white dark:bg-gray-900 border-2 dark:border border-black dark:border-gray-700 rounded-lg dark:rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none" : "flex items-center gap-2 p-2 bg-gray-50 rounded border"}>
+                        <span className={theme === 'retro' ? "text-sm font-bold dark:font-normal" : "text-xs"}>🔗</span>
+                        <span className={theme === 'retro' ? "flex-1 text-sm text-gray-900 dark:text-gray-300 truncate font-bold dark:font-normal" : "flex-1 text-sm text-gray-700 truncate"} title={url}>
                           {url}
                         </span>
                         <Button
@@ -1851,7 +1881,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                           onClick={() => {
                             setNewTaskWorkspaceUrls(newTaskWorkspaceUrls.filter((_, i) => i !== index));
                           }}
-                          className={theme === 'retro' ? "h-7 w-7 p-0 text-gray-900 hover:text-red-600 hover:bg-red-100 rounded-md font-black text-lg" : "h-6 w-6 p-0 text-gray-400 hover:text-red-600"}
+                          className={theme === 'retro' ? "h-7 w-7 p-0 text-gray-900 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md font-black dark:font-bold text-lg" : "h-6 w-6 p-0 text-gray-400 hover:text-red-600"}
                         >
                           ×
                         </Button>
@@ -1871,13 +1901,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={editPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
-          transform transition-transform duration-300 ease-in-out z-50 flex flex-col
+          fixed top-0 right-0 h-full w-[480px] bg-card border-l border-border 
+          transform transition-transform duration-300 ease-in-out z-40 flex flex-col
           ${isEditPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className={theme === 'retro' ? "bg-[#ffe164] border-b-2 border-black p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
+        <div className={theme === 'retro' ? "bg-[#FFE164] border-b-2 border-black dark:border-gray-600 p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
           <div className="flex items-center justify-between mb-3">
             <h2 className={theme === 'retro' ? "text-2xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>
               {theme === 'retro' && <Edit className="w-6 h-6" />}
@@ -1893,7 +1923,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             </Button>
           </div>
           {theme === 'retro' && (
-            <div className="text-xs text-gray-700 font-bold bg-white border-2 border-black rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+            <div className="text-xs text-gray-900 font-bold bg-[#FFE164] border-2 border-black dark:border-gray-700 rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
               Changes are automatically saved as you type
             </div>
           )}
@@ -1908,9 +1938,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         <div className="flex-1 overflow-y-auto">
           <div className={theme === 'retro' ? "p-4 space-y-4" : "p-6 space-y-6"}>
           {/* Category Selection */}
-          <div className={theme === 'retro' ? "bg-[#fff3b0] dark:bg-[#ffd700]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm" : "space-y-2"}>
             <div className="flex items-center justify-between">
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Category</label>
+              <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Category</label>
               {userData.categories.length === 0 && (
                 <Button
                   type="button"
@@ -1933,28 +1963,59 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   updateTask(editingTask.id, { categoryId: newCategory });
                 }
               }}>
-                <SelectTrigger className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md bg-white dark:bg-gray-900 font-bold focus:shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:focus:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
+                <SelectTrigger className={theme === 'retro' ? "border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}>
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no-category">
+                <SelectContent 
+                  align="start"
+                  className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.2)] bg-white dark:bg-gray-900 p-2" : ""}
+                >
+                  <SelectItem value="no-category" className={theme === 'retro' ? "rounded-lg hover:bg-accent/50 font-bold cursor-pointer mb-1" : ""}>
                     <div className="flex items-center gap-2">
                       <span>📝</span>
                       <span>No Category</span>
                     </div>
                   </SelectItem>
-                  {userData.categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        <div 
-                          className="w-2 h-2 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <span>{category.name}</span>
+                  {userData.categories.map((category) => {
+                    const taskCount = getCategoryTaskCount(category.id);
+                    return (
+                      <div key={category.id} className="flex items-center gap-1 mb-1 group">
+                        <SelectItem 
+                          value={category.id}
+                          className={theme === 'retro' ? "flex-1 rounded-lg hover:bg-accent/50 font-bold cursor-pointer" : "flex-1"}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{category.icon}</span>
+                            <div 
+                              className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-2 h-2 rounded-full flex-shrink-0"}
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span>{category.name}</span>
+                            {taskCount > 0 && (
+                              <span className={theme === 'retro' ? "ml-auto bg-black dark:bg-white text-white dark:text-black px-2 py-0.5 rounded-md text-xs border border-black dark:border-white font-bold" : "ml-auto bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs"}>
+                                {taskCount}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDeletingCategory({ id: category.id, name: category.name, taskCount });
+                          }}
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 border-2 border-transparent hover:border-red-300 dark:hover:border-red-700 rounded-md transition-colors"
+                              : "h-8 w-8 p-0 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                          }
+                          type="button"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    </SelectItem>
-                  ))}
+                    );
+                  })}
                 </SelectContent>
               </Select>
             ) : (
@@ -1965,8 +2026,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Title Input */}
-          <div className={theme === 'retro' ? "bg-[#d4f1ff] dark:bg-[#00d4ff]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Title</label>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Title</label>
             <Input
               ref={titleInputRef}
               placeholder="Enter task title..."
@@ -1983,15 +2044,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 }
                 autoSaveTaskRef.current();
               }}
-              className={theme === 'retro' ? "border-2 border-black dark:border-black rounded-lg bg-white dark:bg-gray-800 font-bold focus:shadow-[3px_3px_0_0_rgba(0,0,0,0.3)] text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
+              className={theme === 'retro' ? "border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-base h-11" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base"}
               autoFocus
             />
           </div>
 
           {/* Description */}
-          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Description</label>
-            <div className={theme === 'retro' ? "border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)]" : ""}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3" : "space-y-2"}>
+            <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Description</label>
+            <div className={theme === 'retro' ? "border border-gray-300 dark:border-gray-600 rounded-md" : ""}>
               <RichTextEditor
                 content={editDescription}
                 onChange={(content) => {
@@ -2005,9 +2066,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Due Date & Time */}
-          <div className={theme === 'retro' ? "bg-[#96f2d7] dark:bg-[#00e5a0]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3"}>
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3" : "space-y-3"}>
             <div className="flex items-center justify-between">
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-semibold text-gray-900"}>Due Date</label>
+              <label className={theme === 'retro' ? "text-sm font-semibold text-gray-700 dark:text-gray-300" : "text-sm font-semibold text-gray-900"}>Due Date</label>
               {editDueDate && (
                 <Button
                   type="button"
@@ -2038,10 +2099,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 }}
                 className={
                   theme === 'retro'
-                    ? `h-9 text-xs font-black rounded-lg ${
+                    ? `h-9 text-xs font-semibold rounded-md ${
                         editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                          ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]'
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-blue-600 dark:bg-blue-500 text-white border border-blue-600 dark:border-blue-500'
+                          : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
                       }`
                     : "h-8 text-xs"
                 }
@@ -2059,7 +2120,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(tomorrow);
                   scheduleAutoSave();
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-semibold rounded-md ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-blue-600 dark:bg-blue-500 text-white border border-blue-600 dark:border-blue-500' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 Tomorrow
               </Button>
@@ -2074,7 +2135,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(threeDays);
                   scheduleAutoSave();
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-semibold rounded-md ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 3), 'yyyy-MM-dd') ? 'bg-blue-600 dark:bg-blue-500 text-white border border-blue-600 dark:border-blue-500' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 3 Days
               </Button>
@@ -2089,7 +2150,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setEditDueDate(nextWeek);
                   scheduleAutoSave();
                 }}
-                className={theme === 'retro' ? `h-9 text-xs font-black rounded-lg ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.25)]' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white hover:bg-gray-100 dark:hover:bg-gray-700'}` : "h-8 text-xs"}
+                className={theme === 'retro' ? `h-9 text-xs font-semibold rounded-md ${editDueDate && format(editDueDate, 'yyyy-MM-dd') === format(addDays(new Date(), 7), 'yyyy-MM-dd') ? 'bg-blue-600 dark:bg-blue-500 text-white border border-blue-600 dark:border-blue-500' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}` : "h-8 text-xs"}
               >
                 Next Week
               </Button>
@@ -2111,15 +2172,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           </div>
 
           {/* Estimated Pomodoros */}
-          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
+          <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-700 rounded-xl dark:rounded-lg p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm space-y-3" : "space-y-3 pt-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-300 flex items-center gap-2" : "text-sm font-semibold text-gray-900"}>
               {theme === 'retro' && <Timer className="w-4 h-4" />}
               Estimated Pomodoros
             </label>
             <div className="space-y-3">
               <div className="flex items-center gap-4">
                 {theme === 'retro' ? (
-                  <div className="w-10 h-10 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+                  <div className="w-10 h-10 bg-white dark:bg-gray-800 border-2 border-black dark:border-gray-600 rounded-lg flex items-center justify-center text-xl shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-sm">
                     🍅
                   </div>
                 ) : (
@@ -2149,11 +2210,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     className="w-full"
                   />
                 </div>
-                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black text-2xl text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
+                <span className={theme === 'retro' ? "min-w-[3rem] text-center font-black dark:font-bold text-2xl dark:text-xl text-gray-900 dark:text-blue-400 bg-white dark:bg-blue-900/30 border-2 dark:border-0 border-black rounded-lg px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:shadow-none" : "min-w-[3rem] text-center font-semibold text-blue-600"}>
                   {editEstimatedPomodoros}
                 </span>
               </div>
-              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-300 font-bold flex items-center gap-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
+              <div className={theme === 'retro' ? "text-xs text-gray-700 dark:text-gray-400 font-bold dark:font-normal flex items-center gap-2 bg-white dark:bg-gray-900 border-2 dark:border-0 border-black rounded-lg dark:rounded-md px-3 py-2" : "text-xs text-gray-500 flex items-center gap-1"}>
                 <Clock className="w-3 h-3" />
                 Approximately {editEstimatedPomodoros * 30} minutes of focused work
               </div>
@@ -2162,7 +2223,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
           {/* Workspace URLs */}
           <div className={theme === 'retro' ? "bg-[#96f2d7] border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-3 pt-2 border-t border-gray-100"}>
-            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
+            <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-gray-100 dark:text-white flex items-center gap-2" : "text-sm font-semibold text-gray-900 flex items-center gap-2"}>
               {theme === 'retro' ? (
                 <>
                   <div className="w-5 h-5 bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded flex items-center justify-center">
@@ -2297,15 +2358,15 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
       <div 
         ref={viewPanelRef}
         className={`
-          fixed top-0 right-0 h-full w-[576px] bg-card border-l border-border 
-          transform transition-transform duration-300 ease-in-out z-50
+          fixed top-0 right-0 h-full w-[480px] bg-card border-l border-border 
+          transform transition-transform duration-300 ease-in-out z-40
           ${isViewPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Panel Header */}
-        <div className={theme === 'retro' ? "bg-[#d4f1ff] border-b-2 border-black p-6" : "bg-card border-b border-border p-6"}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className={theme === 'retro' ? "text-xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>{theme === 'retro' && <span className="text-2xl">📋</span>}Task Details</h2>
+        <div className={theme === 'retro' ? "bg-[#FFE164] border-b-2 border-black dark:border-gray-600 p-6 pb-4 flex-shrink-0" : "bg-card border-b border-border p-6 pb-0 flex-shrink-0"}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={theme === 'retro' ? "text-2xl font-black text-gray-900 flex items-center gap-2" : "text-xl font-semibold text-foreground"}>{theme === 'retro' && <span className="text-2xl">📋</span>}Task Details</h2>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -2313,11 +2374,16 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 setIsViewPanelOpen(false);
                 setViewingTask(null);
               }}
-              className={theme === 'retro' ? "text-foreground hover:bg-accent/50 rounded-md" : "text-gray-500 hover:text-gray-700"}
+              className={theme === 'retro' ? "text-gray-900 hover:bg-black/10 rounded-md h-8 w-8" : "text-gray-500 hover:text-gray-700"}
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
+          {theme === 'retro' && (
+            <div className="text-xs text-gray-900 font-bold bg-[#FFE164] border-2 border-black dark:border-gray-700 rounded-lg px-3 py-1.5 inline-block shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] mb-4">
+              View task details and perform actions
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
@@ -2325,7 +2391,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               onClick={() => viewingTask && handleEditTask(viewingTask)}
               variant="outline"
               size="sm"
-              className={theme === 'retro' ? "font-bold border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] hover:translate-x-[-1px] hover:translate-y-[-1px]" : "font-medium"}
+              className={theme === 'retro' ? "font-bold border-2 border-black dark:border-gray-300 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]" : "font-medium"}
             >
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -2339,8 +2405,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 theme === 'retro'
                   ? `font-bold border-2 rounded-md ${
                       pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 cursor-not-allowed'
-                        : 'border-black dark:border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] hover:translate-x-[-1px] hover:translate-y-[-1px]'
+                        ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-black dark:border-gray-300 shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]'
                     }`
                   : `font-medium ${
                       pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
@@ -2371,7 +2437,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   setViewingTask(null);
                 }
               }}
-              className="font-medium text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+              className={theme === 'retro' ? "font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 hover:border-red-400 dark:hover:border-red-600 rounded-md shadow-[2px_2px_0_0_rgba(220,38,38,0.3)] dark:shadow-[2px_2px_0_0_rgba(220,38,38,0.5)]" : "font-medium text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"}
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
@@ -2390,11 +2456,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 </span>
                 <div className="flex-1">
                   <h1 className={`text-2xl font-semibold leading-tight ${
-                    viewingTask.completed ? 'line-through text-gray-500' : 'text-gray-900'
+                    viewingTask.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'
                   }`}>
                     {viewingTask.title}
                   </h1>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
                     <span className="font-medium">
                       {userData.categories.find(cat => cat.id === viewingTask.categoryId)?.name || 'Unknown'}
                     </span>
@@ -2417,9 +2483,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             {/* Description Section */}
             {viewingTask.description && (
               <div className="px-6 pb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div 
-                    className="prose prose-sm max-w-none text-gray-700"
+                    className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert"
                     dangerouslySetInnerHTML={{ 
                       __html: viewingTask.description
                         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
@@ -2434,16 +2500,16 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
             {/* Details Section */}
             <div className="px-6 pb-6">
                               <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Task Details</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Task Details</h3>
                 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Status */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Status</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</label>
                     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                       viewingTask.completed 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-gray-100 text-gray-600'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     }`}>
                       {viewingTask.completed ? (
                         <>
@@ -2461,8 +2527,8 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                   {/* Created Date */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Created</label>
-                    <div className="text-sm text-gray-700">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Created</label>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
                       {new Date(viewingTask.created).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -2473,24 +2539,24 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 </div>
 
                 {/* Pomodoro Progress - Full Width */}
-                <div className="space-y-1 pt-2 border-t border-gray-100">
-                  <label className="text-xs font-medium text-gray-500">Pomodoro Progress</label>
+                <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Pomodoro Progress</label>
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🍅</span>
-                      <span className="font-medium text-gray-700">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
                         {viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0} / {viewingTask.estimatedPomodoros || 3}
                       </span>
                     </div>
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div 
-                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-red-500 dark:bg-red-600 h-2 rounded-full transition-all duration-300"
                         style={{
                           width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
                         }}
                       />
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
                     </span>
                   </div>
@@ -2498,10 +2564,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 {/* Due Date - Full Width if Present */}
                 {viewingTask.dueDate && (
-                  <div className="space-y-1 pt-2 border-t border-gray-100">
-                    <label className="text-xs font-medium text-gray-500">Due Date</label>
-                                         <div className="flex items-center gap-2 text-sm text-gray-700">
-                       <Calendar className="w-4 h-4 text-gray-400" />
+                  <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Due Date</label>
+                                         <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                       <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                        <span className="font-medium">
                          {formatSmartDate(new Date(viewingTask.dueDate))}
                        </span>
@@ -2511,16 +2577,16 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
                 {/* Workspace URLs - Full Width if Present */}
                 {viewingTask.workspaceUrls && viewingTask.workspaceUrls.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-gray-100">
-                    <label className="text-xs font-medium text-gray-500">
+                  <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
                       Workspace URLs ({viewingTask.workspaceUrls.length})
                     </label>
                     <div className="space-y-1">
                       {viewingTask.workspaceUrls.map((url, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs">
-                          <span className="text-blue-500">🌐</span>
+                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+                          <span className="text-blue-500 dark:text-blue-400">🌐</span>
                           <span 
-                            className="flex-1 text-gray-700 truncate cursor-pointer hover:text-blue-600" 
+                            className="flex-1 text-gray-700 dark:text-gray-300 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400" 
                             title={url}
                             onClick={() => {
                               try {
@@ -2559,7 +2625,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
           <div className="space-y-4 pt-4">
             {/* Category Name */}
             <div className={theme === 'retro' ? "bg-[#fff3b0] dark:bg-[#ffd700]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]" : "space-y-2"}>
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Category Name</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-gray-100 dark:text-white" : "text-sm font-medium"}>Category Name</label>
               <Input
                 placeholder="e.g., Work, Personal, Fitness"
                 value={newCategoryName}
@@ -2571,7 +2637,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
             {/* Icon Selection */}
             <div className={theme === 'retro' ? "bg-[#d4f1ff] dark:bg-[#00d4ff]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Icon</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-gray-100 dark:text-white" : "text-sm font-medium"}>Icon</label>
               <div className="grid grid-cols-8 gap-2">
                 {categoryIcons.map((icon: string) => (
                   <button
@@ -2599,7 +2665,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
             {/* Color Selection */}
             <div className={theme === 'retro' ? "bg-[#ffd4f4] dark:bg-[#ff69b4]/20 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] space-y-3" : "space-y-2"}>
-              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-white" : "text-sm font-medium"}>Color</label>
+              <label className={theme === 'retro' ? "text-sm font-black text-gray-900 dark:text-gray-100 dark:text-white" : "text-sm font-medium"}>Color</label>
               <div className="grid grid-cols-8 gap-2">
                 {categoryColors.map((color: string) => (
                   <button
@@ -2640,7 +2706,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 disabled={!newCategoryName.trim()}
                 className={
                   theme === 'retro'
-                    ? "flex-1 bg-[#96f2d7] hover:bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] hover:translate-y-[-1px] transition-all font-black h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+                    ? "flex-1 bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.2)] dark:hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.6)] hover:translate-y-[-1px] transition-all font-black h-11 disabled:opacity-50 disabled:cursor-not-allowed"
                     : "flex-1"
                 }
               >
@@ -2664,6 +2730,98 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <Dialog open={!!deletingCategory} onOpenChange={() => setDeletingCategory(null)}>
+        <DialogContent className={theme === 'retro' ? "sm:max-w-[450px] bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-[8px_8px_0_0_rgba(0,0,0,0.3)] dark:shadow-[8px_8px_0_0_rgba(255,255,255,0.2)]" : "sm:max-w-[450px]"}>
+          <DialogHeader>
+            <DialogTitle className={theme === 'retro' ? "text-2xl font-black text-red-600 dark:text-red-400 flex items-center gap-2" : "text-xl font-semibold text-red-600 dark:text-red-400"}>
+              {theme === 'retro' && <Trash2 className="w-6 h-6" />}
+              Delete Category?
+            </DialogTitle>
+          </DialogHeader>
+          
+          {deletingCategory && (
+            <div className="space-y-4 pt-4">
+              <div className={theme === 'retro' ? "bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4" : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4"}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="text-3xl">{userData.categories.find(c => c.id === deletingCategory.id)?.icon || '📁'}</div>
+                  <div>
+                    <div className={theme === 'retro' ? "text-lg font-black text-gray-900 dark:text-gray-100" : "text-lg font-semibold text-gray-900 dark:text-gray-100"}>
+                      {deletingCategory.name}
+                    </div>
+                    <div className={theme === 'retro' ? "text-sm text-gray-600 dark:text-gray-400 font-bold" : "text-sm text-gray-600 dark:text-gray-400"}>
+                      Category
+                    </div>
+                  </div>
+                </div>
+                
+                {deletingCategory.taskCount > 0 ? (
+                  <div className={theme === 'retro' ? "space-y-2 pt-3 border-t-2 border-red-200 dark:border-red-800" : "space-y-2 pt-3 border-t border-red-200 dark:border-red-800"}>
+                    <p className={theme === 'retro' ? "text-sm font-black text-red-800 dark:text-red-300" : "text-sm font-semibold text-red-800 dark:text-red-300"}>
+                      ⚠️ Warning: This action cannot be undone
+                    </p>
+                    <p className={theme === 'retro' ? "text-sm text-gray-700 dark:text-gray-300 font-bold" : "text-sm text-gray-700 dark:text-gray-300"}>
+                      Deleting this category will also delete:
+                    </p>
+                    <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 border-2 border-red-300 dark:border-red-700 rounded-lg p-3" : "bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg p-3"}>
+                      <div className={theme === 'retro' ? "text-2xl font-black text-red-600 dark:text-red-400" : "text-2xl font-bold text-red-600 dark:text-red-400"}>
+                        {deletingCategory.taskCount}
+                      </div>
+                      <div className={theme === 'retro' ? "text-sm text-gray-600 dark:text-gray-400 font-bold" : "text-sm text-gray-600 dark:text-gray-400"}>
+                        Task{deletingCategory.taskCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={theme === 'retro' ? "text-sm text-gray-600 dark:text-gray-400 font-bold pt-2" : "text-sm text-gray-600 dark:text-gray-400 pt-2"}>
+                    This category has no tasks and can be safely deleted.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeletingCategory(null)}
+                  className={
+                    theme === 'retro'
+                      ? "flex-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-white rounded-xl font-bold h-11 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      : "flex-1"
+                  }
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    deleteCategory(deletingCategory.id);
+                    // If the currently editing task has this category, reset it
+                    if (editCategory === deletingCategory.id) {
+                      setEditCategory(undefined);
+                      if (editingTask) {
+                        updateTask(editingTask.id, { categoryId: undefined });
+                      }
+                    }
+                    // If the currently creating task has this category, reset it
+                    if (taskCategory === deletingCategory.id) {
+                      setTaskCategory(undefined);
+                    }
+                    setDeletingCategory(null);
+                  }}
+                  className={
+                    theme === 'retro'
+                      ? "flex-1 bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-700 text-white border-2 border-red-600 dark:border-red-600 rounded-xl shadow-[4px_4px_0_0_rgba(220,38,38,0.3)] dark:shadow-[4px_4px_0_0_rgba(220,38,38,0.5)] hover:shadow-[5px_5px_0_0_rgba(220,38,38,0.4)] dark:hover:shadow-[5px_5px_0_0_rgba(220,38,38,0.6)] hover:translate-y-[-1px] transition-all font-black h-11"
+                      : "flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  }
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Category
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
@@ -2713,11 +2871,19 @@ const DragOverlayTaskItem: React.FC<{ task: Task; theme?: 'clean' | 'retro' }> =
   const completedSessions = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   
   return (
-            <div className="flex items-center gap-3 py-2 px-3 bg-card shadow-lg rounded-lg border border-border cursor-grabbing transform">
+    <div className={
+      theme === 'retro'
+        ? "flex items-center gap-3 p-3 bg-white dark:bg-gray-800 shadow-lg rounded-xl border-2 border-black dark:border-gray-500 cursor-grabbing transform shadow-[6px_6px_0_0_rgba(0,0,0,0.2)] dark:shadow-[6px_6px_0_0_rgba(0,0,0,0.6)]"
+        : "flex items-center gap-3 py-2 px-3 bg-card shadow-lg rounded-lg border border-border cursor-grabbing transform"
+    }>
       <div className="flex-shrink-0 p-1">
-        <GripVertical className="w-4 h-4 text-gray-400" />
+        <GripVertical className={theme === 'retro' ? "w-4 h-4 text-gray-600 dark:text-gray-400" : "w-4 h-4 text-gray-400"} />
       </div>
-      <div className="flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300"></div>
+      <div className={
+        theme === 'retro'
+          ? "flex-shrink-0 w-5 h-5 rounded-md border-2 border-black dark:border-gray-300"
+          : "flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300"
+      }></div>
       
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <div className="flex items-center gap-1">
@@ -2725,18 +2891,18 @@ const DragOverlayTaskItem: React.FC<{ task: Task; theme?: 'clean' | 'retro' }> =
             {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
           </span>
           <div 
-            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
+            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-gray-400" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
             style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
           />
         </div>
-        <span className="text-sm font-medium text-foreground">
+        <span className={theme === 'retro' ? "text-sm font-bold text-foreground dark:text-gray-100" : "text-sm font-medium text-foreground"}>
           {task.title}
         </span>
       </div>
 
       <div className="flex items-center gap-1">
         {task.dueDate && (
-          <Clock className="w-3 h-3 text-gray-400" />
+          <Clock className={theme === 'retro' ? "w-3 h-3 text-gray-500 dark:text-gray-400" : "w-3 h-3 text-gray-400"} />
         )}
         {(completedSessions > 0 || task.estimatedPomodoros) && (
           <span className="text-xs text-muted-foreground">🍅{completedSessions}/{task.estimatedPomodoros || 3}</span>
@@ -2902,19 +3068,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   // Minimal todo item - just title and checkbox
-  // Get colors based on category
-  const category = userData.categories.find(cat => cat.id === task.categoryId);
-  const getRetroCardColor = () => {
-    if (!category) return '#ffe164'; // default yellow
-    const colors = ['#ffe164', '#d4f1ff', '#ffd4f4', '#96f2d7', '#fff3b0'];
-    return colors[userData.categories.indexOf(category) % colors.length];
-  };
-  
-  const getDarkRetroCardColor = () => {
-    if (!category) return '#ffd700'; // default gold
-    const darkColors = ['#ffd700', '#00d4ff', '#ff69b4', '#00e5a0', '#ffd700'];
-    return darkColors[userData.categories.indexOf(category) % darkColors.length];
-  };
   
   return (
     <div 
@@ -2922,8 +3075,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
         theme === 'retro'
           ? `group flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer border-2 ${
               isOverdue
-                ? 'bg-[#ffcccb] border-black hover:border-black hover:translate-y-[-2px] shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)]'
-                : 'bg-white border-gray-300 hover:border-black hover:translate-y-[-2px] shadow-[4px_4px_0_0_rgba(0,0,0,0.08)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.12)]'
+                ? 'bg-[#ffcccb] dark:bg-red-800/80 border-black dark:border-gray-500 hover:border-black dark:hover:border-gray-400 hover:translate-y-[-2px] shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] dark:shadow-[6px_6px_0_0_rgba(0,0,0,0.6)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] dark:hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.8)]'
+                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-gray-400 hover:translate-y-[-2px] shadow-[4px_4px_0_0_rgba(0,0,0,0.08)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.7)]'
             }`
           : `group flex items-center gap-3 py-2 px-3 rounded-lg transition-colors cursor-pointer border ${
               isOverdue 
@@ -2941,10 +3094,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
         }}
         className={
           theme === 'retro'
-            ? `flex-shrink-0 w-5 h-5 rounded-md border-2 border-black flex items-center justify-center transition-all duration-200 shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${
+            ? `flex-shrink-0 w-5 h-5 rounded-md border-2 border-black dark:border-gray-300 flex items-center justify-center transition-all duration-200 shadow-[2px_2px_0_0_rgba(0,0,0,1)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.6)] ${
                 task.completed 
-                  ? 'bg-black' 
-                  : 'bg-white dark:bg-gray-800'
+                  ? 'bg-black dark:bg-gray-100' 
+                  : 'bg-white dark:bg-gray-700'
               }`
             : `flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
                 task.completed 
@@ -2955,7 +3108,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       >
         {task.completed && (
           theme === 'retro' ? (
-            <div className="w-2 h-2 rounded-sm bg-white"></div>
+            <div className="w-2 h-2 rounded-sm bg-white dark:bg-gray-900"></div>
           ) : (
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -2970,7 +3123,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {userData.categories.find(cat => cat.id === task.categoryId)?.icon || '📝'}
           </span>
           <div 
-            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
+            className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-gray-400" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
             style={{ backgroundColor: userData.categories.find(cat => cat.id === task.categoryId)?.color || '#6B7280' }}
           />
         </div>
@@ -2979,7 +3132,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             ? `text-sm font-bold cursor-pointer ${
                 task.completed 
                   ? 'line-through text-muted-foreground' 
-                  : 'text-foreground'
+                  : 'text-foreground dark:text-gray-100'
               }`
             : `text-sm font-medium cursor-pointer ${
                 task.completed 
@@ -3000,7 +3153,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {isOverdue && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 text-orange-500 cursor-help">
+                <div className="flex items-center gap-1 text-orange-500 dark:text-orange-400 cursor-help">
                   <Clock className="w-3 h-3 fill-current" />
                 </div>
               </TooltipTrigger>
@@ -3012,7 +3165,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {task.dueDate && !isOverdue && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Clock className="w-3 h-3 text-gray-400 cursor-help" />
+                <Clock className="w-3 h-3 text-gray-400 dark:text-gray-500 cursor-help" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{getSmartDateText(new Date(task.dueDate))}</p>

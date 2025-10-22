@@ -191,13 +191,16 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange, theme = 'clean' }) 
               <div className="flex items-center gap-4">
                 {/* Tags */}
                 {tags.length > 0 && (
-                  <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                    <span className="text-xs text-gray-400 font-medium">TAGS:</span>
+                  <div className={theme === 'retro' ? "flex items-center gap-2 border-l border-gray-200 dark:border-gray-600 pl-4" : "flex items-center gap-2 border-l border-gray-200 pl-4"}>
+                    <span className={theme === 'retro' ? "text-xs text-gray-400 dark:text-gray-500 font-medium" : "text-xs text-gray-400 font-medium"}>TAGS:</span>
                     {tags.map((tag) => (
                       <button
                         key={tag}
                         onClick={() => scrollToTag(tag)}
-                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        className={theme === 'retro' 
+                          ? "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                          : "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        }
                         title={`Scroll to @${tag}`}
                       >
                         @{tag}
@@ -208,8 +211,8 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange, theme = 'clean' }) 
                 
                 {/* Save Status */}
                 {isTyping && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                  <div className={theme === 'retro' ? "flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400" : "flex items-center gap-2 text-sm text-gray-500"}>
+                    <div className={theme === 'retro' ? "w-2 h-2 bg-orange-400 dark:bg-orange-500 rounded-full animate-pulse" : "w-2 h-2 bg-orange-400 rounded-full animate-pulse"}></div>
                     Saving...
                   </div>
                 )}
@@ -221,11 +224,11 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange, theme = 'clean' }) 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-background">
           {/* Main Content Area */}
-          <div className="bg-white rounded-lg shadow-sm border">
+          <div className={theme === 'retro' ? "bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-600" : "bg-white rounded-lg shadow-sm border"}>
             {/* Notes Header */}
-            <div className="border-b p-4">
+            <div className={theme === 'retro' ? "border-b dark:border-gray-600 p-4" : "border-b p-4"}>
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className={theme === 'retro' ? "text-xl font-semibold text-gray-900 dark:text-gray-100" : "text-xl font-semibold text-gray-900"}>
                   {selectedView === 'all' 
                     ? 'All Notes' 
                     : categories.find(cat => cat.id === selectedView)?.name + ' Notes'
@@ -271,14 +274,17 @@ const NotesPage: React.FC<NotesPageProps> = ({ onPageChange, theme = 'clean' }) 
                 placeholder={`Start writing your ${
                   selectedView === 'all' ? 'notes' : categories.find(cat => cat.id === selectedView)?.name.toLowerCase() + ' notes'
                 }...`}
-                className="w-full h-[600px] p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 leading-relaxed"
+                className={theme === 'retro' 
+                  ? "w-full h-[600px] p-4 border border-gray-200 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-900 dark:text-gray-100 dark:bg-gray-700 leading-relaxed"
+                  : "w-full h-[600px] p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 leading-relaxed"
+                }
                 style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
               />
             </div>
 
             {/* Footer Info */}
-            <div className="border-t p-4 bg-gray-50">
-              <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className={theme === 'retro' ? "border-t dark:border-gray-600 p-4 bg-gray-50 dark:bg-gray-900" : "border-t p-4 bg-gray-50"}>
+              <div className={theme === 'retro' ? "flex items-center justify-between text-sm text-gray-500 dark:text-gray-400" : "flex items-center justify-between text-sm text-gray-500"}>
                 <span>
                   {noteContent.length} characters • {noteContent.split('\n').length} lines
                 </span>

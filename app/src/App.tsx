@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar"
 import React from "react"
 import { TodoProvider, useTodo } from "@/contexts/TodoContext"
-import { DarkModeProvider } from "@/contexts/DarkModeContext"
+import { DarkModeProvider, useDarkMode } from "@/contexts/DarkModeContext"
 import CategorySidebar from "@/components/CategorySidebar"
 import TasksPage from "@/components/TasksPage"
 import SettingsPage from "@/components/SettingsPage"
@@ -34,6 +34,7 @@ const ONBOARDING_FORCE_SHOW_KEY = 'tabbie_onboarding_force_show';
 
 function AppContent() {
   const { userData } = useTodo();
+  const { setThemeMode } = useDarkMode();
   const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
   const [showOnboarding, setShowOnboarding] = React.useState(false);
@@ -70,14 +71,20 @@ function AppContent() {
     }
   }, [userData.tasks.length, userData.completedTasks.length]);
 
-  const handleOnboardingComplete = (selectedDesign: 'clean' | 'retro') => {
+  const handleOnboardingComplete = (selectedDesign: 'clean' | 'retro', themeMode: 'light' | 'dark' | 'auto') => {
     // Save onboarding completion flag
     localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
     
-    // Save selected theme to settings using the updateSettings utility
-    updateSettings({ theme: selectedDesign });
+    // Save selected theme and theme mode to settings using the updateSettings utility
+    updateSettings({ 
+      theme: selectedDesign,
+      themeMode: themeMode
+    });
     
-    // Reload the page to apply the theme (this ensures TodoContext reloads with the new settings)
+    // Apply theme mode immediately
+    setThemeMode(themeMode);
+    
+    // Reload the page to apply the design theme (this ensures TodoContext reloads with the new settings)
     window.location.reload();
   };
 

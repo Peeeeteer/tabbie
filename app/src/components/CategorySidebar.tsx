@@ -188,7 +188,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
           <div className="px-2 pt-3 pb-2">
             <Button
               onClick={() => onPageChange('dashboard')}
-              className="w-full h-12 bg-[#ffe164] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] font-black hover:translate-y-[-2px] transition-all text-base"
+              className="w-full h-12 bg-[#ffe164] dark:bg-yellow-900/30 text-gray-900 dark:text-gray-100 hover:bg-[#fff9c4] dark:hover:bg-yellow-900/40 hover:text-gray-900 dark:hover:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.15)] dark:hover:shadow-[8px_8px_0_0_rgba(0,0,0,0.4)] font-black hover:translate-y-[-2px] transition-all text-base"
             >
               Dashboard
             </Button>
@@ -221,9 +221,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'tasks'}
                 className={
                   theme === 'retro' && currentPage === 'tasks'
-                    ? "h-12 px-4 bg-[#d4f1ff] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    ? "h-12 px-4 !bg-[#d4f1ff] dark:!bg-blue-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
                     : theme === 'retro'
-                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#d4f1ff]/30 hover:border-black rounded-xl font-bold transition-all"
+                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#d4f1ff]/60 dark:hover:bg-blue-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
                     : ""
                 }
               >
@@ -247,9 +247,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'pomodoro'}
                 className={
                   theme === 'retro' && currentPage === 'pomodoro'
-                    ? "h-12 px-4 bg-[#ffd4f4] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
+                    ? "h-12 px-4 !bg-[#ffd4f4] dark:!bg-pink-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
                     : theme === 'retro'
-                    ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all"
+                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#ffd4f4]/60 dark:hover:bg-pink-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
                     : ""
                 }
               >
@@ -272,8 +272,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'notes'}
                 className={
                   theme === 'retro' && currentPage === 'notes'
-                    ? "h-12 px-4 bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#96f2d7] dark:!bg-teal-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#96f2d7]/60 dark:hover:bg-teal-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <BookOpen className="w-4 h-4" />
@@ -287,8 +287,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'reminders'}
                 className={
                   theme === 'retro' && currentPage === 'reminders'
-                    ? "h-12 px-4 bg-[#fff3b0] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#fff3b0] dark:!bg-yellow-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#fff3b0]/60 dark:hover:bg-yellow-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <Bell className="w-4 h-4" />
@@ -302,8 +302,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'events'}
                 className={
                   theme === 'retro' && currentPage === 'events'
-                    ? "bg-[#d4f1ff]/20 dark:bg-[#00d4ff]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#ffd4a3] dark:!bg-orange-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#ffd4a3]/60 dark:hover:bg-orange-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <Zap className="w-4 h-4" />
@@ -317,8 +317,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'notifications'}
                 className={
                   theme === 'retro' && currentPage === 'notifications'
-                    ? "h-12 px-4 bg-[#ffd4f4] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#e9d5ff] dark:!bg-purple-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#e9d5ff]/60 dark:hover:bg-purple-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <Bell className="w-4 h-4" />
@@ -332,8 +332,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'activity'}
                 className={
                   theme === 'retro' && currentPage === 'activity'
-                    ? "h-12 px-4 bg-[#96f2d7] text-gray-900 border-2 border-black rounded-xl shadow-[6px_6px_0_0_rgba(0,0,0,0.12)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#fed7aa] dark:!bg-orange-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#fed7aa]/60 dark:hover:bg-orange-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <BarChart3 className="w-4 h-4" />
@@ -347,8 +347,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 isActive={currentPage === 'tabbie'}
                 className={
                   theme === 'retro' && currentPage === 'tabbie'
-                    ? "bg-[#ffe164]/20 dark:bg-[#ffd700]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-accent/30 hover:border-black rounded-xl font-bold transition-all" : ""
+                    ? "h-12 px-4 !bg-[#ffe164] dark:!bg-yellow-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#ffe164]/60 dark:hover:bg-yellow-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
                 }
               >
                 <Bot className="w-4 h-4" />
@@ -359,270 +359,23 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
         </SidebarGroup>
 
 
-        {/* Categories */}
-          <SidebarGroup className={theme === 'retro' ? "mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-700" : ""}>
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCategoriesCollapsed(!categoriesCollapsed)}
-                  className="flex items-center gap-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded p-1 transition-colors"
-                >
-                  {categoriesCollapsed ? (
-                    <ChevronRight className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  )}
-                  <SidebarGroupLabel className={theme === 'retro' ? "cursor-pointer text-xs font-black uppercase tracking-wider text-foreground" : "cursor-pointer"}>Categories</SidebarGroupLabel>
-                </button>
-                {userData.categories.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {userData.categories.length}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-1">
-                {userData.categories.length === 0 ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={resetCategoriesToDefault}
-                    className="h-6 text-xs px-2 hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Quick Start
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsAddingCategory(true)}
-                    className="h-7 w-7 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {!categoriesCollapsed && (
-              <SidebarMenu>
-                {/* Enhanced Add Category Section */}
-                {isAddingCategory && (
-                  <SidebarMenuItem>
-                    <div className="px-3 py-3 space-y-3 bg-sidebar-accent/30 rounded-lg mx-2 border border-sidebar-border">
-                      {/* Category Name Input */}
-                      <div className="space-y-1">
-                        <Input
-                          placeholder="Category name (e.g., Work, Personal)"
-                          value={newCategoryName}
-                          onChange={(e) => setNewCategoryName(e.target.value)}
-                          onKeyDown={handleKeyPress}
-                          className="h-8 text-sm border-sidebar-border focus:border-blue-500"
-                          autoFocus
-                        />
-                      </div>
+        {/* Categories - REMOVED, categories now managed in Tasks page */}
 
-                      {/* Icon Selection - Always visible */}
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground">Icon</div>
-                        <div className="grid grid-cols-6 gap-1">
-                          {categoryIcons.slice(0, showAdvancedOptions ? categoryIcons.length : 6).map(icon => (
-                            <button
-                              key={icon}
-                              onClick={() => setNewCategoryIcon(icon)}
-                              className={`w-7 h-7 text-sm rounded border transition-colors ${
-                                newCategoryIcon === icon
-                                  ? 'border-blue-500 bg-blue-50 shadow-sm'
-                                  : 'border-sidebar-border hover:border-gray-300 hover:bg-sidebar-accent'
-                              }`}
-                            >
-                              {icon}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Progressive Disclosure for Advanced Options */}
-                      {showAdvancedOptions && (
-                        <div className="space-y-2">
-                          <div className="text-xs font-medium text-muted-foreground">Color</div>
-                          <div className="grid grid-cols-8 gap-1">
-                            {categoryColors.map(color => (
-                              <button
-                                key={color}
-                                onClick={() => setNewCategoryColor(color)}
-                                className={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
-                                  newCategoryColor === color
-                                    ? 'border-gray-800 shadow-sm'
-                                    : 'border-gray-200'
-                                }`}
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            onClick={handleAddCategory}
-                            disabled={!newCategoryName.trim()}
-                            className="h-7 text-xs px-3 bg-blue-600 hover:bg-blue-700"
-                          >
-                            Create
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => {
-                              setIsAddingCategory(false);
-                              setNewCategoryName('');
-                              setNewCategoryIcon('📝');
-                              setNewCategoryColor('');
-                              setShowAdvancedOptions(false);
-                            }}
-                            className="h-7 text-xs px-2"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                          className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showAdvancedOptions ? 'Less' : 'More'}
-                          <Palette className="w-3 h-3 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  </SidebarMenuItem>
-                )}
-
-                {/* Empty State */}
-                {userData.categories.length === 0 && !isAddingCategory && (
-                  <SidebarMenuItem>
-                    <div className="px-3 py-4 text-center space-y-2 bg-sidebar-accent/20 rounded-lg mx-2 border border-dashed border-sidebar-border">
-                      <div className="text-2xl">📂</div>
-                      <div className="text-xs text-muted-foreground">
-                        <div className="font-medium">No categories yet</div>
-                        <div>Organize your tasks with categories</div>
-                      </div>
-                    </div>
-                  </SidebarMenuItem>
-                )}
-
-                {/* Enhanced Category List */}
-                {userData.categories.map((category) => {
-                  const taskCount = getTaskCount(category.id);
-                  const completedCount = getCompletedCount(category.id);
-                  
-                  return (
-                    <SidebarMenuItem key={category.id}>
-                      <div className="flex items-center group">
-                        <SidebarMenuButton
-                          onClick={() => {
-                            setSelectedCategory(category.id);
-                            onViewChange?.(category.id as any);
-                          }}
-                          isActive={_currentView === category.id}
-                          className={
-                            theme === 'retro' && _currentView === category.id
-                              ? "flex-1 bg-accent/50 text-foreground border-2 border-gray-400 dark:border-gray-600 rounded-md shadow-[1px_1px_0_0_rgba(0,0,0,0.2)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.1)] font-medium"
-                              : theme === 'retro' ? "flex-1 border-2 border-transparent hover:bg-accent/30 hover:border-gray-300 dark:hover:border-gray-700 rounded-md" : "flex-1"
-                          }
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 flex items-center justify-center text-sm">
-                              {category.icon}
-                            </div>
-                            <div 
-                              className={theme === 'retro' ? "w-2 h-2 rounded-sm flex-shrink-0 border border-black dark:border-white" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
-                              style={{ backgroundColor: category.color }}
-                            />
-                          </div>
-                          <span className="flex-1">{category.name}</span>
-                          <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                            {taskCount > 0 && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={
-                                    theme === 'retro'
-                                      ? "bg-foreground text-background px-2 py-0.5 rounded-md border border-foreground font-bold shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.2)] cursor-help"
-                                      : "bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded cursor-help"
-                                  }>{taskCount}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{taskCount} active task{taskCount !== 1 ? 's' : ''}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {completedCount > 0 && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={
-                                    theme === 'retro'
-                                      ? "text-green-600 dark:text-green-400 font-bold cursor-help"
-                                      : "text-green-600 cursor-help"
-                                  }>+{completedCount}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{completedCount} completed in last 2 weeks</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </SidebarMenuButton>
-                        
-                        {/* Simple Delete with Dropdown */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
-                            >
-                              <MoreHorizontal className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (window.confirm(`Delete "${category.name}" category? ${taskCount > 0 ? `This will also delete ${taskCount} tasks.` : ''}`)) {
-                                  deleteCategory(category.id);
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <AlertTriangle className="w-3 h-3 mr-2" />
-                              Delete
-                              {taskCount > 0 && (
-                                <span className="ml-auto text-xs">({taskCount} tasks)</span>
-                              )}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            )}
-          </SidebarGroup>
-
-                {/* Current Pomodoro Session */}
+        {/* Current Pomodoro Session */}
         {(currentTask || pomodoroTimer.currentSession) && (
           <SidebarGroup>
             <SidebarGroupLabel>Current Session</SidebarGroupLabel>
-            <div className="px-3 py-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg mx-2 border border-blue-200 shadow-sm">
+            <div className={
+              theme === 'retro'
+                ? "px-3 py-4 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 rounded-[12px] mx-2 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)]"
+                : "px-3 py-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-800 rounded-lg mx-2 border border-blue-200 dark:border-gray-600 shadow-sm"
+            }>
               <div 
-                className="text-sm font-semibold text-blue-900 mb-3 cursor-pointer hover:text-blue-700 transition-colors flex items-center gap-2"
+                className={
+                  theme === 'retro'
+                    ? "text-sm font-black text-gray-900 dark:text-gray-100 mb-3 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2"
+                    : "text-sm font-semibold text-blue-900 dark:text-gray-100 mb-3 cursor-pointer hover:text-blue-700 dark:hover:text-gray-300 transition-colors flex items-center gap-2"
+                }
                 onClick={() => onPageChange('pomodoro')}
                 title="Click to view full pomodoro timer"
               >
@@ -635,11 +388,15 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               {/* Progress Bar */}
               {pomodoroTimer.currentSession && (
                 <div className="mb-3">
-                  <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
+                  <div className={
+                    theme === 'retro'
+                      ? "w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2 mb-1 border border-black dark:border-gray-600"
+                      : "w-full bg-blue-200 dark:bg-gray-700 rounded-full h-2 mb-1"
+                  }>
                     <div 
                       className={`h-2 rounded-full transition-all duration-300 ${
-                        isWorkOverdue ? 'bg-orange-500' : 
-                        isBreakOverdue ? 'bg-green-500' : 'bg-blue-500'
+                        isWorkOverdue ? 'bg-orange-500 dark:bg-orange-600' : 
+                        isBreakOverdue ? 'bg-green-500 dark:bg-green-600' : 'bg-blue-500 dark:bg-blue-600'
                       }`}
                       style={{ 
                         width: `${Math.max(0, Math.min(100, 
@@ -649,7 +406,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       }}
                     />
                   </div>
-                  <div className="text-xs text-blue-600">
+                  <div className={
+                    theme === 'retro'
+                      ? "text-xs text-gray-700 dark:text-gray-300 font-bold"
+                      : "text-xs text-blue-600 dark:text-gray-300"
+                  }>
                     {Math.round(Math.max(0, Math.min(100, 
                       ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
                       (pomodoroTimer.currentSession.duration * 60)) * 100
@@ -659,15 +420,23 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               )}
               
               <div className="flex items-center justify-between">
-                <div className="text-sm text-blue-700">
+                <div className={
+                  theme === 'retro'
+                    ? "text-sm text-gray-900 dark:text-gray-100"
+                    : "text-sm text-blue-700 dark:text-gray-300"
+                }>
                   <div className={`font-mono font-bold text-lg ${
-                    isWorkOverdue ? 'text-orange-600' : 
-                    isBreakOverdue ? 'text-green-600' : 
-                    'text-blue-800'
+                    isWorkOverdue ? 'text-orange-600 dark:text-orange-400' : 
+                    isBreakOverdue ? 'text-green-600 dark:text-green-400' : 
+                    theme === 'retro' ? 'text-gray-900 dark:text-gray-100' : 'text-blue-800 dark:text-blue-400'
                   }`}>
                     {formatTime(pomodoroTimer.timeLeft)}
                   </div>
-                  <div className="mt-1 text-xs font-medium">
+                  <div className={
+                    theme === 'retro'
+                      ? "mt-1 text-xs font-bold text-gray-700 dark:text-gray-300"
+                      : "mt-1 text-xs font-medium text-blue-700 dark:text-gray-400"
+                  }>
                     {isWorkOverdue ? 'Take break' : 
                      isBreakOverdue ? 'Break over!' :
                      pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
@@ -682,7 +451,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={completeWorkSession}
-                          className="h-8 w-8 p-0 text-orange-600 hover:bg-orange-100"
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 border-2 border-transparent hover:border-orange-300 dark:hover:border-orange-700 rounded-md"
+                              : "h-8 w-8 p-0 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                          }
                         >
                           <Coffee className="w-4 h-4" />
                         </Button>
@@ -698,7 +471,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={skipBreak}
-                          className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 border-2 border-transparent hover:border-green-300 dark:hover:border-green-700 rounded-md"
+                              : "h-8 w-8 p-0 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                          }
                         >
                           <SkipForward className="w-4 h-4" />
                         </Button>
@@ -714,7 +491,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={skipBreak}
-                          className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 border-2 border-transparent hover:border-green-300 dark:hover:border-green-700 rounded-md"
+                              : "h-8 w-8 p-0 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                          }
                         >
                           <SkipForward className="w-4 h-4" />
                         </Button>
@@ -730,7 +511,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={pausePomodoro}
-                          className="h-8 w-8 p-0 text-blue-700 hover:bg-blue-200"
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/30 border-2 border-transparent hover:border-blue-300 dark:hover:border-blue-700 rounded-md"
+                              : "h-8 w-8 p-0 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/30"
+                          }
                         >
                           <Pause className="w-4 h-4" />
                         </Button>
@@ -746,7 +531,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                           size="sm" 
                           variant="ghost" 
                           onClick={resumePomodoro}
-                          className="h-8 w-8 p-0 text-blue-700 hover:bg-blue-200"
+                          className={
+                            theme === 'retro'
+                              ? "h-8 w-8 p-0 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/30 border-2 border-transparent hover:border-blue-300 dark:hover:border-blue-700 rounded-md"
+                              : "h-8 w-8 p-0 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/30"
+                          }
                         >
                           <Play className="w-4 h-4" />
                         </Button>
@@ -762,7 +551,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                         size="sm" 
                         variant="ghost" 
                         onClick={stopPomodoro}
-                        className="h-8 w-8 p-0 text-red-600 hover:bg-red-100"
+                        className={
+                          theme === 'retro'
+                            ? "h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 border-2 border-transparent hover:border-red-300 dark:hover:border-red-700 rounded-md"
+                            : "h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30"
+                        }
                       >
                         <Square className="w-4 h-4" />
                       </Button>

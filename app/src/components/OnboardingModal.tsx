@@ -7,15 +7,25 @@ import {
 import WelcomeStep from './onboarding/WelcomeStep';
 import TabbieStep from './onboarding/TabbieStep';
 import VideoStep from './onboarding/VideoStep';
+import { loadUserData } from '@/utils/storage';
+
+type ThemeMode = 'light' | 'dark' | 'auto';
 
 interface OnboardingModalProps {
   isOpen: boolean;
-  onComplete: (selectedDesign: 'clean' | 'retro') => void;
+  onComplete: (selectedDesign: 'clean' | 'retro', themeMode: ThemeMode) => void;
 }
 
 const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedDesign, setSelectedDesign] = useState<'clean' | 'retro'>('clean');
+  const [selectedDesign, setSelectedDesign] = useState<'clean' | 'retro'>(() => {
+    const userData = loadUserData();
+    return userData.settings.theme || 'clean';
+  });
+  const [selectedThemeMode, setSelectedThemeMode] = useState<ThemeMode>(() => {
+    const userData = loadUserData();
+    return userData.settings.themeMode || 'auto';
+  });
 
   const handleNext = () => {
     setCurrentStep(prev => prev + 1);
@@ -30,7 +40,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComplete })
   };
 
   const handleFinish = () => {
-    onComplete(selectedDesign);
+    onComplete(selectedDesign, selectedThemeMode);
   };
 
   const totalSteps = 3;
@@ -76,6 +86,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComplete })
             <WelcomeStep
               selectedDesign={selectedDesign}
               onDesignSelect={setSelectedDesign}
+              selectedThemeMode={selectedThemeMode}
+              onThemeModeSelect={setSelectedThemeMode}
               onNext={handleNext}
             />
           )}

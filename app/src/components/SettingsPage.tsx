@@ -1,12 +1,12 @@
 import React from 'react';
-import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Bell, Clock, Moon, Sun, Volume2, Wifi, RotateCcw, Palette } from 'lucide-react';
+import { Sun, Volume2, Wifi, RotateCcw, Sparkles, Square, Moon, Clock } from 'lucide-react';
 import { useTodo } from '@/contexts/TodoContext';
 import { updateSettings } from '@/utils/storage';
+import { useDarkMode } from '@/contexts/DarkModeContext';
 
 interface SettingsPageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
@@ -15,13 +15,19 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clean' }) => {
   const { userData } = useTodo();
-  const [notifications, setNotifications] = React.useState(true);
-  const [soundEnabled, setSoundEnabled] = React.useState(true);
+  const { themeMode, setThemeMode } = useDarkMode();
+  const [pomodoroSound, setPomodoroSound] = React.useState(
+    userData.settings.pomodoroSound !== undefined ? userData.settings.pomodoroSound : true
+  );
   const [autoConnect, setAutoConnect] = React.useState(false);
-  const [pomodoroReminders, setPomodoroReminders] = React.useState(true);
   const [selectedTheme, setSelectedTheme] = React.useState<'clean' | 'retro'>(
     userData.settings.theme || 'clean'
   );
+
+  const handlePomodoroSoundChange = (enabled: boolean) => {
+    setPomodoroSound(enabled);
+    updateSettings({ pomodoroSound: enabled });
+  };
 
   const handleResetOnboarding = () => {
     if (window.confirm('This will show the onboarding flow again. Continue?')) {
@@ -43,12 +49,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className={
+        theme === 'retro'
+          ? "bg-card border-b-4 border-black dark:border-white"
+          : "bg-card border-b"
+      }>
+        <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-              <p className="text-muted-foreground">Manage your preferences and app behavior</p>
+              <h1 className={
+                theme === 'retro'
+                  ? "text-3xl font-black text-foreground"
+                  : "text-2xl font-bold text-foreground"
+              }>
+                ⚙️ Settings
+              </h1>
+              <p className={
+                theme === 'retro'
+                  ? "text-muted-foreground font-medium mt-1"
+                  : "text-muted-foreground mt-1"
+              }>
+                Customize your Tabbie experience
+              </p>
             </div>
           </div>
         </div>
@@ -73,71 +95,170 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
                 Customize how Tabbie looks and feels
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Theme</label>
-                  <p className="text-sm text-muted-foreground">
-                    Choose between light and dark themes
+            <CardContent className="space-y-6">
+              {/* Design Style - Primary Choice */}
+              <div className="space-y-3 p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
+                <div>
+                  <label className={
+                    theme === 'retro'
+                      ? "text-lg font-black text-primary"
+                      : "text-base font-bold text-primary"
+                  }>
+                    Design Style
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-xs text-muted-foreground font-medium mt-1"
+                      : "text-xs text-muted-foreground mt-1"
+                  }>
+                    Completely changes how Tabbie looks and feels
                   </p>
                 </div>
-                <DarkModeToggle variant="switch" showIcon={true} />
+                <div className="flex gap-3">
+                  {/* Clean Button - Styled like Clean UI */}
+                  <Button
+                    variant="outline"
+                    size={theme === 'retro' ? 'lg' : 'default'}
+                    onClick={() => handleThemeChange('clean')}
+                    className={
+                      selectedTheme === 'clean'
+                        ? `flex-1 font-semibold border-2 ring-4 ring-blue-500/30 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-blue-500 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/40 dark:hover:to-purple-900/40`
+                        : `flex-1 font-semibold hover:border-blue-300 hover:shadow-md`
+                    }
+                  >
+                    <Sparkles className="h-5 w-5 mr-2" />
+                    Clean
+                  </Button>
+                  
+                  {/* Retro Button - Styled like Retro UI */}
+                  <Button
+                    variant="outline"
+                    size={theme === 'retro' ? 'lg' : 'default'}
+                    onClick={() => handleThemeChange('retro')}
+                    className={
+                      selectedTheme === 'retro'
+                        ? `flex-1 font-black border-4 border-black dark:border-white shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.3)] bg-yellow-100 dark:bg-yellow-900/30 text-black dark:text-white hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(255,255,255,0.4)] translate-x-[-2px] translate-y-[-2px]`
+                        : `flex-1 font-black border-2 hover:border-black dark:hover:border-white hover:shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] dark:hover:shadow-[4px_4px_0_0_rgba(255,255,255,0.2)]`
+                    }
+                  >
+                    <Square className="h-5 w-5 mr-2 fill-current" />
+                    Retro
+                  </Button>
+                </div>
               </div>
               
               <Separator />
               
+              {/* Color Mode - Secondary Choice */}
               <div className="space-y-3">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Design Style</label>
-                  <p className="text-sm text-muted-foreground">
-                    Choose between Clean (modern) or Retro (neobrutalism) design
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold"
+                      : "text-sm font-medium"
+                  }>
+                    Color Mode
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-xs text-muted-foreground font-medium"
+                      : "text-xs text-muted-foreground"
+                  }>
+                    Light, dark, or automatic theme switching
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant={selectedTheme === 'clean' ? 'default' : 'outline'}
+                    variant={themeMode === 'light' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => handleThemeChange('clean')}
-                    className="flex-1"
+                    onClick={() => setThemeMode('light')}
+                    className={
+                      theme === 'retro'
+                        ? "flex-1 font-bold border-2"
+                        : "flex-1"
+                    }
                   >
-                    🎯 Clean
+                    <Sun className="h-4 w-4 mr-1.5" />
+                    Light
                   </Button>
                   <Button
-                    variant={selectedTheme === 'retro' ? 'default' : 'outline'}
+                    variant={themeMode === 'dark' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => handleThemeChange('retro')}
-                    className="flex-1"
+                    onClick={() => setThemeMode('dark')}
+                    className={
+                      theme === 'retro'
+                        ? "flex-1 font-bold border-2"
+                        : "flex-1"
+                    }
                   >
-                    📟 Retro
+                    <Moon className="h-4 w-4 mr-1.5" />
+                    Dark
+                  </Button>
+                  <Button
+                    variant={themeMode === 'auto' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setThemeMode('auto')}
+                    className={
+                      theme === 'retro'
+                        ? "flex-1 font-bold border-2 relative"
+                        : "flex-1 relative"
+                    }
+                  >
+                    <Clock className="h-4 w-4 mr-1.5" />
+                    Auto
+                    {themeMode === 'auto' && (
+                      <span className="ml-1 text-xs">★</span>
+                    )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground italic">
-                  Note: Full theme switching coming soon. Current selection is saved.
-                </p>
+                {themeMode === 'auto' && (
+                  <p className={
+                    theme === 'retro'
+                      ? "text-xs text-muted-foreground font-medium italic"
+                      : "text-xs text-muted-foreground italic"
+                  }>
+                    Dark mode from 6 PM to 6 AM
+                  </p>
+                )}
               </div>
               
               <Separator />
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Onboarding</label>
-                  <p className="text-sm text-muted-foreground">
-                    View the welcome tour and change your design preference
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold"
+                      : "text-sm font-medium"
+                  }>
+                    Welcome Tour
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-sm text-muted-foreground font-medium"
+                      : "text-sm text-muted-foreground"
+                  }>
+                    Replay the onboarding experience
                   </p>
                 </div>
                 <Button 
                   variant="outline" 
-                  size="sm"
+                  size={theme === 'retro' ? 'default' : 'sm'}
                   onClick={handleResetOnboarding}
+                  className={
+                    theme === 'retro'
+                      ? "font-bold border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)]"
+                      : ""
+                  }
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  View Again
+                  Restart Tour
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Notifications Section */}
+          {/* Pomodoro Section */}
           <Card className={
             theme === 'retro'
               ? "bg-[#d4f1ff]/30 dark:bg-[#00d4ff]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
@@ -145,63 +266,41 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
           }>
             <CardHeader>
               <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
-                <Bell className="h-5 w-5" />
-                Notifications
+                <Volume2 className="h-5 w-5" />
+                Pomodoro
               </CardTitle>
               <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
-                Control how and when you receive notifications
+                Configure pomodoro timer settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Push Notifications</label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications for important events
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold cursor-pointer"
+                      : "text-sm font-medium cursor-pointer"
+                  }>
+                    Sound Alerts
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-sm text-muted-foreground font-medium"
+                      : "text-sm text-muted-foreground"
+                  }>
+                    Play sound when pomodoro timer ends
                   </p>
                 </div>
                 <ToggleSwitch
-                  checked={notifications}
-                  onCheckedChange={setNotifications}
-                  size="md"
-                />
-              </div>
-              
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Sound Alerts</label>
-                  <p className="text-sm text-muted-foreground">
-                    Play sounds for notifications and timers
-                  </p>
-                </div>
-                <ToggleSwitch
-                  checked={soundEnabled}
-                  onCheckedChange={setSoundEnabled}
-                  size="md"
-                />
-              </div>
-              
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Pomodoro Reminders</label>
-                  <p className="text-sm text-muted-foreground">
-                    Get reminded when pomodoro sessions end
-                  </p>
-                </div>
-                <ToggleSwitch
-                  checked={pomodoroReminders}
-                  onCheckedChange={setPomodoroReminders}
+                  checked={pomodoroSound}
+                  onCheckedChange={handlePomodoroSoundChange}
                   size="md"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Connection Section */}
+          {/* Device Connection Section */}
           <Card className={
             theme === 'retro'
               ? "bg-[#ffd4f4]/30 dark:bg-[#ff69b4]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
@@ -210,18 +309,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
             <CardHeader>
               <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
                 <Wifi className="h-5 w-5" />
-                Connection
+                Device Connection
               </CardTitle>
-              <CardDescription>
-                Manage device connection settings
+              <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
+                Manage your Tabbie device connection
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Auto-Connect</label>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically connect to device on startup
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold cursor-pointer"
+                      : "text-sm font-medium cursor-pointer"
+                  }>
+                    Auto-Connect
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-sm text-muted-foreground font-medium"
+                      : "text-sm text-muted-foreground"
+                  }>
+                    Automatically connect to your device on startup
                   </p>
                 </div>
                 <ToggleSwitch
@@ -229,60 +338,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
                   onCheckedChange={setAutoConnect}
                   size="md"
                 />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Toggle Switch Showcase */}
-          <Card className={
-            theme === 'retro'
-              ? "bg-[#96f2d7]/30 dark:bg-[#00e5a0]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
-              : ""
-          }>
-            <CardHeader>
-              <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
-                <Clock className="h-5 w-5" />
-                Toggle Switch Examples
-              </CardTitle>
-              <CardDescription>
-                Different sizes and states of toggle switches
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Small Switch</span>
-                    <ToggleSwitch checked={true} onCheckedChange={() => {}} size="sm" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Medium Switch</span>
-                    <ToggleSwitch checked={false} onCheckedChange={() => {}} size="md" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Large Switch</span>
-                    <ToggleSwitch checked={true} onCheckedChange={() => {}} size="lg" />
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Disabled (On)</span>
-                    <ToggleSwitch checked={true} onCheckedChange={() => {}} disabled />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Disabled (Off)</span>
-                    <ToggleSwitch checked={false} onCheckedChange={() => {}} disabled />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Interactive</span>
-                    <ToggleSwitch 
-                      checked={notifications} 
-                      onCheckedChange={setNotifications} 
-                      size="md" 
-                    />
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

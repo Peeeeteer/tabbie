@@ -65,6 +65,8 @@ export interface UserData {
     autoStartBreaks: boolean;
     autoStartPomodoros: boolean;
     theme?: 'clean' | 'retro'; // UI theme preference
+    themeMode?: 'light' | 'dark' | 'auto'; // Color mode: manual light, manual dark, or time-based auto
+    pomodoroSound?: boolean; // Play sound when pomodoro ends
   };
 }
 
@@ -107,4 +109,6 @@ export const DEFAULT_SETTINGS = {
   autoStartBreaks: false,
   autoStartPomodoros: false,
   theme: 'clean' as 'clean' | 'retro',
+  themeMode: 'auto' as 'light' | 'dark' | 'auto',
+  pomodoroSound: true,
 }; 

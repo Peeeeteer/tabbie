@@ -218,16 +218,17 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     const isRetro = theme === 'retro';
 
     return (
-      <div className={isRetro ? "relative border-4 border-black rounded-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(255,255,255,0.3)]" : "relative"}>
+      <div className={isRetro ? "relative border-4 border-black dark:border-gray-600 rounded-full shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(0,0,0,0.6)]" : "relative"}>
         <svg width={size} height={size} className="transform -rotate-90">
           {/* Background circle */}
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={isRetro ? "rgb(255 255 255 / 0.3)" : "rgb(229 231 235)"}
+            stroke={isRetro ? "rgb(229 231 235)" : "rgb(229 231 235)"}
             strokeWidth={isRetro ? "12" : "8"}
             fill="none"
+            className="dark:stroke-gray-700"
           />
           {/* Progress circle */}
           <circle
@@ -269,39 +270,46 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
 
   if (!currentTask || (!pomodoroTimer.currentSession && !pomodoroTimer.justCompleted)) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className={
+        theme === 'retro'
+          ? "min-h-screen bg-white dark:bg-gray-950"
+          : "min-h-screen bg-gray-50 dark:bg-gray-950"
+      }>
         {/* Header matching dashboard style */}
-        <div className="bg-white shadow-sm border-b">
+        <div className={
+          theme === 'retro'
+            ? "bg-[#ffe164] dark:bg-gray-900 shadow-sm border-b-2 border-black dark:border-gray-700"
+            : "bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-800"
+        }>
           <div className="max-w-6xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </Button>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🍅</span>
-                  <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
-                </div>
+            <div className="flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🍅</span>
+                <h1 className={
+                  theme === 'retro'
+                    ? "text-2xl font-black text-gray-900 dark:text-gray-100"
+                    : "text-2xl font-bold text-gray-900 dark:text-gray-100"
+                }>Pomodoro Timer</h1>
+                <span className="text-2xl">🍅</span>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={debugPomodoroState}
-                title="Debug persistence state"
-              >
-                <Bug className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </div>
 
         {/* Main content */}
         <div className="max-w-2xl mx-auto px-6 py-12">
-          <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+          <div className={
+            theme === 'retro'
+              ? "bg-white dark:bg-gray-800 rounded-[24px] border-2 border-black dark:border-gray-600 shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(0,0,0,0.6)] p-8 text-center"
+              : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-8 text-center"
+          }>
             <div className="text-6xl mb-4">🍅</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Active Pomodoro</h2>
-            <p className="text-gray-600 mb-8">Start a pomodoro session from your task list or choose a task to focus on!</p>
+            <h2 className={
+              theme === 'retro'
+                ? "text-2xl font-black text-gray-900 dark:text-gray-100 mb-2"
+                : "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2"
+            }>No Active Pomodoro</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">Start a pomodoro session from your task list or choose a task to focus on!</p>
             
             {availableTasks.length > 0 ? (
               <Popover open={showTaskSelection} onOpenChange={setShowTaskSelection}>
@@ -418,91 +426,36 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={
+      theme === 'retro'
+        ? "min-h-screen bg-white dark:bg-gray-950"
+        : "min-h-screen bg-gray-50 dark:bg-gray-950"
+    }>
       {/* Header matching dashboard style */}
-      <div className="bg-white shadow-sm border-b">
+      <div className={
+        theme === 'retro'
+          ? "bg-[#ffe164] dark:bg-gray-900 shadow-sm border-b-2 border-black dark:border-gray-700"
+          : "bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-800"
+      }>
         <div className="max-w-6xl mx-auto px-6 py-4">
-                      <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </Button>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🍅</span>
-                  <h1 className="text-2xl font-bold text-gray-900">Pomodoro Timer</h1>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  Work Session {currentSessionNumber} of {estimatedSessions}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={debugPomodoroState}
-                    title="Debug persistence state"
-                  >
-                    <Bug className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={debugTimerState}
-                    title="Debug timer state"
-                    className="text-xs"
-                  >
-                    🔍
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={testPomodoroPersistence}
-                    title="Test persistence"
-                    className="text-xs"
-                  >
-                    Test
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={testPageRefreshScenario}
-                    title="Test page refresh"
-                    className="text-xs"
-                  >
-                    Refresh
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={testSound}
-                    title="Test sound"
-                    className="text-xs"
-                  >
-                    🔊
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={debugSetTimerTo10Seconds}
-                    title="Set timer to 10 seconds for testing"
-                    className="text-xs"
-                  >
-                    ⏱️10s
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={debugSetTimerTo14m45Overtime}
-                    title="Set timer to 14:45 overtime for testing"
-                    className="text-xs"
-                  >
-                    ⏱️14:45
-                  </Button>
-                </div>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🍅</span>
+              <h1 className={
+                theme === 'retro'
+                  ? "text-2xl font-black text-gray-900 dark:text-gray-100"
+                  : "text-2xl font-bold text-gray-900 dark:text-gray-100"
+              }>Pomodoro Timer</h1>
+              <span className="text-2xl">🍅</span>
             </div>
+            <div className={
+              theme === 'retro'
+                ? "text-sm font-bold text-gray-700 dark:text-gray-300"
+                : "text-sm text-gray-600 dark:text-gray-400"
+            }>
+              Work Session {currentSessionNumber} of {estimatedSessions}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -512,16 +465,24 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
           
           {/* Left Column - Timer */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm border p-8">
+            <div className={
+              theme === 'retro'
+                ? "bg-white dark:bg-gray-800 rounded-[24px] border-2 border-black dark:border-gray-600 shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(0,0,0,0.6)] p-8"
+                : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-8"
+            }>
               
               {/* Task Info */}
               <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <h2 className={
+                  theme === 'retro'
+                    ? "text-2xl font-black text-gray-900 dark:text-gray-100 mb-2"
+                    : "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2"
+                }>
                   {currentTask?.title || 'No Task Selected'}
                 </h2>
                 {currentTask?.description && (
                   <div 
-                    className="text-gray-600 prose prose-sm max-w-none"
+                    className="text-gray-600 dark:text-gray-400 prose prose-sm max-w-none dark:prose-invert"
                     dangerouslySetInnerHTML={{ 
                       __html: currentTask.description
                         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
@@ -531,7 +492,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                   />
                 )}
                 {!currentTask && (
-                  <p className="text-gray-500 text-sm">Please select a task to start a pomodoro session</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Please select a task to start a pomodoro session</p>
                 )}
               </div>
 
@@ -542,7 +503,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
 
               {/* Progress Bars - Horizontal Timeline */}
               <div className="mb-8">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">Session Progress</h3>
+                <h3 className={
+                  theme === 'retro'
+                    ? "text-sm font-black text-gray-900 dark:text-gray-100 mb-4"
+                    : "text-sm font-medium text-gray-700 dark:text-gray-400 mb-4"
+                }>Session Progress</h3>
                 <div className="flex items-center gap-1 mb-2">
                   {progressBars.map((bar, index) => (
                     <div
@@ -584,7 +549,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                     />
                   ))}
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className={
+                  theme === 'retro'
+                    ? "flex justify-between text-xs text-gray-700 dark:text-gray-300 font-bold"
+                    : "flex justify-between text-xs text-gray-500 dark:text-gray-400"
+                }>
                   <span>🍅 Pomodoro</span>
                   <span>☕ Break</span>
                 </div>
@@ -709,7 +678,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                 window.history.back();
                               }
                             }}
-                            className="bg-green-600 hover:bg-green-700 text-white px-8"
+                            className={
+                              theme === 'retro'
+                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                : "bg-green-600 hover:bg-green-700 text-white px-8"
+                            }
                           >
                             <CheckSquare className="w-5 h-5 mr-2" />
                             Finish Task
@@ -799,7 +772,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                 window.history.back();
                               }
                             }}
-                            className="bg-green-600 hover:bg-green-700 text-white px-8"
+                            className={
+                              theme === 'retro'
+                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                : "bg-green-600 hover:bg-green-700 text-white px-8"
+                            }
                           >
                             <CheckSquare className="w-5 h-5 mr-2" />
                             Finish Task
@@ -841,7 +818,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             size="lg"
                             className={
                               theme === 'retro'
-                                ? "bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 px-8 rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                ? "bg-[#ffe164] dark:bg-yellow-600 hover:bg-[#ffe164] dark:hover:bg-yellow-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
                                 : "bg-orange-600 hover:bg-orange-700 text-white px-8"
                             }
                           >
@@ -854,7 +831,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             size="lg"
                             className={
                               theme === 'retro'
-                                ? "bg-[#96f2d7] dark:bg-[#00e5a0] text-gray-900 px-8 rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                                ? "bg-[#96f2d7] dark:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
                                 : "bg-green-600 hover:bg-green-700 text-white px-8"
                             }
                           >
@@ -868,7 +845,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           size="lg"
                           className={
                             theme === 'retro'
-                              ? "px-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-full border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                              ? "px-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
                               : "px-8 border-red-200 text-red-600 hover:bg-red-50"
                           }
                         >
@@ -889,7 +866,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             }
                           }}
                           size="lg"
-                          className="px-8 bg-green-600 hover:bg-green-700 text-white"
+                          className={
+                            theme === 'retro'
+                              ? "px-8 bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
+                              : "px-8 bg-green-600 hover:bg-green-700 text-white"
+                          }
                         >
                           <CheckSquare className="w-5 h-5 mr-2" />
                           Finish Task
@@ -904,77 +885,142 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
 
           {/* Right Column - Stats & Info */}
           <div className="space-y-4">
-            {/* Current Session Info */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="text-sm font-semibold mb-3">Current Session</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Category</span>
-                  <span className="font-medium text-right max-w-[150px] truncate flex items-center gap-1">
-                    {currentTask ? (
-                      <>
-                        <span>{userData.categories.find(cat => cat.id === currentTask.categoryId)?.icon || '📝'}</span>
-                        <span>{userData.categories.find(cat => cat.id === currentTask.categoryId)?.name || 'Unknown'}</span>
-                      </>
-                    ) : 'No Task'}
-                  </span>
+            {/* Session Overview - Compact Retro Style */}
+            <div className={
+              theme === 'retro'
+                ? "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 rounded-[16px] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] p-4"
+                : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-4"
+            }>
+              {/* Header with Session Type */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{pomodoroTimer.sessionType === 'work' ? '🍅' : '☕'}</span>
+                  <div>
+                    <h3 className={
+                      theme === 'retro'
+                        ? "text-sm font-black text-gray-900 dark:text-gray-100"
+                        : "text-sm font-semibold text-gray-900 dark:text-gray-100"
+                    }>
+                      {pomodoroTimer.sessionType === 'work' ? 'Work Session' : 'Break Time'}
+                    </h3>
+                    <p className={
+                      theme === 'retro'
+                        ? "text-xs text-gray-600 dark:text-gray-400 font-bold dark:font-normal"
+                        : "text-xs text-gray-600 dark:text-gray-400"
+                    }>
+                      {currentSessionNumber} of {estimatedSessions}
+                    </p>
+                  </div>
                 </div>
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Duration</span>
-                  <span className="font-medium">
-                    {pomodoroTimer.sessionType === 'work' 
-                      ? userData.settings.workDuration 
-                      : userData.settings.shortBreakDuration} min
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Status</span>
-                  <span className={`font-medium ${isAutoPausedForOvertime ? 'text-orange-600' : pomodoroTimer.isRunning ? 'text-green-600' : 'text-gray-700'}`}>
-                    {isAutoPausedForOvertime
-                      ? `Paused · ${overtimeMinutesDisplay}:${overtimeSecondsDisplay.toString().padStart(2, '0')} overtime`
-                      : pomodoroTimer.isRunning
-                      ? 'Running'
-                      : 'Paused'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Progress</span>
-                  <span className="font-medium">
-                    {isWorkOverdue || isBreakOverdue ? 'Overdue' : `${progress.toFixed(0)}%`}
-                  </span>
+                <div className={`px-2 py-1 rounded-md text-xs font-bold ${
+                  isAutoPausedForOvertime ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                  pomodoroTimer.isRunning ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
+                  'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}>
+                  {isAutoPausedForOvertime ? 'Paused' : pomodoroTimer.isRunning ? 'Running' : 'Paused'}
                 </div>
               </div>
-            </div>
 
-            {/* Task Progress */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="text-sm font-semibold mb-3">Task Progress</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Completed</span>
-                  <span className="font-medium">{completedWorkSessions} / {estimatedSessions}</span>
+              {/* Category & Task Info */}
+              {currentTask && (
+                <div className={
+                  theme === 'retro'
+                    ? "mb-3 p-2 bg-white dark:bg-gray-900 border border-black dark:border-gray-600 rounded-lg"
+                    : "mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                }>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">
+                      {userData.categories.find(cat => cat.id === currentTask.categoryId)?.icon || '📝'}
+                    </span>
+                    <span className={
+                      theme === 'retro'
+                        ? "text-xs font-bold dark:font-semibold text-gray-900 dark:text-gray-100"
+                        : "text-xs font-medium text-gray-900 dark:text-gray-100"
+                    }>
+                      {userData.categories.find(cat => cat.id === currentTask.categoryId)?.name || 'Unknown'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  {Math.max(0, estimatedSessions - completedWorkSessions)} sessions remaining
+              )}
+
+              {/* Progress Stats */}
+              <div className={
+                theme === 'retro'
+                  ? "grid grid-cols-2 gap-2"
+                  : "grid grid-cols-2 gap-3"
+              }>
+                <div className={
+                  theme === 'retro'
+                    ? "bg-white dark:bg-gray-900 border border-black dark:border-gray-600 rounded-lg p-2 text-center"
+                    : "bg-gray-50 dark:bg-gray-800 rounded-lg p-2 text-center"
+                }>
+                  <div className={
+                    theme === 'retro'
+                      ? "text-lg font-black text-gray-900 dark:text-gray-100"
+                      : "text-lg font-bold text-gray-900 dark:text-gray-100"
+                  }>
+                    {completedWorkSessions}/{estimatedSessions}
+                  </div>
+                  <div className={
+                    theme === 'retro'
+                      ? "text-[10px] text-gray-600 dark:text-gray-400 font-bold dark:font-normal"
+                      : "text-[10px] text-gray-600 dark:text-gray-400"
+                  }>
+                    Completed
+                  </div>
                 </div>
-                
+                <div className={
+                  theme === 'retro'
+                    ? "bg-white dark:bg-gray-900 border border-black dark:border-gray-600 rounded-lg p-2 text-center"
+                    : "bg-gray-50 dark:bg-gray-800 rounded-lg p-2 text-center"
+                }>
+                  <div className={
+                    theme === 'retro'
+                      ? "text-lg font-black text-gray-900 dark:text-gray-100"
+                      : "text-lg font-bold text-gray-900 dark:text-gray-100"
+                  }>
+                    {isWorkOverdue || isBreakOverdue ? '—' : `${progress.toFixed(0)}%`}
+                  </div>
+                  <div className={
+                    theme === 'retro'
+                      ? "text-[10px] text-gray-600 dark:text-gray-400 font-bold dark:font-normal"
+                      : "text-[10px] text-gray-600 dark:text-gray-400"
+                  }>
+                    Progress
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Workspace URLs */}
             {currentTask?.workspaceUrls && currentTask.workspaceUrls.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm border p-4">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <div className={
+                theme === 'retro'
+                  ? "bg-white dark:bg-gray-800 rounded-[16px] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] p-4"
+                  : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-4"
+              }>
+                <h3 className={
+                  theme === 'retro'
+                    ? "text-sm font-black text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"
+                    : "text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"
+                }>
                   <span className="text-base">🔗</span>
                   Workspace URLs ({currentTask.workspaceUrls.length})
                 </h3>
                 <div className="space-y-1">
                   {currentTask.workspaceUrls.map((url, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs">
-                      <span className="text-blue-500">🌐</span>
+                    <div key={index} className={
+                      theme === 'retro'
+                        ? "flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 border border-black dark:border-gray-600 rounded-lg text-xs"
+                        : "flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs"
+                    }>
+                      <span className="text-blue-500 dark:text-blue-400">🌐</span>
                       <span 
-                        className="flex-1 text-gray-700 truncate cursor-pointer hover:text-blue-600" 
+                        className={
+                          theme === 'retro'
+                            ? "flex-1 text-gray-900 dark:text-gray-100 font-bold dark:font-normal truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                            : "flex-1 text-gray-700 dark:text-gray-300 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                        }
                         title={url}
                         onClick={() => {
                           try {
@@ -992,8 +1038,16 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                     </div>
                   ))}
                 </div>
-                <div className="pt-2 border-t border-gray-200 mt-3">
-                  <div className="text-xs text-gray-500">
+                <div className={
+                  theme === 'retro'
+                    ? "pt-2 border-t-2 border-black dark:border-gray-600 mt-3"
+                    : "pt-2 border-t border-gray-200 dark:border-gray-700 mt-3"
+                }>
+                  <div className={
+                    theme === 'retro'
+                      ? "text-xs text-gray-700 dark:text-gray-300 font-bold dark:font-normal"
+                      : "text-xs text-gray-500 dark:text-gray-400"
+                  }>
                     💡 Manually close workspace tabs when you're done focusing
                   </div>
                 </div>
@@ -1001,12 +1055,24 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
             )}
 
             {/* Focus Tips */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="text-sm font-semibold mb-3">💡 Focus Tips</h3>
-              <div className="space-y-2 text-xs text-gray-600">
+            <div className={
+              theme === 'retro'
+                ? "bg-white dark:bg-gray-800 rounded-[16px] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] p-4"
+                : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-4"
+            }>
+              <h3 className={
+                theme === 'retro'
+                  ? "text-sm font-black text-gray-900 dark:text-gray-100 mb-3"
+                  : "text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3"
+              }>💡 Focus Tips</h3>
+              <div className={
+                theme === 'retro'
+                  ? "space-y-2 text-xs text-gray-700 dark:text-gray-300 font-bold dark:font-normal"
+                  : "space-y-2 text-xs text-gray-600 dark:text-gray-400"
+              }>
                 {isWorkOverdue ? (
                   <>
-                    <p className="text-orange-600 font-medium">⏰ Work session is overdue!</p>
+                    <p className="text-orange-600 dark:text-orange-400 font-medium">⏰ Work session is overdue!</p>
                     <p>• You've worked longer than planned</p>
                     <p>• Consider taking a break to stay fresh</p>
                     <p>• Click "Take Break" when ready</p>
@@ -1014,7 +1080,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                   </>
                 ) : isBreakOverdue ? (
                   <>
-                    <p className="text-red-600 font-medium">⏰ Break is overdue!</p>
+                    <p className="text-red-600 dark:text-red-400 font-medium">⏰ Break is overdue!</p>
                     <p>• You've been on break longer than planned</p>
                     <p>• Consider getting back to work</p>
                     <p>• Click "Continue Working" when ready</p>
