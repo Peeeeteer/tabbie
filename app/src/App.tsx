@@ -16,6 +16,7 @@ import {
 import React from "react"
 import { TodoProvider, useTodo } from "@/contexts/TodoContext"
 import { DarkModeProvider, useDarkMode } from "@/contexts/DarkModeContext"
+import { TabbieProvider } from "@/contexts/TabbieContext"
 import CategorySidebar from "@/components/CategorySidebar"
 import TasksPage from "@/components/TasksPage"
 import SettingsPage from "@/components/SettingsPage"
@@ -246,7 +247,9 @@ export default function Page() {
   return (
     <DarkModeProvider>
       <TodoProvider>
-        <AppContent />
+        <TabbieProvider>
+          <AppContent />
+        </TabbieProvider>
       </TodoProvider>
     </DarkModeProvider>
   )

@@ -1,135 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Wifi, WifiOff, Zap, Play, Square, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useTodo } from '@/contexts/TodoContext';
+import { useTabbieSync } from '@/contexts/TabbieContext';
 
 interface TabbiePageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings' | 'notes') => void;
   theme?: 'clean' | 'retro';
 }
 
-interface TabbieStatus {
-  status: string;
-  animation: string;
-  task: string;
-  uptime: number;
-  connectedDevices: number;
-  ip: string;
-}
-
-const TABBIE_HOSTNAME = "tabbie.local";
-
 const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [tabbieStatus, setTabbieStatus] = useState<TabbieStatus | null>(null);
-  const [connectionError, setConnectionError] = useState<string>('');
-  const [customIP, setCustomIP] = useState(TABBIE_HOSTNAME);
-  const { userData, pomodoroTimer } = useTodo();
+  const { 
+    isConnected, 
+    isConnecting, 
+    tabbieStatus, 
+    connectionError, 
+    customIP, 
+    checkConnection, 
+    setCustomIP: setCustomIPContext,
+    sendAnimation,
+    activityState 
+  } = useTabbieSync();
 
-  // Auto-connect on component mount
-  useEffect(() => {
-    checkConnection();
-    
-    // Set up periodic status updates when connected
-    const interval = setInterval(() => {
-      if (isConnected) {
-        updateStatus();
-      }
-    }, 3000);
-    
-    return () => clearInterval(interval);
-  }, [isConnected]);
+  // Local state for IP input field
+  const [localIP, setLocalIP] = React.useState(customIP);
 
-  // Monitor pomodoro state changes and sync with Tabbie
-  useEffect(() => {
-    if (isConnected && pomodoroTimer.isRunning) {
-      const currentTask = userData.tasks.find(t => t.id === pomodoroTimer.currentTaskId);
-      sendAnimation('pomodoro', currentTask?.title || 'Focus Session');
-    } else if (isConnected && pomodoroTimer.justCompleted) {
-      const currentTask = userData.tasks.find(t => t.id === pomodoroTimer.currentTaskId);
-      sendAnimation('complete', currentTask?.title || 'Task Complete!');
-    } else if (isConnected && !pomodoroTimer.isRunning) {
-      sendAnimation('idle');
-    }
-  }, [pomodoroTimer.isRunning, pomodoroTimer.justCompleted, pomodoroTimer.currentTaskId, isConnected]);
+  // Sync local IP with context when customIP changes
+  React.useEffect(() => {
+    setLocalIP(customIP);
+  }, [customIP]);
 
-  const checkConnection = async () => {
-    setIsConnecting(true);
-    setConnectionError('');
-    
-    try {
-      const response = await fetch(`http://${customIP}/api/status`, {
-        method: 'GET',
-        timeout: 5000,
-      });
-      
-      if (response.ok) {
-        const status = await response.json();
-        setTabbieStatus(status);
-        setIsConnected(true);
-        setConnectionError('');
-      } else {
-        throw new Error('Failed to connect to Tabbie');
-      }
-    } catch (error) {
-      setIsConnected(false);
-      setTabbieStatus(null);
-      
-      // Provide more specific error messages
-      if (customIP.includes('192.168.4.1') || customIP.includes('tabbie-setup')) {
-        setConnectionError('🔧 Tabbie is in setup mode. Complete WiFi configuration first, then reconnect to your home network and try again.');
-      } else if (customIP === 'tabbie.local' || customIP.includes('.local')) {
-        setConnectionError('🔍 Cannot reach tabbie.local. Check that: 1) Tabbie is powered on, 2) Both devices are on the same WiFi network, 3) Tabbie\'s OLED shows a connected status.');
-      } else {
-        setConnectionError('❌ Connection failed. Verify Tabbie is powered on, connected to WiFi (check OLED display), and on the same network as this computer.');
-      }
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const updateStatus = async () => {
-    if (!isConnected) return;
-    
-    try {
-      const response = await fetch(`http://${customIP}/api/status`);
-      if (response.ok) {
-        const status = await response.json();
-        setTabbieStatus(status);
-      }
-    } catch (error) {
-      // Connection lost
-      setIsConnected(false);
-      setTabbieStatus(null);
-      setConnectionError('Connection to Tabbie lost');
-    }
-  };
-
-  const sendAnimation = async (animation: string, task?: string) => {
-    if (!isConnected) return;
-    
-    try {
-      const response = await fetch(`http://${customIP}/api/animation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          animation: animation,
-          task: task || ''
-        }),
-      });
-      
-      if (response.ok) {
-        // Update status to reflect the change
-        setTimeout(updateStatus, 500);
-      }
-    } catch (error) {
-      console.error('Failed to send animation:', error);
-    }
+  const handleSetIP = () => {
+    setCustomIPContext(localIP);
   };
 
   const formatUptime = (uptime: number) => {
@@ -253,11 +156,20 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
                 <div className="flex gap-2">
                   <Input
                     placeholder="Tabbie Address (tabbie.local)"
-                    value={customIP}
-                    onChange={(e) => setCustomIP(e.target.value)}
+                    value={localIP}
+                    onChange={(e) => setLocalIP(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSetIP();
+                        checkConnection();
+                      }
+                    }}
                     className="flex-1"
                   />
-                  <Button onClick={checkConnection} disabled={isConnecting}>
+                  <Button onClick={() => {
+                    handleSetIP();
+                    checkConnection();
+                  }} disabled={isConnecting}>
                     {isConnecting ? 'Connecting...' : 'Connect'}
                   </Button>
                 </div>
@@ -285,12 +197,17 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
                     <div className="font-semibold capitalize">{tabbieStatus.animation}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Uptime</div>
-                    <div className="font-semibold">{formatUptime(tabbieStatus.uptime)}</div>
+                    <div className="text-sm text-muted-foreground">Activity Sync</div>
+                    <div className="font-semibold capitalize flex items-center gap-1">
+                      {activityState === 'pomodoro' && <span className="text-red-500">🍅 Focus</span>}
+                      {activityState === 'break' && <span className="text-green-500">☕ Break</span>}
+                      {activityState === 'complete' && <span className="text-blue-500">✅ Complete</span>}
+                      {activityState === 'idle' && <span className="text-gray-500">💤 Idle</span>}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Connected Devices</div>
-                    <div className="font-semibold">{tabbieStatus.connectedDevices}</div>
+                    <div className="text-sm text-muted-foreground">Uptime</div>
+                    <div className="font-semibold">{formatUptime(tabbieStatus.uptime)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">IP Address</div>

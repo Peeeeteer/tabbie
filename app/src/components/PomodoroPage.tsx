@@ -3,6 +3,7 @@ import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee, Bug, Skip
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useTodo } from '@/contexts/TodoContext';
+import { useTabbieSync } from '@/contexts/TabbieContext';
 import { debugPomodoroState } from '@/utils/storage';
 import { testPomodoroPersistence, testPageRefreshScenario } from '@/utils/pomodoro-persistence-test';
 
@@ -27,6 +28,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     debugSetTimerTo10Seconds,
     debugSetTimerTo14m45Overtime,
   } = useTodo();
+  
+  const { triggerTaskCompletion } = useTabbieSync();
 
   // Get current task from userData using currentTaskId
   const currentTask = currentTaskId ? userData.tasks.find(t => t.id === currentTaskId) : null;
@@ -74,9 +77,50 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
 
   const [showTaskSelection, setShowTaskSelection] = useState(false);
   const [selectedTaskForPomodoro, setSelectedTaskForPomodoro] = useState<string>('');
+  const [showingCompletionAnimation, setShowingCompletionAnimation] = useState(false);
 
-  // Get available tasks (not completed)
-  const availableTasks = userData.tasks.filter(task => !task.completed);
+  // Get available tasks (not completed) and sort by due date
+  const availableTasks = userData.tasks
+    .filter(task => !task.completed)
+    .sort((a, b) => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // Helper function to check if a date is overdue
+      const isOverdue = (date?: Date) => {
+        if (!date) return false;
+        const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return taskDate.getTime() < today.getTime();
+      };
+      
+      // Helper function to check if a date is today
+      const isToday = (date?: Date) => {
+        if (!date) return false;
+        const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return taskDate.getTime() === today.getTime();
+      };
+      
+      // Sort priority: overdue > due today > has due date > no due date
+      const aOverdue = isOverdue(a.dueDate);
+      const bOverdue = isOverdue(b.dueDate);
+      const aToday = isToday(a.dueDate);
+      const bToday = isToday(b.dueDate);
+      
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+      if (aToday && !bToday) return -1;
+      if (!aToday && bToday) return 1;
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      
+      // If both have due dates, sort by date
+      if (a.dueDate && b.dueDate) {
+        return a.dueDate.getTime() - b.dueDate.getTime();
+      }
+      
+      // Otherwise maintain original order
+      return 0;
+    });
 
   // Calculate session info
   const completedWorkSessions = currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
@@ -323,8 +367,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-lg mb-2">Choose a Task</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Select a task to start your pomodoro session
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Click to select or double-click to start immediately
                       </p>
                     </div>
 
@@ -334,29 +378,55 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                         const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
                         const totalEstimated = task.estimatedPomodoros || 3;
                         
+                        // Check due date status
+                        const now = new Date();
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const isOverdue = task.dueDate && new Date(task.dueDate.getFullYear(), task.dueDate.getMonth(), task.dueDate.getDate()).getTime() < today.getTime();
+                        const isToday = task.dueDate && new Date(task.dueDate.getFullYear(), task.dueDate.getMonth(), task.dueDate.getDate()).getTime() === today.getTime();
+                        
                         return (
                           <div
                             key={task.id}
                             className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                               selectedTaskForPomodoro === task.id
-                                ? 'border-red-500 bg-red-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-400'
+                                : isOverdue
+                                ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-500 hover:border-red-400 dark:hover:border-red-400'
+                                : isToday
+                                ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-500 hover:border-orange-400 dark:hover:border-orange-400'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                             }`}
                             onClick={() => {
                               setSelectedTaskForPomodoro(task.id);
                             }}
+                            onDoubleClick={() => {
+                              // Double-click to immediately start the session
+                              setSelectedTaskForPomodoro(task.id);
+                              startPomodoro(task);
+                              setShowTaskSelection(false);
+                            }}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   {category && (
                                     <span className="text-sm">{category.icon}</span>
                                   )}
-                                  <span className="font-medium text-sm">{task.title}</span>
+                                  <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{task.title}</span>
+                                  {isOverdue && (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white dark:bg-red-500 dark:text-white rounded-full">
+                                      OVERDUE
+                                    </span>
+                                  )}
+                                  {isToday && (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-orange-600 text-white dark:bg-orange-500 dark:text-white rounded-full">
+                                      TODAY
+                                    </span>
+                                  )}
                                 </div>
                                 {task.description && (
                                   <div 
-                                    className="text-xs text-gray-600 mt-1 prose prose-xs max-w-none"
+                                    className="text-xs text-gray-600 dark:text-gray-400 mt-1 prose prose-xs max-w-none dark:prose-invert"
                                     dangerouslySetInnerHTML={{ 
                                       __html: task.description
                                         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
@@ -366,13 +436,13 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                   />
                                 )}
                                 <div className="flex items-center gap-2 mt-2">
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
                                     🍅 {completedPomodoros}/{totalEstimated}
                                   </span>
                                   {completedPomodoros > 0 && (
-                                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                                       <div 
-                                        className="bg-red-500 h-1.5 rounded-full transition-all duration-300"
+                                        className="bg-red-500 dark:bg-red-400 h-1.5 rounded-full transition-all duration-300"
                                         style={{ width: `${Math.min((completedPomodoros / totalEstimated) * 100, 100)}%` }}
                                       />
                                     </div>
@@ -670,22 +740,29 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           <Button 
                             onClick={() => {
                               if (currentTask) {
+                                // Show completion animation overlay
+                                setShowingCompletionAnimation(true);
+                                // Trigger completion animation on Tabbie
+                                triggerTaskCompletion(currentTask.title);
                                 // Mark the task as completed
                                 updateTask(currentTask.id, { completed: true });
                                 // Stop the pomodoro session
                                 stopPomodoro();
-                                // Navigate back to tasks
-                                window.history.back();
+                                // Wait 5 seconds for animation to play, then navigate
+                                setTimeout(() => {
+                                  window.history.back();
+                                }, 5000);
                               }
                             }}
+                            disabled={showingCompletionAnimation}
                             className={
                               theme === 'retro'
-                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
-                                : "bg-green-600 hover:bg-green-700 text-white px-8"
+                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold disabled:opacity-50"
+                                : "bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-50"
                             }
                           >
                             <CheckSquare className="w-5 h-5 mr-2" />
-                            Finish Task
+                            {showingCompletionAnimation ? 'Completing...' : 'Finish Task'}
                           </Button>
                           <Button 
                             variant="outline"
@@ -699,6 +776,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                 startPomodoro(currentTask);
                               }
                             }}
+                            disabled={showingCompletionAnimation}
                           >
                             <Plus className="w-4 h-4 mr-2" />
                             Continue Working
@@ -764,22 +842,29 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           <Button 
                             onClick={() => {
                               if (currentTask) {
+                                // Show completion animation overlay
+                                setShowingCompletionAnimation(true);
+                                // Trigger completion animation on Tabbie
+                                triggerTaskCompletion(currentTask.title);
                                 // Mark the task as completed
                                 updateTask(currentTask.id, { completed: true });
                                 // Stop the pomodoro session
                                 stopPomodoro();
-                                // Navigate back to tasks
-                                window.history.back();
+                                // Wait 5 seconds for animation to play, then navigate
+                                setTimeout(() => {
+                                  window.history.back();
+                                }, 5000);
                               }
                             }}
+                            disabled={showingCompletionAnimation}
                             className={
                               theme === 'retro'
-                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
-                                : "bg-green-600 hover:bg-green-700 text-white px-8"
+                                ? "bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 px-8 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold disabled:opacity-50"
+                                : "bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-50"
                             }
                           >
                             <CheckSquare className="w-5 h-5 mr-2" />
-                            Finish Task
+                            {showingCompletionAnimation ? 'Completing...' : 'Finish Task'}
                           </Button>
                         </div>
                       </div>
@@ -855,25 +940,32 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                         <Button 
                           onClick={() => {
                             if (currentTask) {
+                              // Show completion animation overlay
+                              setShowingCompletionAnimation(true);
+                              // Trigger completion animation on Tabbie
+                              triggerTaskCompletion(currentTask.title);
                               // Mark the task as completed
                               updateTask(currentTask.id, { completed: true });
                               // Stop the pomodoro session
                               stopPomodoro();
-                              // Navigate to tasks tab
-                              if (onPageChange) {
-                                onPageChange('tasks');
-                              }
+                              // Wait 5 seconds for animation to play, then navigate
+                              setTimeout(() => {
+                                if (onPageChange) {
+                                  onPageChange('tasks');
+                                }
+                              }, 5000);
                             }
                           }}
                           size="lg"
+                          disabled={showingCompletionAnimation}
                           className={
                             theme === 'retro'
-                              ? "px-8 bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold"
-                              : "px-8 bg-green-600 hover:bg-green-700 text-white"
+                              ? "px-8 bg-[#96f2d7] dark:bg-teal-600 hover:bg-[#96f2d7] dark:hover:bg-teal-600 text-gray-900 dark:text-gray-100 rounded-full border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-bold disabled:opacity-50"
+                              : "px-8 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                           }
                         >
                           <CheckSquare className="w-5 h-5 mr-2" />
-                          Finish Task
+                          {showingCompletionAnimation ? 'Completing...' : 'Finish Task'}
                         </Button>
                       </>
                     )}
