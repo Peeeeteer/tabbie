@@ -6,3 +6,4 @@ image-to-bitmap
 firmware/.env
 firmware/wifi.env
 TABBIE_SYNC_IMPLEMENTATION.md
+sounds/
