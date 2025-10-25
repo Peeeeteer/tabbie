@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, Clock, ChevronLeft, CheckSquare, Coffee, Bug, SkipForward, Plus, AlertTriangle } from 'lucide-react';
+import { Play, Pause, Square, ChevronLeft, CheckSquare, Coffee, SkipForward, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useTodo } from '@/contexts/TodoContext';
 import { useTabbieSync } from '@/contexts/TabbieContext';
-import { debugPomodoroState } from '@/utils/storage';
-import { testPomodoroPersistence, testPageRefreshScenario } from '@/utils/pomodoro-persistence-test';
 
 interface PomodoroPageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings') => void;
@@ -25,8 +23,6 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     startNextSession,
     completeWorkSession,
     skipBreak,
-    debugSetTimerTo10Seconds,
-    debugSetTimerTo14m45Overtime,
   } = useTodo();
   
   const { triggerTaskCompletion } = useTabbieSync();
@@ -34,44 +30,23 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
   // Get current task from userData using currentTaskId
   const currentTask = currentTaskId ? userData.tasks.find(t => t.id === currentTaskId) : null;
 
-  // Test sound function
-  const testSound = () => {
+  // Play task complete sound
+  const playTaskCompleteSound = () => {
+    // Check if sounds are enabled in settings
+    if (userData.settings.pomodoroSound === false) {
+      console.log('🔇 Sounds are disabled in settings');
+      return;
+    }
+    
     try {
-      console.log('🔊 Testing sound...');
-      const audio = new Audio('/sound.mp3');
+      console.log('🔊 Playing task complete sound...');
+      const audio = new Audio('/task_complete.wa.mp3');
       audio.volume = 0.7;
       audio.play().catch(error => {
-        console.log('🔊 Test sound failed:', error);
+        console.log('🔊 Task complete sound failed:', error);
       });
     } catch (error) {
-      console.log('🔊 Test sound error:', error);
-    }
-  };
-
-  // Debug timer state function
-  const debugTimerState = () => {
-    console.log('🔍 Debug Timer State:');
-    console.log('timeLeft:', pomodoroTimer.timeLeft);
-    console.log('isRunning:', pomodoroTimer.isRunning);
-    console.log('sessionType:', pomodoroTimer.sessionType);
-    console.log('currentSession:', pomodoroTimer.currentSession);
-    console.log('totalPausedTime:', pomodoroTimer.totalPausedTime);
-    console.log('pausedAt:', pomodoroTimer.pausedAt);
-    console.log('justCompleted:', pomodoroTimer.justCompleted);
-    console.log('currentTask:', currentTask);
-    
-    if (pomodoroTimer.currentSession) {
-      const now = Date.now();
-      const sessionElapsed = Math.floor((now - pomodoroTimer.currentSession.started.getTime()) / 1000);
-      const effectiveElapsed = sessionElapsed - pomodoroTimer.totalPausedTime;
-      const totalDuration = pomodoroTimer.currentSession.duration * 60;
-      const actualTimeLeft = totalDuration - effectiveElapsed;
-      
-      console.log('🔍 Timer Calculations:');
-      console.log('sessionElapsed:', sessionElapsed);
-      console.log('effectiveElapsed:', effectiveElapsed);
-      console.log('totalDuration:', totalDuration);
-      console.log('actualTimeLeft:', actualTimeLeft);
+      console.log('🔊 Task complete sound error:', error);
     }
   };
 
@@ -842,6 +817,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           <Button 
                             onClick={() => {
                               if (currentTask) {
+                                // Play task complete sound
+                                playTaskCompleteSound();
                                 // Show completion animation overlay
                                 setShowingCompletionAnimation(true);
                                 // Trigger completion animation on Tabbie

@@ -190,16 +190,22 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [pomodoroTimer.timeLeft, pomodoroTimer.sessionType, currentTaskId, pomodoroTimer.currentSession]);
 
-  // Play notification sound
-  const playNotificationSound = () => {
+  // Play notification sound - generic function for specific sound files
+  const playNotificationSound = (soundFile: string = '/sound.mp3') => {
+    // Check if sounds are enabled in settings
+    if (userData.settings.pomodoroSound === false) {
+      console.log('🔇 Sounds are disabled in settings');
+      return;
+    }
+
     try {
-      console.log('🔊 Attempting to play notification sound...');
+      console.log(`🔊 Attempting to play notification sound: ${soundFile}`);
       
       // Create audio context to ensure sound plays even when tab is not focused
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
       // Load and decode the audio file
-      fetch('/sound.mp3')
+      fetch(soundFile)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => {
@@ -213,10 +219,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           gainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
           
           source.start(audioContext.currentTime);
-          console.log('🔊 Sound played successfully!');
+          console.log(`🔊 Sound played successfully: ${soundFile}`);
         })
         .catch(error => {
-          console.log('🔊 Could not load audio file:', error);
+          console.log(`🔊 Could not load audio file ${soundFile}:`, error);
           // Fallback: try to play a simple beep
           console.log('🔊 Trying fallback beep sound...');
           try {
@@ -243,6 +249,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔊 Could not play notification sound:', error);
     }
   };
+
+  // Specific sound functions for different events
+  const playPomodoroCompleteSound = () => playNotificationSound('/pomodoro_complete.mp3');
+  const playBreakCompleteSound = () => playNotificationSound('/break_complete.mp3');
+  const playTaskCompleteSound = () => playNotificationSound('/task_complete.wa.mp3');
+  const playOvertimeReminderSound = () => playNotificationSound('/overtime_reminder.mp3');
+  const playBreakOvertimeReminderSound = () => playNotificationSound('/break_complete_reminder.mp3');
 
   // Show browser notification
   const showNotification = (title: string, body: string, icon?: string) => {
@@ -288,13 +301,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (safeActualTimeLeft <= 0 && prev.timeLeft > 0) {
             if (prev.sessionType === 'shortBreak') {
-              playNotificationSound();
+              playBreakCompleteSound();
               showNotification(
                 '☕ Break Complete!', 
                 'Break time is over. Ready to get back to work?'
               );
             } else if (prev.sessionType === 'work') {
-              playNotificationSound();
+              playPomodoroCompleteSound();
               showNotification(
                 '🍅 Pomodoro Complete!', 
                 `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. You can continue working or take a break!`
@@ -314,7 +327,11 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const isBreakSession = prev.sessionType === 'shortBreak';
 
           if (shouldAutoPause) {
-            playNotificationSound();
+            if (isWorkSession) {
+              playOvertimeReminderSound();
+            } else if (isBreakSession) {
+              playBreakOvertimeReminderSound();
+            }
             showNotification(
               isWorkSession ? '⏰ Focus Session Paused' : '⏰ Break Paused',
               `You have been ${isWorkSession ? 'working' : 'on break'} ${overtimeMinutes} minutes overtime. Are you still there?`
@@ -334,13 +351,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           if (shouldNotifyOvertime && isNotificationIntervalReached && !shouldAutoPause) {
-            playNotificationSound();
             if (isWorkSession) {
+              playOvertimeReminderSound();
               showNotification(
                 '⏰ Still Working!', 
                 `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
               );
             } else if (isBreakSession) {
+              playBreakOvertimeReminderSound();
               showNotification(
                 '⏰ Break Overdue!', 
                 `You've been on break for ${overtimeMinutes} minutes longer than planned. Ready to get back to work?`
@@ -940,7 +958,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (isLastSession) {
         // Task completed!
-        playNotificationSound();
+        playTaskCompleteSound();
         showNotification(
           '🎉 Task Complete!', 
           `Congratulations! You completed all pomodoros for "${currentTask?.title}"`
@@ -1032,7 +1050,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (isLastSession) {
         // Task completed!
-        playNotificationSound();
+        playTaskCompleteSound();
         showNotification(
           '🎉 Task Complete!', 
           `Congratulations! You completed all pomodoros for "${currentTask.title}"`

@@ -23,10 +23,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
   const [selectedTheme, setSelectedTheme] = React.useState<'clean' | 'retro'>(
     userData.settings.theme || 'clean'
   );
+  const [workDuration, setWorkDuration] = React.useState(userData.settings.workDuration || 25);
+  const [shortBreakDuration, setShortBreakDuration] = React.useState(userData.settings.shortBreakDuration || 5);
 
   const handlePomodoroSoundChange = (enabled: boolean) => {
     setPomodoroSound(enabled);
     updateSettings({ pomodoroSound: enabled });
+  };
+
+  const handleWorkDurationChange = (value: number) => {
+    setWorkDuration(value);
+    updateSettings({ workDuration: value });
+  };
+
+  const handleShortBreakDurationChange = (value: number) => {
+    setShortBreakDuration(value);
+    updateSettings({ shortBreakDuration: value });
   };
 
   const handleResetOnboarding = () => {
@@ -273,7 +285,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
                 Configure pomodoro timer settings
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <label className={
@@ -296,6 +308,84 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
                   onCheckedChange={handlePomodoroSoundChange}
                   size="md"
                 />
+              </div>
+
+              <Separator />
+
+              {/* Work Duration */}
+              <div className="space-y-3">
+                <div className="space-y-0.5">
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold"
+                      : "text-sm font-medium"
+                  }>
+                    Work Duration
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-sm text-muted-foreground font-medium"
+                      : "text-sm text-muted-foreground"
+                  }>
+                    Length of focus sessions in minutes
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="60"
+                    step="1"
+                    value={workDuration}
+                    onChange={(e) => handleWorkDurationChange(Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                  <div className={
+                    theme === 'retro'
+                      ? "min-w-[80px] text-center px-3 py-2 bg-primary/10 border-2 border-black dark:border-white rounded-lg font-black text-lg"
+                      : "min-w-[80px] text-center px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg font-semibold"
+                  }>
+                    {workDuration} min
+                  </div>
+                </div>
+              </div>
+
+              {/* Break Duration */}
+              <div className="space-y-3">
+                <div className="space-y-0.5">
+                  <label className={
+                    theme === 'retro'
+                      ? "text-base font-bold"
+                      : "text-sm font-medium"
+                  }>
+                    Break Duration
+                  </label>
+                  <p className={
+                    theme === 'retro'
+                      ? "text-sm text-muted-foreground font-medium"
+                      : "text-sm text-muted-foreground"
+                  }>
+                    Length of breaks between focus sessions
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    step="1"
+                    value={shortBreakDuration}
+                    onChange={(e) => handleShortBreakDurationChange(Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                  <div className={
+                    theme === 'retro'
+                      ? "min-w-[80px] text-center px-3 py-2 bg-primary/10 border-2 border-black dark:border-white rounded-lg font-black text-lg"
+                      : "min-w-[80px] text-center px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg font-semibold"
+                  }>
+                    {shortBreakDuration} min
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

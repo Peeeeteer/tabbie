@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wifi, WifiOff, Zap, Play, Square, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,6 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
     customIP, 
     checkConnection, 
     setCustomIP: setCustomIPContext,
-    sendAnimation,
     activityState 
   } = useTabbieSync();
 
@@ -224,87 +223,6 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
               </CardContent>
             </Card>
           )}
-
-          {/* Quick Actions */}
-          {isConnected && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Test different animations and states
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => sendAnimation('idle')}
-                    className="flex flex-col items-center gap-2 h-auto py-4"
-                  >
-                    <div className="text-2xl">💤</div>
-                    <span>Idle</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => sendAnimation('pomodoro', 'Test Focus Session')}
-                    className="flex flex-col items-center gap-2 h-auto py-4"
-                  >
-                    <div className="text-2xl">🍅</div>
-                    <span>Focus</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => sendAnimation('complete', 'Task Completed!')}
-                    className="flex flex-col items-center gap-2 h-auto py-4"
-                  >
-                    <div className="text-2xl">✅</div>
-                    <span>Complete</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(`http://${customIP}`, '_blank')}
-                    className="flex flex-col items-center gap-2 h-auto py-4"
-                  >
-                    <div className="text-2xl">🌐</div>
-                    <span>Web UI</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Integration Info */}
-          <Card className={
-            theme === 'retro'
-              ? "bg-[#d4f1ff]/30 dark:bg-[#00d4ff]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
-              : ""
-          }>
-            <CardHeader>
-              <CardTitle className={theme === 'retro' ? "font-bold text-foreground" : ""}>🔗 Dashboard Integration</CardTitle>
-              <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
-                Tabbie automatically syncs with your productivity workflow
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Play className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">When you start a Pomodoro timer, Tabbie shows focus animation</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">Task completions trigger celebration animations</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Square className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm">Idle time shows a peaceful waiting state</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
         </div>
       </div>
