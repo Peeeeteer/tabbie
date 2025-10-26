@@ -20,22 +20,22 @@ I recommend buying the parts on **Amazon or Aliexpress**
 **Aliexpress** is cheaper, but things sometimes arrive broken and shipping takes long  
 
 **Amazon EU:**
-- [ESP32 - Pack of 2](https://amzn.to/4mDWJ6Z) (~14 EUR) 
+- [ESP32 USB-C](https://amzn.to/4mDWJ6Z) (~14 EUR) 
 - [OLED Screen - Pack of 3](https://amzn.to/4nxXHCO) (~18.99 EUR)
 - [JumperWires -  Full pack](https://amzn.to/4mOGZ0I) (~6.40 EUR)
 - [PLA Filament for 3D printing](https://amzn.to/46QfHkC) (~14 EUR)
 
 **Amazon USA/Canada:**
-- [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
+- [ESP32 USB-C](https://amzn.to/4mGymW4) (~13.99 USD)
 - [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
 - [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
 - [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
 
 **Aliexpress Worldwide:**
-- [ESP32](https://amzn.to/4mGymW4) (~13.99 USD)
-- [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
-- [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
-- [PLA Filament for 3D printing](https://amzn.to/46yAlqL) (~13.99 USD)
+- [ESP32 USB-C](https://s.click.aliexpress.com/e/_c3wydxSb) (~6.99 USD / 5.20 EUR a piece)
+- [1.3 INCH OLED Screen white](https://s.click.aliexpress.com/e/_c30oI6Nd) (~5.35 USD / 4.50 EUR)
+- [JumperWires](https://s.click.aliexpress.com/e/_c3SbwD0R) (~3.30 USD / 2.59 EUR)
+- [PLA Filament for 3D printing](https://s.click.aliexpress.com/e/_c3O5ECAR) (~15.50 USD / 13.50 EUR)
 
 
 
