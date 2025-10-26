@@ -61,9 +61,13 @@ const VideoStep: React.FC<VideoStepProps> = ({ onFinish, selectedDesign }) => {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">See How to Use It</h2>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            Step 2: How It Works
+          </div>
+          <h2 className="text-2xl font-bold">Quick Overview</h2>
           <p className="text-muted-foreground">
-            Watch this quick 20-second overview to get started
+            Learn how to use Tabbie in just 20 seconds
           </p>
         </div>
 
@@ -179,9 +183,13 @@ const VideoStep: React.FC<VideoStepProps> = ({ onFinish, selectedDesign }) => {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-black">See How to Use It</h2>
-        <p className="text-gray-700 dark:text-gray-300 font-medium">
-          Watch this quick 20-second overview to get started
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border-2 border-black bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 text-xs font-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-900"></span>
+          Step 2: How It Works
+        </div>
+        <h2 className="text-3xl font-black">Quick Overview</h2>
+        <p className="text-gray-700 dark:text-gray-300 font-bold">
+          Learn how to use Tabbie in just 20 seconds
         </p>
       </div>
 

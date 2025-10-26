@@ -58,85 +58,61 @@ const TabbieStep: React.FC<TabbieStepProps> = ({ onNext, onSkip, onBack, selecte
             ← Back
           </Button>
           
-          <div className="text-center space-y-3 pt-8">
-            <h2 className="text-2xl font-bold">Meet Tabbie</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Your physical desk companion that watches, listens, and helps you stay productive
+          <div className="text-center space-y-2 pt-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              Step 1: Connect Your Tabbie
+            </div>
+            <h2 className="text-2xl font-bold">Meet Your Desk Companion</h2>
+            <p className="text-muted-foreground max-w-md mx-auto text-sm">
+              Watch how Tabbie works, then connect it to get started
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <div className="bg-card border rounded-lg p-4 space-y-2 hover:bg-accent transition-colors">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="font-semibold">Watches & Listens</div>
-              <div className="text-sm text-muted-foreground">
-                Monitors your work sessions
-              </div>
-            </div>
-            
-            <div className="bg-card border rounded-lg p-4 space-y-2 hover:bg-accent transition-colors">
-              <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                <Smile className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="font-semibold">Shows Expressions</div>
-              <div className="text-sm text-muted-foreground">
-                Displays emotions based on activity
-              </div>
-            </div>
-            
-            <div className="bg-card border rounded-lg p-4 space-y-2 hover:bg-accent transition-colors">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                <PartyPopper className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="font-semibold">Celebrates Success</div>
-              <div className="text-sm text-muted-foreground">
-                Reacts to completed tasks
-              </div>
-            </div>
-          </div>
-
-          {/* Video Tutorial - Clean Style */}
-          <div className="max-w-md mx-auto">
-            <div className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <PlayCircle className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold mb-1">Quick Tutorial</div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    See how Tabbie works on your desk
-                  </p>
-                  <a
-                    href="https://www.youtube.com/@LloydDecember1"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                    <span>Watch Tutorial</span>
-                  </a>
+          {/* Video Tutorial - Embedded */}
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-card border rounded-lg overflow-hidden shadow-lg">
+              {/* Video Player */}
+              <div className="relative aspect-video bg-black">
+                <video
+                  className="w-full h-full"
+                  controls
+                  playsInline
+                  poster="/video-thumbnail.jpg"
+                >
+                  <source src="/tabbie-demo.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                {/* Placeholder overlay if no video exists */}
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                  <div className="text-center text-white space-y-4 p-6">
+                    <div className="text-6xl">🎬</div>
+                    <div className="text-lg font-semibold">Tabbie Demo Video</div>
+                    <div className="text-sm opacity-90">
+                      Add your tabbie-demo.mp4 to /public folder
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center gap-3 pt-4">
+          {/* Action Buttons */}
+          <div className="flex flex-col items-center gap-3 pt-4 max-w-md mx-auto">
             <Button 
               onClick={() => setShowConnection(true)}
               size="lg"
+              className="w-full h-12"
             >
-              <Wifi className="h-4 w-4 mr-2" />
-              I Have a Tabbie
+              <Wifi className="h-5 w-5 mr-2" />
+              Connect Tabbie
             </Button>
             <Button 
               onClick={onSkip}
-              variant="outline"
-              size="lg"
+              variant="ghost"
+              size="sm"
             >
-              Skip
+              I don't have a Tabbie yet →
             </Button>
           </div>
         </div>
@@ -155,87 +131,62 @@ const TabbieStep: React.FC<TabbieStepProps> = ({ onNext, onSkip, onBack, selecte
           ← Back
         </Button>
         
-        <div className="text-center space-y-3 pt-8">
-          <h2 className="text-3xl font-black">Meet Tabbie</h2>
-          <p className="text-gray-700 dark:text-gray-300 max-w-md mx-auto font-medium">
-            Your physical desk companion that watches, listens, and helps you stay productive
+        <div className="text-center space-y-2 pt-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border-2 border-black bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 text-xs font-black mb-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-900"></span>
+            Step 1: Connect Your Tabbie
+          </div>
+          <h2 className="text-3xl font-black">Meet Your Desk Companion</h2>
+          <p className="text-gray-700 dark:text-gray-300 max-w-md mx-auto font-bold text-sm">
+            Watch how Tabbie works, then connect it to get started
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          <div className="bg-[#fff3b0] dark:bg-[#ffd700] border-2 border-black rounded-[24px] p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,215,0,0.5)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(255,215,0,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all">
-            <div className="w-12 h-12 rounded-full border-2 border-black bg-white dark:bg-[#1a1a1a] flex items-center justify-center mb-3">
-              <Eye className="h-6 w-6 text-gray-900 dark:text-white" />
-            </div>
-            <div className="font-bold text-gray-900 mb-1">Watches & Listens</div>
-            <div className="text-sm text-gray-700 dark:text-gray-900 font-medium">
-              Monitors your work sessions
-            </div>
-          </div>
-          
-          <div className="bg-[#ffd4f4] dark:bg-[#ff69b4] border-2 border-black rounded-[24px] p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,105,180,0.5)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(255,105,180,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all">
-            <div className="w-12 h-12 rounded-full border-2 border-black bg-white dark:bg-[#1a1a1a] flex items-center justify-center mb-3">
-              <Smile className="h-6 w-6 text-gray-900 dark:text-white" />
-            </div>
-            <div className="font-bold text-gray-900 mb-1">Shows Expressions</div>
-            <div className="text-sm text-gray-700 dark:text-gray-900 font-medium">
-              Displays emotions based on activity
-            </div>
-          </div>
-          
-          <div className="bg-[#96f2d7] dark:bg-[#00e5a0] border-2 border-black rounded-[24px] p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(0,229,160,0.5)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(0,229,160,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all">
-            <div className="w-12 h-12 rounded-full border-2 border-black bg-white dark:bg-[#1a1a1a] flex items-center justify-center mb-3">
-              <PartyPopper className="h-6 w-6 text-gray-900 dark:text-white" />
-            </div>
-            <div className="font-bold text-gray-900 mb-1">Celebrates Success</div>
-            <div className="text-sm text-gray-700 dark:text-gray-900 font-medium">
-              Reacts to completed tasks
-            </div>
-          </div>
-        </div>
-
-        {/* Video Tutorial - Retro Style */}
-        <div className="max-w-md mx-auto">
-          <div className="bg-[#d4f1ff] dark:bg-[#00d4ff] border-2 border-black rounded-[24px] p-5 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(0,212,255,0.5)] hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(0,212,255,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full border-2 border-black bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
-                <PlayCircle className="h-6 w-6 text-gray-900 dark:text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="font-bold text-lg mb-1 text-gray-900">Quick Tutorial</div>
-                <p className="text-sm text-gray-700 dark:text-gray-900 font-medium mb-3">
-                  See how Tabbie works on your desk
-                </p>
-                <a
-                  href="https://www.youtube.com/@LloydDecember1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-bold border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:shadow-[5px_5px_0_0_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-                >
-                  <PlayCircle className="h-4 w-4" />
-                  <span>Watch Tutorial</span>
-                </a>
+        {/* Video Tutorial - Embedded Retro Style */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-card border-2 border-black rounded-[24px] overflow-hidden shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(0,0,0,0.6)]">
+            {/* Video Player */}
+            <div className="relative aspect-video bg-black">
+              <video
+                className="w-full h-full"
+                controls
+                playsInline
+                poster="/video-thumbnail.jpg"
+              >
+                <source src="/tabbie-demo.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              {/* Placeholder overlay if no video exists */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                <div className="text-center text-white space-y-4 p-6">
+                  <div className="text-6xl">🎬</div>
+                  <div className="text-lg font-black">Tabbie Demo Video</div>
+                  <div className="text-sm opacity-90 font-medium">
+                    Add your tabbie-demo.mp4 to /public folder
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-center gap-3 pt-4">
+        {/* Action Buttons */}
+        <div className="flex flex-col items-center gap-3 pt-4 max-w-md mx-auto">
           <Button 
             onClick={() => setShowConnection(true)}
             size="lg"
-            className="rounded-full border-2 border-black bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,215,0,0.5)] hover:bg-[#ffd633] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(255,215,0,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+            className="w-full h-12 rounded-full border-2 border-black bg-[#ffe164] dark:bg-[#ffd700] text-gray-900 font-black shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,215,0,0.5)] hover:bg-[#ffd633] hover:shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0_0_rgba(255,215,0,0.7)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
           >
-            <Wifi className="h-4 w-4 mr-2" />
-            I Have a Tabbie
+            <Wifi className="h-5 w-5 mr-2" />
+            Connect Tabbie
           </Button>
           <Button 
             onClick={onSkip}
-            variant="outline"
-            size="lg"
-            className="rounded-full border-2 border-black bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.2)] hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0_0_rgba(255,255,255,0.3)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+            variant="ghost"
+            size="sm"
+            className="font-bold"
           >
-            Skip
+            I don't have a Tabbie yet →
           </Button>
         </div>
       </div>

@@ -396,7 +396,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     <div 
                       className={`h-2 rounded-full transition-all duration-300 ${
                         isWorkOverdue ? 'bg-orange-500 dark:bg-orange-600' : 
-                        isBreakOverdue ? 'bg-green-500 dark:bg-green-600' : 'bg-blue-500 dark:bg-blue-600'
+                        isBreakOverdue ? 'bg-red-500 dark:bg-red-600' : 'bg-blue-500 dark:bg-blue-600'
                       }`}
                       style={{ 
                         width: `${Math.max(0, Math.min(100, 
@@ -427,7 +427,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 }>
                   <div className={`font-mono font-bold text-lg ${
                     isWorkOverdue ? 'text-orange-600 dark:text-orange-400' : 
-                    isBreakOverdue ? 'text-green-600 dark:text-green-400' : 
+                    isBreakOverdue ? 'text-red-600 dark:text-red-400' : 
                     theme === 'retro' ? 'text-gray-900 dark:text-gray-100' : 'text-blue-800 dark:text-blue-400'
                   }`}>
                     {formatTime(pomodoroTimer.timeLeft)}

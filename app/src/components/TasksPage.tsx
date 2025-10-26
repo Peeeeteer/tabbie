@@ -152,8 +152,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   };
 
   const today = getLocalDate(new Date());
-  const tomorrow = getLocalDate(new Date(today.getTime() + 24 * 60 * 60 * 1000));
-  const next7Days = getLocalDate(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const next7Days = new Date(today);
+  next7Days.setDate(next7Days.getDate() + 7);
 
   const getTodayTasks = () => {
     return userData.tasks.filter(task => {
