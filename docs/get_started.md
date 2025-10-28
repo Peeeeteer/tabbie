@@ -25,7 +25,7 @@ I recommend buying the parts on **Amazon or Aliexpress**
 - [JumperWires -  Full pack](https://amzn.to/4mOGZ0I) (~6.40 EUR)
 - [PLA Filament for 3D printing](https://amzn.to/46QfHkC) (~14 EUR)
 
-**Amazon USA/Canada:**
+**Amazon US**
 - [ESP32 USB-C](https://amzn.to/4mGymW4) (~13.99 USD)
 - [OLED Screen](https://amzn.to/4nGTbSQ) (~17.99 USD)
 - [JumperWires -  Full pack](https://amzn.to/4nFxh2a) (~6.80 USD)
