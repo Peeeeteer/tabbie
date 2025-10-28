@@ -120,41 +120,21 @@ Your ESP32 (brains) needs special drivers to talk to your computer.
 ### STEP 4: Connect the Parts
 
 **Wiring Guide:**
-1. Connect the OLED screen to ESP32:
+1. Partly Asemble Enclosure (as per video)
+2. Connect the OLED screen to ESP32:
    - SDA wire → GPIO 21 (D21)
    - SCK/SCL wire → GPIO 22 (D22)
    - VDD → 3.3V 
    - GND → GND (Ground)
-   
-3. Put ESP32 into the 3D printed base
-4. Thread wires through the neck piece
-5. Snap the screen into the head piece
+
+Keep it partly assembled (we need to upload code and make sure everything works first)
 
 GG. done
 
 
 ---
 
-### STEP 5: Set Up the React Dashboard
-
-Open your terminal/command and run:
-
-```bash
-# Go to the dashboard folder
-cd app
-
-# Install everything it needs
-npm install
-
-# Start it up
-npm run dev
-```
-
-The dashboard will open at `http://localhost:8080` in your web browser.
-
----
-
-### STEP 6: Program Your ESP32
+### STEP 5: Program Your ESP32
 
 1. **Navigate to the firmware folder:**
 
@@ -189,6 +169,30 @@ pio run --target upload
 **Tip:** If upload fails, hold down the BOOT button on your ESP32 while uploading
 and make sure that your are in still in the `firmware` directory when uploading 
 
+
+4. Finish assembling Tabbie.
+
+Put the screen in the front -> front in the head
+
+---
+
+
+### STEP 6: Set Up the React Dashboard
+
+Open your terminal/command and run:
+
+```bash
+# Go to the dashboard folder
+cd app
+
+# Install everything it needs
+npm install
+
+# Start it up
+npm run dev
+```
+
+The dashboard will open at `http://localhost:8080` in your web browser.
 
 ---
 
@@ -235,7 +239,7 @@ All your tasks/notes etc... are only saved on your computer, no one can access t
 - Check your USB cable (some cables only charge, they don't transfer data)
 
 **Need more help?** Join the community:
-- [Discord](https://discord.gg/7er2Ysjc) - [Reddit](https://www.reddit.com/r/deskbuddy/) - [YouTube](https://www.youtube.com/@LloydDecember1) - [GitHub](https://github.com/Peeeeteer/tabbie)
+- [Discord](https://discord.gg/7er2Ysjc) - [Reddit](https://www.reddit.com/r/deskbuddy/) - [YouTube](https://www.youtube.com/@LloydDecember1) - [GitHub](https://github.com/Peeeeteer/tabbie) - [X](https://x.com/llo7d)
 
 ---
 
