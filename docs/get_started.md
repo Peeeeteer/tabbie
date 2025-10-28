@@ -69,18 +69,11 @@ The video covers everything for both Windows and Mac users.
 
 >Download:
 
-**Option A: Using Git (recommended)**   
+**Option A: Using Git**   
 
 ```bash
 git clone https://github.com/Peeeeteer/tabbie.git
 cd tabbie
-```
-
-Youll be able to update very easly in the future by just running 
-
-```bash
-cd tabbie
-git pull
 ```
 
 **Option B: Download as ZIP**
@@ -96,14 +89,16 @@ git pull
 ### STEP 2: Print the Body/Enclosure   
 
 1. Use the STL files from the `/hardware` folder & print
-      - `tabbie-head.stl`
-      - `tabbie-head.stl`
-      - `tabbie-head.stl`
-      - `tabbie-head.stl`
-      - `tabbie-head.stl`
-      - `tabbie-head.stl`
+      - `GCODE.bgcode`
+      - `STL/antenna.stl`
+      - `STL/antenna2.stl`
+      - `STL/bottom_case.stl`
+      - `STL/case.stl`
+      - `STL/neck.stl`
+      - `STL/panel.stl`
+      - `STL/top_case.stl`
 
-Tip: Turn on supports for `Neck.stl` and `Top_case.stl` 
+**Tip:** Turn on supports for `neck.stl` and `top_case.stl` 
 
 
 ### STEP 3: Install ESP32 Drivers
@@ -111,7 +106,7 @@ Tip: Turn on supports for `Neck.stl` and `Top_case.stl`
 Your ESP32 (brains) needs special drivers to talk to your computer.
 
 **Windows Users:**
-1. Download drivers from [Silicon Labs](https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads)
+1. Download drivers from [Silicon Labs](https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads)
 2. Install them
 3. Plug in your ESP32 with a USB cable
 4. Open Device Manager - you should see "Silicon Labs CP210x USB to UART Bridge"
@@ -126,19 +121,17 @@ Your ESP32 (brains) needs special drivers to talk to your computer.
 
 **Wiring Guide:**
 1. Connect the OLED screen to ESP32:
-   - SCK wire → GPIO 21 (D21)
-   - SDA wire → GPIO 22 (D22)
+   - SDA wire → GPIO 21 (D21)
+   - SCK/SCL wire → GPIO 22 (D22)
    - VDD → 3.3V 
    - GND → GND (Ground)
+   
+3. Put ESP32 into the 3D printed base
+4. Thread wires through the neck piece
+5. Snap the screen into the head piece
 
-2. Put ESP32 into the 3D printed base
-3. Thread wires through the neck piece
-4. Snap the screen into the head piece
+GG. done
 
-
-*[Short video here showing assembly]*
-
-**Optional:** Use glue to make it extra secure (but it should stay together without it)
 
 ---
 
@@ -186,11 +179,15 @@ WIFI_PASSWORD=your_wifi_password_here
 3. **Upload the code to your ESP32:**
 
 ```bash
+
+# Go to the dashboard folder
+cd firmware
+
 pio run --target upload
 ```
 
 **Tip:** If upload fails, hold down the BOOT button on your ESP32 while uploading
-and make sure that your are in still in the `firmware`directory when uploading 
+and make sure that your are in still in the `firmware` directory when uploading 
 
 
 ---
@@ -198,9 +195,10 @@ and make sure that your are in still in the `firmware`directory when uploading
 ### STEP 7: Connect Everything Together
 
 1. **Open the dashboard** at `http://localhost:8080` in your browser
-2. **Go to the Tabbie Page**
-3. **Click "Reconnect"** if it doesn't find Tabbie automatically
-4. **Watch the magic!** Tabbie should start showing its idle animation
+2. Follow the onboarding steps
+3. **Watch the magic!** Tabbie should start showing its idle animation
+
+**Tip:** Sometimes things just break, so disconnect tabbie for a few seconds and plug back in if wifi is not connecting properly. 
 
 ---
 
@@ -209,14 +207,11 @@ and make sure that your are in still in the `firmware`directory when uploading
 **Create Tasks**
 - Go to the Tasks tab
 - Add things you need to do
-- Check them off when you're done!
-Tabbie will be happy you created a task
+- Start pomodors for tasks
+- Tick it of when finished
 
-**Use Pomodoro Timer**
-- Go to the Pomodoro tab
-- Pick a task to work on
-- Start the timer
-Tabbie will show a focus animation to help you concentrate
+Tabbie will show focus, happy,relax and bored animations a long the way to keep you focused.
+
 
 **Important:**  
 All your tasks/notes etc... are only saved on your computer, no one can access them.
@@ -226,7 +221,7 @@ All your tasks/notes etc... are only saved on your computer, no one can access t
 ## Troubleshooting
 
 ### ESP32 Won't Connect
-- Double-check your WiFi name and password in the `.env` file
+- Double-check your WiFi name and password in the `.env` file and press "save"
 - Make sure your ESP32 and computer are on the same WiFi network
 
 ### Dashboard Won't Start
