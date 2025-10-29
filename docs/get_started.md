@@ -89,14 +89,14 @@ cd tabbie
 ### STEP 2: Print the Body/Enclosure   
 
 1. Use the STL files from the `/hardware` folder & print
-      - `GCODE.bgcode`
-      - `STL/antenna.stl`
-      - `STL/antenna2.stl`
-      - `STL/bottom_case.stl`
-      - `STL/case.stl`
-      - `STL/neck.stl`
-      - `STL/panel.stl`
-      - `STL/top_case.stl`
+      - `hardware/GCODE.bgcode`
+      - `hardware/STL/antenna.stl`
+      - `hardware/STL/antenna2.stl`
+      - `hardware/STL/bottom_case.stl`
+      - `hardware/STL/case.stl`
+      - `hardware/STL/neck.stl`
+      - `hardware/STL/panel.stl`
+      - `hardware/STL/top_case.stl`
 
 **Tip:** Turn on supports for `neck.stl` and `top_case.stl` 
 
