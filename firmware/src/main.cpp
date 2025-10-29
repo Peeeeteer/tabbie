@@ -9,6 +9,11 @@
 
 // Animation data
 #include "idle01.h"
+#include "focus_bitmap.h"
+#include "relax_bitmap.h"
+#include "love_bitmap.h"
+#include "startup_bitmap.h"
+#include "angry_bitmap.h"
 
 // OLED display configuration - Using U8g2 with SH1106 driver
 U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -23,9 +28,11 @@ DNSServer dnsServer;
 Preferences preferences;
 
 // Current state
-String currentAnimation = "idle";
+String currentAnimation = "startup";
 String currentTask = "";
 unsigned long animationStartTime = 0;
+unsigned long startupTime = 0;
+bool hasCompletedStartup = false;
 bool isInSetupMode = false;
 String wifiStatus = "disconnected";
 String lastError = "";
@@ -55,12 +62,20 @@ void drawConnecting();
 void drawConnected();
 void drawError();
 void drawIdleAnimation();
+void drawFocusImage();
+void drawRelaxImage();
+void drawLoveImage();
+void drawStartupImage();
+void drawAngryImage();
 void drawPomodoroAnimation();
 void drawTaskCompleteAnimation();
 
 void setup() {
   Serial.begin(115200);
   Serial.println("🤖 Tabbie Assistant Starting...");
+  
+  // Record startup time
+  startupTime = millis();
   
   // Initialize components
   setupDisplay();
@@ -611,13 +626,36 @@ void handleAnimation() {
 }
 
 void updateDisplay() {
+  // Handle startup animation for 5 seconds
+  if (!hasCompletedStartup && (millis() - startupTime < 5000)) {
+    drawStartupImage();
+    return;
+  } else if (!hasCompletedStartup) {
+    hasCompletedStartup = true;
+    currentAnimation = "idle";
+  }
+  
   if (isInSetupMode) {
     drawSetupMode();
   } else if (wifiStatus == "connecting" || wifiStatus == "reconnecting") {
     drawConnecting();
   } else if (wifiStatus == "connected") {
+    // Handle love animation (auto-return to idle after 5 seconds)
+    if (currentAnimation == "love" && (millis() - animationStartTime > 5000)) {
+      currentAnimation = "idle";
+      currentTask = "";
+    }
+    
     if (currentAnimation == "idle") {
       drawIdleAnimation();
+    } else if (currentAnimation == "focus") {
+      drawFocusImage();
+    } else if (currentAnimation == "break") {
+      drawRelaxImage();
+    } else if (currentAnimation == "paused") {
+      drawAngryImage();
+    } else if (currentAnimation == "love") {
+      drawLoveImage();
     } else if (currentAnimation == "pomodoro") {
       drawPomodoroAnimation();
     } else if (currentAnimation == "complete") {
@@ -735,22 +773,53 @@ void drawIdleAnimation() {
   
   unsigned long currentTime = millis();
   
-  // Update frame at 24fps (42ms per frame)
-  if (currentTime - lastFrameTime >= 42) {
+  // Update frame at 24fps using IDLE01_FRAME_DELAY (41ms per frame)
+  if (currentTime - lastFrameTime >= IDLE01_FRAME_DELAY) {
     display.clearBuffer();
     
-    const uint8_t* frameData = sketch_04_frames[currentFrame];
+    // Get the frame from PROGMEM
+    const uint8_t* frameData = (const uint8_t*)pgm_read_ptr(&idle01_frames[currentFrame]);
     display.drawBitmap(0, 0, 128 / 8, 64, frameData);
     
     display.sendBuffer();
     
     currentFrame++;
-    if (currentFrame >= SKETCH_04_FRAME_COUNT) {
+    if (currentFrame >= IDLE01_FRAME_COUNT) {
       currentFrame = 0;
     }
     
     lastFrameTime = currentTime;
   }
+}
+
+void drawFocusImage() {
+  display.clearBuffer();
+  display.drawBitmap(0, 0, 128 / 8, 64, focus_bitmap);
+  display.sendBuffer();
+}
+
+void drawRelaxImage() {
+  display.clearBuffer();
+  display.drawBitmap(0, 0, 128 / 8, 64, relax_bitmap);
+  display.sendBuffer();
+}
+
+void drawLoveImage() {
+  display.clearBuffer();
+  display.drawBitmap(0, 0, 128 / 8, 64, love_bitmap);
+  display.sendBuffer();
+}
+
+void drawStartupImage() {
+  display.clearBuffer();
+  display.drawBitmap(0, 0, 128 / 8, 64, startup_bitmap);
+  display.sendBuffer();
+}
+
+void drawAngryImage() {
+  display.clearBuffer();
+  display.drawBitmap(0, 0, 128 / 8, 64, angry_bitmap);
+  display.sendBuffer();
 }
 
 void drawPomodoroAnimation() {

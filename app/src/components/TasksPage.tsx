@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTodo } from '@/contexts/TodoContext';
+import { useTabbieSync } from '@/contexts/TabbieContext';
 import type { Task } from '@/types/todo';
 import {
   Tooltip,
@@ -71,12 +72,30 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     deleteTask,
     toggleTaskComplete,
     startPomodoro,
+    stopPomodoro,
     resetCategoriesToDefault,
     reorderTasks,
     pomodoroTimer,
     addCategory,
     deleteCategory,
   } = useTodo();
+  
+  const { triggerTaskCompletion } = useTabbieSync();
+
+  // Wrapper to trigger love animation when completing a task
+  const handleToggleTaskComplete = (taskId: string) => {
+    const task = userData.tasks.find(t => t.id === taskId);
+    if (task && !task.completed) {
+      // If this task has an active pomodoro running, stop it first
+      if (pomodoroTimer?.currentSession?.taskId === taskId) {
+        stopPomodoro();
+      }
+      
+      // Task is being completed - trigger love animation
+      triggerTaskCompletion(task.title);
+    }
+    toggleTaskComplete(taskId);
+  };
 
   // Category creation options
   const categoryIcons = ['📝', '💼', '🎨', '🏠', '💪', '🎯', '📚', '🛒', '💡', '🎮', '🎵', '✈️', '🍔', '💰', '🔧', '📱'];
@@ -816,7 +835,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SortableTaskItem
                       key={task.id}
                       task={task}
-                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onToggleComplete={() => handleToggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
                       onStartPomodoro={() => handleStartPomodoro(task)}
@@ -903,7 +922,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SortableTaskItem
                       key={task.id}
                       task={task}
-                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onToggleComplete={() => handleToggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
                       onStartPomodoro={() => handleStartPomodoro(task)}
@@ -983,7 +1002,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SortableTaskItem
                       key={task.id}
                       task={task}
-                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onToggleComplete={() => handleToggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
                       onStartPomodoro={() => handleStartPomodoro(task)}
@@ -1049,7 +1068,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                     <SortableTaskItem
                       key={task.id}
                       task={task}
-                      onToggleComplete={() => toggleTaskComplete(task.id)}
+                      onToggleComplete={() => handleToggleTaskComplete(task.id)}
                       onView={() => handleViewTask(task)}
                       onEdit={() => handleEditTask(task)}
                       onStartPomodoro={() => handleStartPomodoro(task)}

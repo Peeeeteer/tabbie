@@ -155,10 +155,10 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
     
-    console.log('🎉 Task completed - triggering completion animation:', taskTitle);
+    console.log('🎉 Task completed - triggering love animation:', taskTitle);
     setIsPlayingCompletionAnimation(true);
     setActivityState('complete');
-    sendAnimation('complete', taskTitle);
+    sendAnimation('love', taskTitle);
     
     // Return to idle after 5 seconds
     setTimeout(() => {
@@ -219,17 +219,17 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Active session running
       if (pomodoroTimer.sessionType === 'work') {
         // Focus session active
-        if (activityState !== 'pomodoro') {
-          setActivityState('pomodoro');
-          sendAnimation('pomodoro', currentTask?.title || 'Focus Session');
+        if (activityState !== 'focus') {
+          setActivityState('focus');
+          sendAnimation('focus', currentTask?.title || 'Focus Session');
           console.log('🍅 Pomodoro started - sent focus animation');
         }
       } else if (pomodoroTimer.sessionType === 'shortBreak') {
         // Break session active
         if (activityState !== 'break') {
           setActivityState('break');
-          sendAnimation('idle', 'Break Time');
-          console.log('☕ Break started - sent idle animation');
+          sendAnimation('break', 'Break Time');
+          console.log('☕ Break started - sent break animation');
         }
       }
     } else if (pomodoroTimer.justCompleted) {
@@ -244,10 +244,10 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     } else if (pomodoroTimer.currentSession && !pomodoroTimer.isRunning) {
       // Paused session
-      if (activityState !== 'idle') {
-        setActivityState('idle');
-        sendAnimation('idle', 'Paused');
-        console.log('⏸️ Session paused - sent idle animation');
+      if (activityState !== 'paused') {
+        setActivityState('paused');
+        sendAnimation('paused', 'Paused');
+        console.log('⏸️ Session paused - sent paused animation');
       }
     } else {
       // No active session - idle

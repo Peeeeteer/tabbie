@@ -3,7 +3,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Sun, Volume2, Wifi, RotateCcw, Sparkles, Square, Moon, Clock } from 'lucide-react';
+import { Sun, Volume2, RotateCcw, Sparkles, Square, Moon, Clock } from 'lucide-react';
 import { useTodo } from '@/contexts/TodoContext';
 import { updateSettings } from '@/utils/storage';
 import { useDarkMode } from '@/contexts/DarkModeContext';
@@ -19,7 +19,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
   const [pomodoroSound, setPomodoroSound] = React.useState(
     userData.settings.pomodoroSound !== undefined ? userData.settings.pomodoroSound : true
   );
-  const [autoConnect, setAutoConnect] = React.useState(false);
   const [selectedTheme, setSelectedTheme] = React.useState<'clean' | 'retro'>(
     userData.settings.theme || 'clean'
   );
@@ -386,48 +385,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onPageChange, theme = 'clea
                     {shortBreakDuration} min
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Device Connection Section */}
-          <Card className={
-            theme === 'retro'
-              ? "bg-[#ffd4f4]/30 dark:bg-[#ff69b4]/10 border-2 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)]"
-              : ""
-          }>
-            <CardHeader>
-              <CardTitle className={theme === 'retro' ? "flex items-center gap-2 font-bold text-foreground" : "flex items-center gap-2"}>
-                <Wifi className="h-5 w-5" />
-                Device Connection
-              </CardTitle>
-              <CardDescription className={theme === 'retro' ? "text-muted-foreground font-medium" : ""}>
-                Manage your Tabbie device connection
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <label className={
-                    theme === 'retro'
-                      ? "text-base font-bold cursor-pointer"
-                      : "text-sm font-medium cursor-pointer"
-                  }>
-                    Auto-Connect
-                  </label>
-                  <p className={
-                    theme === 'retro'
-                      ? "text-sm text-muted-foreground font-medium"
-                      : "text-sm text-muted-foreground"
-                  }>
-                    Automatically connect to your device on startup
-                  </p>
-                </div>
-                <ToggleSwitch
-                  checked={autoConnect}
-                  onCheckedChange={setAutoConnect}
-                  size="md"
-                />
               </div>
             </CardContent>
           </Card>
