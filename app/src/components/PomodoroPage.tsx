@@ -20,6 +20,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     stopPomodoro,
     startPomodoro,
     updateTask,
+    toggleTaskComplete,
     startNextSession,
     completeWorkSession,
     skipBreak,
@@ -823,8 +824,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                 setShowingCompletionAnimation(true);
                                 // Trigger completion animation on Tabbie
                                 triggerTaskCompletion(currentTask.title);
-                                // Mark the task as completed
-                                updateTask(currentTask.id, { completed: true });
+                                // Mark the task as completed (moves to completedTasks array)
+                                toggleTaskComplete(currentTask.id);
                                 // Stop the pomodoro session
                                 stopPomodoro();
                                 // Wait 5 seconds for animation to play, then navigate

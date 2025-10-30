@@ -132,6 +132,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
   const autoSaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveTaskRef = React.useRef<() => void>(() => {});
   const [completedTasksDateFilter, setCompletedTasksDateFilter] = useState<'7days' | '30days' | 'all'>('30days');
+  const [completedTasksCategoryFilter, setCompletedTasksCategoryFilter] = useState<string | null>(null);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📝');
@@ -240,6 +241,11 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     }
     // 'all' shows all completed tasks
     
+    // Apply category filter if set
+    if (completedTasksCategoryFilter) {
+      filteredTasks = filteredTasks.filter(task => task.categoryId === completedTasksCategoryFilter);
+    }
+    
     // Convert CompletedTask to Task format for compatibility with existing components
     const convertedTasks = filteredTasks.map(completedTask => ({
       id: completedTask.id,
@@ -283,6 +289,12 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
         getLocalDate(new Date(task.completed)) >= thirtyDaysAgo
       );
     }
+    
+    // Apply category filter if set
+    if (completedTasksCategoryFilter) {
+      filteredTasks = filteredTasks.filter(task => task.categoryId === completedTasksCategoryFilter);
+    }
+    
     return filteredTasks.length;
   };
 
@@ -1107,9 +1119,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-lg text-gray-800">{title}</h3>
+          <h3 className={`font-semibold text-lg ${theme === 'retro' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-800 dark:text-gray-200'}`}>{title}</h3>
           {count !== undefined && count > 0 && (
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{count}</span>
+            <span className={`text-sm px-2 py-1 rounded ${theme === 'retro' ? 'text-gray-900 dark:text-gray-300 bg-gray-100 dark:bg-gray-700' : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'}`}>{count}</span>
           )}
         </div>
         {sectionDate && (
@@ -1278,6 +1290,55 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                 </div>
               </div>
             </div>
+            
+            {/* Category Filter for Completed Tasks */}
+            <div className={theme === 'retro' ? "mb-6 p-4 bg-gray-50 dark:bg-gray-800 border-2 dark:border border-black dark:border-gray-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] dark:shadow-sm" : "mb-6 p-4 bg-gray-50 rounded-lg"}>
+              <div className="flex items-center justify-between">
+                <h3 className={theme === 'retro' ? "text-sm font-black dark:font-semibold text-gray-900 dark:text-gray-100" : "text-sm font-medium text-gray-700"}>Filter by category:</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setCompletedTasksCategoryFilter(null)}
+                    className={
+                      theme === 'retro'
+                        ? `px-3 py-1 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md transition-colors border-2 dark:border shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none ${
+                            completedTasksCategoryFilter === null
+                              ? 'bg-black dark:bg-blue-500 text-white border-black dark:border-blue-500'
+                              : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`
+                        : `px-3 py-1 text-xs rounded-md transition-colors ${
+                            completedTasksCategoryFilter === null
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-card text-muted-foreground border border-border hover:bg-accent'
+                          }`
+                    }
+                  >
+                    All Categories
+                  </button>
+                  {userData.categories.map(category => (
+                    <button
+                      key={category.id}
+                      onClick={() => setCompletedTasksCategoryFilter(category.id)}
+                      className={
+                        theme === 'retro'
+                          ? `px-3 py-1 text-xs font-black dark:font-semibold rounded-lg dark:rounded-md transition-colors border-2 dark:border shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] dark:shadow-none ${
+                              completedTasksCategoryFilter === category.id
+                                ? 'bg-black dark:bg-blue-500 text-white border-black dark:border-blue-500'
+                                : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`
+                          : `px-3 py-1 text-xs rounded-md transition-colors ${
+                              completedTasksCategoryFilter === category.id
+                                ? 'bg-primary/20 text-primary border border-primary/30'
+                                : 'bg-card text-muted-foreground border border-border hover:bg-accent'
+                            }`
+                      }
+                    >
+                      {category.icon} {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             {renderTaskSection('Completed Tasks', getCompletedTasks(), undefined, getCompletedTaskCount(), false, 'completed')}
             
             {/* Load More button for completed tasks */}
@@ -2408,46 +2469,50 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            <Button 
-              onClick={() => viewingTask && handleEditTask(viewingTask)}
-              variant="outline"
-              size="sm"
-              className={theme === 'retro' ? "font-bold border-2 border-black dark:border-gray-300 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]" : "font-medium"}
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => viewingTask && handleStartPomodoro(viewingTask)}
-              disabled={pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id}
-              className={
-                theme === 'retro'
-                  ? `font-bold border-2 rounded-md ${
-                      pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
-                        ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600 cursor-not-allowed'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-black dark:border-gray-300 shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]'
-                    }`
-                  : `font-medium ${
-                      pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
-                        ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed'
-                        : ''
-                    }`
-              }
-            >
-              {pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2" />
-                  Pomodoro Running
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Pomodoro
-                </>
-              )}
-            </Button>
+            {!viewingTask?.completed && (
+              <Button 
+                onClick={() => viewingTask && handleEditTask(viewingTask)}
+                variant="outline"
+                size="sm"
+                className={theme === 'retro' ? "font-bold border-2 border-black dark:border-gray-300 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]" : "font-medium"}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {!viewingTask?.completed && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => viewingTask && handleStartPomodoro(viewingTask)}
+                disabled={pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id}
+                className={
+                  theme === 'retro'
+                    ? `font-bold border-2 rounded-md ${
+                        pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
+                          ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600 cursor-not-allowed'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-black dark:border-gray-300 shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px]'
+                      }`
+                    : `font-medium ${
+                        pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id
+                          ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed'
+                          : ''
+                      }`
+                }
+              >
+                {pomodoroTimer.isRunning && pomodoroTimer.currentSession?.taskId === viewingTask?.id ? (
+                  <>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Pomodoro Running
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Pomodoro
+                  </>
+                )}
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="sm" 
@@ -2559,40 +2624,113 @@ const TasksPage: React.FC<TasksPageProps> = ({ currentView, onViewChange, onPage
                   </div>
                 </div>
 
-                {/* Pomodoro Progress - Full Width */}
-                <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Pomodoro Progress</label>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🍅</span>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">
-                        {viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0} / {viewingTask.estimatedPomodoros || 3}
+                {/* Completion Summary - Show when task is completed */}
+                {viewingTask.completed && (() => {
+                  const completedTaskData = userData.completedTasks.find(ct => ct.id === viewingTask.id);
+                  const completedDate = completedTaskData?.completed || viewingTask.updated;
+                  const totalPomodoros = completedTaskData?.totalPomodoros || (viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0);
+                  const estimatedPomodoros = viewingTask.estimatedPomodoros || 3;
+                  const hasDueDate = !!viewingTask.dueDate;
+                  const dueDate = viewingTask.dueDate ? new Date(viewingTask.dueDate) : null;
+                  const completedDateObj = new Date(completedDate);
+                  const wasOnTime = hasDueDate && dueDate && completedDateObj <= dueDate;
+                  
+                  return (
+                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Completion Summary</label>
+                      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 space-y-3">
+                        {/* Completion Date */}
+                        <div className="flex items-start gap-2 text-sm">
+                          <CheckSquare className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="text-gray-700 dark:text-gray-300">Completed on </span>
+                            <span className="text-gray-900 dark:text-gray-100 font-semibold">
+                              {completedDateObj.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Pomodoro Summary */}
+                        <div className="flex items-start gap-2 text-sm">
+                          <span className="text-lg mt-0.5 flex-shrink-0">🍅</span>
+                          <div className="flex-1">
+                            <span className="text-gray-700 dark:text-gray-300">
+                              Planned <span className="font-medium text-gray-900 dark:text-gray-100">{estimatedPomodoros}</span> pomodoro{estimatedPomodoros !== 1 ? 's' : ''}, you did it in <span className="font-semibold text-gray-900 dark:text-gray-100">{totalPomodoros}</span> pomodoro{totalPomodoros !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Due Date Comparison */}
+                        {hasDueDate && dueDate && (
+                          <div className="flex items-start gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="text-gray-700 dark:text-gray-300">
+                                You planned to finish by <span className="font-medium text-gray-900 dark:text-gray-100">{dueDate.toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })}</span>, {wasOnTime ? 'and you finished on time' : 'but you finished'} by <span className={`font-semibold ${wasOnTime ? 'text-green-700 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>{completedDateObj.toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })}</span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Pomodoro Progress - Only show for incomplete tasks */}
+                {!viewingTask.completed && (
+                  <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Pomodoro Progress</label>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🍅</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0} / {viewingTask.estimatedPomodoros || 3}
+                        </span>
+                      </div>
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-red-500 dark:bg-red-600 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
                       </span>
                     </div>
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-red-500 dark:bg-red-600 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, ((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}%`
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {Math.round(((viewingTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) / (viewingTask.estimatedPomodoros || 3)) * 100)}% complete
-                    </span>
                   </div>
-                </div>
+                )}
 
-                {/* Due Date - Full Width if Present */}
-                {viewingTask.dueDate && (
+                {/* Due Date - Only show for incomplete tasks */}
+                {!viewingTask.completed && viewingTask.dueDate && (
                   <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Due Date</label>
-                                         <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                       <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                       <span className="font-medium">
-                         {formatSmartDate(new Date(viewingTask.dueDate))}
-                       </span>
-                     </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                      <span className="font-medium">
+                        {formatSmartDate(new Date(viewingTask.dueDate))}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -3227,40 +3365,44 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <Eye className="w-4 h-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="flex items-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Todo
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isCurrentTaskPomodoro) {
-                  onStartPomodoro();
-                }
-              }}
-              disabled={isCurrentTaskPomodoro}
-              className={`flex items-center gap-2 ${
-                isCurrentTaskPomodoro ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isCurrentTaskPomodoro ? (
-                <>
-                  <Clock className="w-4 h-4" />
-                  Pomodoro Running
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  Start Pomodoro
-                </>
-              )}
-            </DropdownMenuItem>
+            {!task.completed && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Todo
+              </DropdownMenuItem>
+            )}
+            {!task.completed && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isCurrentTaskPomodoro) {
+                    onStartPomodoro();
+                  }
+                }}
+                disabled={isCurrentTaskPomodoro}
+                className={`flex items-center gap-2 ${
+                  isCurrentTaskPomodoro ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isCurrentTaskPomodoro ? (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    Pomodoro Running
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Start Pomodoro
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
