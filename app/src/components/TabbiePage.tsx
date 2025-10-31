@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTabbieSync } from '@/contexts/TabbieContext';
+import { AnimationStreamingTest } from '@/components/AnimationStreamingTest';
 
 interface TabbiePageProps {
   onPageChange?: (page: 'dashboard' | 'yourtabbie' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'calendar' | 'activity' | 'timetracking' | 'settings' | 'notes') => void;
@@ -223,6 +224,9 @@ const TabbiePage: React.FC<TabbiePageProps> = ({ onPageChange, theme = 'clean' }
               </CardContent>
             </Card>
           )}
+
+          {/* Animation Streaming Test */}
+          <AnimationStreamingTest />
 
         </div>
       </div>

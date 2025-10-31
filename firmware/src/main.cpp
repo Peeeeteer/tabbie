@@ -37,14 +37,27 @@ bool isInSetupMode = false;
 String wifiStatus = "disconnected";
 String lastError = "";
 
+// WiFi connection state machine
+String savedSSID = "";
+String savedPassword = "";
+unsigned long wifiConnectStartTime = 0;
+bool wifiInitialized = false;
+bool wifiConnecting = false;
+bool webServerStarted = false;
+
+const int MAX_WIFI_ATTEMPTS = 3;
+int wifiAttemptCount = 0;
+unsigned long wifiRetryWaitUntil = 0;
+
+
 // Setup mode configuration
 const char* SETUP_SSID = "Tabbie-Setup";
 const char* MDNS_NAME = "tabbie";
 
 // Function declarations
 void setupDisplay();
-void setupWiFiMode();
-bool connectToWiFi(String ssid, String password);
+void loadWiFiCredentials();
+void handleWiFiConnection();
 void startSetupMode();
 void startNormalMode();
 void setupWebServer();
@@ -69,6 +82,8 @@ void drawStartupAnimation();
 void drawAngryImage();
 void drawPomodoroAnimation();
 void drawTaskCompleteAnimation();
+void prepareWiFiForRetry(unsigned long delayMs = 0);
+void onWiFiConnectionFailure(const String& reason);
 
 void setup() {
   Serial.begin(115200);
@@ -77,19 +92,28 @@ void setup() {
   // Record startup time
   startupTime = millis();
   
+  // CRITICAL: Clean WiFi state from any previous boot/mode
+  // This prevents issues when switching between AP and STA modes
+  WiFi.persistent(false);  // Don't save WiFi config to flash
+  WiFi.disconnect(true);   // Disconnect and clear saved credentials
+  WiFi.mode(WIFI_OFF);     // Turn off WiFi completely
+  delay(200);              // Give hardware time to reset
+  wifiAttemptCount = 0;
+  wifiRetryWaitUntil = 0;
+  
   // Initialize components
   setupDisplay();
   
   // Initialize preferences
   preferences.begin("tabbie", false);
   
-  // Determine WiFi mode
-  setupWiFiMode();
+  // Load WiFi credentials (don't connect yet - animations first!)
+  loadWiFiCredentials();
   
-  // Setup web server
-  setupWebServer();
+  // DON'T setup web server here - it will be started in startNormalMode() or startSetupMode()
+  // after WiFi is properly initialized
   
-  Serial.println("✅ Tabbie ready!");
+  Serial.println("✅ Tabbie initialized - animations will play while WiFi connects");
 }
 
 void setupDisplay() {
@@ -104,155 +128,179 @@ void setupDisplay() {
   Serial.println("✅ OLED Display initialized (U8g2 SH1106)");
 }
 
-void setupWiFiMode() {
-  Serial.println("🔍 DEBUG: Starting setupWiFiMode()");
+void loadWiFiCredentials() {
+  Serial.println("📡 Loading WiFi credentials...");
   
   // Check for forced setup mode
   #ifdef FORCE_SETUP_MODE
-  Serial.print("🔍 DEBUG: FORCE_SETUP_MODE defined as: ");
-  Serial.println(FORCE_SETUP_MODE);
   if (FORCE_SETUP_MODE == 1) {
     Serial.println("🔧 Forced setup mode enabled");
     startSetupMode();
     return;
   }
-  #else
-  Serial.println("🔍 DEBUG: FORCE_SETUP_MODE not defined");
   #endif
   
   // Try preset credentials from wifi.env first
-  String wifiSSID = "";
-  String wifiPassword = "";
-  
   #ifdef PRESET_WIFI_SSID
-  wifiSSID = String(PRESET_WIFI_SSID);
-  Serial.print("🔍 DEBUG: PRESET_WIFI_SSID = ");
-  Serial.println(wifiSSID);
-  #else
-  Serial.println("🔍 DEBUG: PRESET_WIFI_SSID not defined");
+  savedSSID = String(PRESET_WIFI_SSID);
+  Serial.print("📡 SSID: ");
+  Serial.println(savedSSID);
   #endif
   
   #ifdef PRESET_WIFI_PASSWORD
-  wifiPassword = String(PRESET_WIFI_PASSWORD);
-  Serial.print("🔍 DEBUG: PRESET_WIFI_PASSWORD = ");
-  Serial.println("***hidden***");
-  #else
-  Serial.println("🔍 DEBUG: PRESET_WIFI_PASSWORD not defined");
+  savedPassword = String(PRESET_WIFI_PASSWORD);
+  Serial.println("📡 Password loaded");
   #endif
   
   // If no preset credentials, check saved preferences
-  if (wifiSSID.length() == 0 || wifiPassword.length() == 0) {
-    Serial.println("🔍 DEBUG: No preset credentials, checking preferences");
-    wifiSSID = preferences.getString("wifi_ssid", "");
-    wifiPassword = preferences.getString("wifi_password", "");
-    Serial.print("🔍 DEBUG: Saved SSID from preferences: ");
-    Serial.println(wifiSSID);
-    Serial.println("📡 Using saved WiFi credentials from preferences");
+  if (savedSSID.length() == 0 || savedPassword.length() == 0) {
+    savedSSID = preferences.getString("wifi_ssid", "");
+    savedPassword = preferences.getString("wifi_password", "");
+    Serial.println("📡 Using saved credentials");
   } else {
-    Serial.println("📡 Using preset WiFi credentials from wifi.env");
-    Serial.println("🔍 DEBUG: Saving preset credentials to preferences");
     // Save preset credentials to preferences for future use
-    preferences.putString("wifi_ssid", wifiSSID);
-    preferences.putString("wifi_password", wifiPassword);
-    Serial.println("🔍 DEBUG: Credentials saved to preferences successfully");
+    preferences.putString("wifi_ssid", savedSSID);
+    preferences.putString("wifi_password", savedPassword);
   }
   
-  Serial.print("🔍 DEBUG: Final SSID length: ");
-  Serial.println(wifiSSID.length());
-  Serial.print("🔍 DEBUG: Final password length: ");
-  Serial.println(wifiPassword.length());
-  
-  if (wifiSSID.length() > 0 && wifiPassword.length() > 0) {
-    Serial.print("📡 Attempting connection to: ");
-    Serial.println(wifiSSID);
+  if (savedSSID.length() > 0 && savedPassword.length() > 0) {
+    Serial.println("📡 Will connect in background");
     wifiStatus = "connecting";
-    updateDisplay();
-    
-    bool connectionResult = connectToWiFi(wifiSSID, wifiPassword);
-    Serial.print("🔍 DEBUG: connectToWiFi returned: ");
-    Serial.println(connectionResult ? "true" : "false");
-    
-    if (connectionResult) {
-      Serial.println("🔍 DEBUG: Connection successful, starting normal mode");
-      startNormalMode();
-    } else {
-      Serial.println("❌ Failed to connect to WiFi, starting setup mode");
-      lastError = "wifi.env connection failed: " + wifiSSID;
-      startSetupMode();
-    }
+    wifiAttemptCount = 0;
+    wifiRetryWaitUntil = 0;
   } else {
-    Serial.println("🔧 No WiFi credentials found, starting setup mode");
+    Serial.println("🔧 No credentials - entering setup mode");
     startSetupMode();
   }
-  
-  Serial.println("🔍 DEBUG: setupWiFiMode() completed");
 }
 
-bool connectToWiFi(String ssid, String password) {
-  Serial.println("🔍 DEBUG: Starting connectToWiFi()");
-  Serial.print("🔍 DEBUG: Current WiFi status before mode change: ");
-  Serial.println(WiFi.status());
-  
-  WiFi.mode(WIFI_STA);
-  Serial.println("🔍 DEBUG: WiFi mode set to STA");
-  
-  WiFi.begin(ssid.c_str(), password.c_str());
-  Serial.print("🔍 DEBUG: WiFi.begin() called with SSID: ");
-  Serial.println(ssid);
-  
-  Serial.print("🔗 Connecting to ");
-  Serial.print(ssid);
-  Serial.print("...");
-  
-  // Wait up to 20 seconds for connection
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-    // Instead of a single long delay, update the display frequently
-    for (int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
-      delay(50); // 10 × 50ms = 500ms total per attempt (same as before)
-      updateDisplay();
-    }
+void prepareWiFiForRetry(unsigned long delayMs) {
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  delay(100);
 
-    Serial.print(".");
-    attempts++;
-    
-    // Show status every 5 attempts
-    if (attempts % 5 == 0) {
-      Serial.print(" [Status: ");
-      Serial.print(WiFi.status());
-      Serial.print("] ");
-    }
-    
-    // Update display every few attempts
-    if (attempts % 4 == 0) {
-      updateDisplay();
-    }
+  wifiInitialized = false;
+  wifiConnecting = false;
+  wifiConnectStartTime = 0;
+  wifiRetryWaitUntil = delayMs > 0 ? millis() + delayMs : 0;
+}
+
+void onWiFiConnectionFailure(const String& reason) {
+  wifiConnecting = false;
+  wifiInitialized = false;
+  wifiConnectStartTime = 0;
+
+  Serial.print("❌ WiFi connection failed: ");
+  Serial.println(reason);
+
+  if (wifiAttemptCount < MAX_WIFI_ATTEMPTS) {
+    Serial.print("🔁 Retrying WiFi (");
+    Serial.print(wifiAttemptCount);
+    Serial.print("/");
+    Serial.print(MAX_WIFI_ATTEMPTS);
+    Serial.println(")...");
+    prepareWiFiForRetry(1000);
+    wifiStatus = "connecting";
+    return;
+  }
+
+  Serial.println("🚫 WiFi retries exhausted. Entering setup mode.");
+  wifiStatus = "failed";
+  lastError = reason + " - " + savedSSID;
+  wifiRetryWaitUntil = 0;
+  wifiAttemptCount = 0;
+  startSetupMode();
+}
+
+void handleWiFiConnection() {
+  // Don't handle WiFi if in setup mode
+  if (isInSetupMode) {
+    return;
   }
   
-  Serial.println();
-  Serial.print("🔍 DEBUG: Final WiFi status: ");
-  Serial.println(WiFi.status());
-  Serial.print("🔍 DEBUG: Total connection attempts: ");
-  Serial.println(attempts);
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("✅ Connected to WiFi! IP: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("🔍 DEBUG: RSSI: ");
-    Serial.println(WiFi.RSSI());
-    wifiStatus = "connected";
-    lastError = "";
-    return true;
-  } else {
-    Serial.print("❌ Failed to connect to WiFi: ");
-    Serial.println(ssid);
-    Serial.print("🔍 DEBUG: WiFi status codes: WL_CONNECTED=");
-    Serial.print(WL_CONNECTED);
-    Serial.print(", current=");
-    Serial.println(WiFi.status());
-    wifiStatus = "failed";
-    lastError = "Could not connect to " + ssid;
-    return false;
+  // Respect backoff window between retries
+  if (!wifiInitialized && wifiStatus == "connecting" && wifiRetryWaitUntil != 0) {
+    if ((long)(wifiRetryWaitUntil - millis()) > 0) {
+      return;
+    }
+    wifiRetryWaitUntil = 0;
+  }
+
+  // Initialize WiFi when we're ready for a new attempt
+  if (!wifiInitialized && wifiStatus == "connecting") {
+    wifiAttemptCount++;
+
+    Serial.print("📡 Starting WiFi connection to: ");
+    Serial.print(savedSSID);
+    Serial.print(" (attempt ");
+    Serial.print(wifiAttemptCount);
+    Serial.print("/");
+    Serial.print(MAX_WIFI_ATTEMPTS);
+    Serial.println(")");
+
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+#ifdef ARDUINO_ARCH_ESP32
+    WiFi.setAutoConnect(true);
+#endif
+    WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
+
+    wifiInitialized = true;
+    wifiConnecting = true;
+    wifiConnectStartTime = millis();
+    Serial.println("📡 WiFi initialized, connecting...");
+    return;
+  }
+
+  // Check connection progress
+  if (wifiConnecting) {
+    wl_status_t status = WiFi.status();
+
+    if (status == WL_CONNECTED) {
+      Serial.print("✅ WiFi connected! IP: ");
+      Serial.println(WiFi.localIP());
+      wifiStatus = "connected";
+      wifiConnecting = false;
+      wifiInitialized = true;
+      wifiRetryWaitUntil = 0;
+      wifiAttemptCount = 0;
+      startNormalMode();
+      return;
+    }
+
+    if (status == WL_CONNECT_FAILED) {
+      onWiFiConnectionFailure("CONNECT_FAILED");
+      return;
+    }
+
+    if (status == WL_NO_SSID_AVAIL) {
+      onWiFiConnectionFailure("NO_SSID");
+      return;
+    }
+
+    if (status == WL_DISCONNECTED && (millis() - wifiConnectStartTime) > 7000) {
+      onWiFiConnectionFailure("DISCONNECTED");
+      return;
+    }
+
+    if (millis() - wifiConnectStartTime > 15000) {
+      onWiFiConnectionFailure("Timeout");
+      return;
+    }
+  }
+
+  // Handle unexpected disconnections once connected
+  if (wifiStatus == "connected" && WiFi.status() != WL_CONNECTED) {
+    static unsigned long lastReconnect = 0;
+    if (millis() - lastReconnect > 30000) {
+      Serial.println("📡 Reconnecting...");
+      wifiStatus = "connecting";
+      wifiInitialized = false;
+      wifiConnecting = false;
+      wifiAttemptCount = 0;
+      prepareWiFiForRetry(500);
+      lastReconnect = millis();
+    }
   }
 }
 
@@ -260,8 +308,15 @@ void startSetupMode() {
   Serial.println("🔍 DEBUG: Starting startSetupMode()");
   isInSetupMode = true;
   wifiStatus = "setup";
+  wifiAttemptCount = 0;
+  wifiRetryWaitUntil = 0;
   
   Serial.println("🔧 Starting setup mode...");
+  
+  // Properly clean up any STA mode state before starting AP
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  delay(100);
   
   // Start in AP mode for setup
   WiFi.mode(WIFI_AP);
@@ -274,6 +329,9 @@ void startSetupMode() {
   // Start DNS server for captive portal
   dnsServer.start(53, "*", WiFi.softAPIP());
   Serial.println("🔍 DEBUG: DNS server started");
+  
+  // Setup web server now that WiFi is initialized
+  setupWebServer();
   
   Serial.print("📶 Setup WiFi started - SSID: ");
   Serial.println(SETUP_SSID);
@@ -288,11 +346,16 @@ void startNormalMode() {
   Serial.println("🔍 DEBUG: Starting startNormalMode()");
   isInSetupMode = false;
   wifiStatus = "connected";
+  wifiAttemptCount = 0;
+  wifiRetryWaitUntil = 0;
   
   Serial.print("🔍 DEBUG: WiFi status in normal mode: ");
   Serial.println(WiFi.status());
   Serial.print("🔍 DEBUG: IP address: ");
   Serial.println(WiFi.localIP());
+  
+  // Setup web server now that WiFi is initialized
+  setupWebServer();
   
   // Setup mDNS
   setupMDNS();
@@ -314,6 +377,11 @@ void setupMDNS() {
 }
 
 void setupWebServer() {
+  // Only setup once
+  if (webServerStarted) {
+    return;
+  }
+  
   // Handle captive portal redirect
   server.onNotFound([]() {
     if (isInSetupMode && server.method() == HTTP_GET) {
@@ -345,6 +413,7 @@ void setupWebServer() {
   server.on("/wifi", HTTP_POST, handleWiFiConfig);
   
   server.begin();
+  webServerStarted = true;
   Serial.println("✅ Web server started");
 }
 
@@ -354,42 +423,14 @@ void loop() {
     dnsServer.processNextRequest();
   }
   
+  // Handle WiFi connection (non-blocking, runs in background)
+  handleWiFiConnection();
+  
   // Handle web server requests
   server.handleClient();
   
-  // Update display animation
+  // Update display animation (always runs, never blocked!)
   updateDisplay();
-  
-  // Check WiFi connection in normal mode
-  if (!isInSetupMode && WiFi.status() != WL_CONNECTED) {
-    static unsigned long lastReconnectAttempt = 0;
-    static bool disconnectReported = false;
-    
-    if (!disconnectReported) {
-      Serial.print("🔍 DEBUG: WiFi disconnected in normal mode! Status: ");
-      Serial.println(WiFi.status());
-      disconnectReported = true;
-    }
-    
-    if (millis() - lastReconnectAttempt > 30000) { // Try reconnect every 30 seconds
-      Serial.println("📡 WiFi disconnected, attempting reconnect...");
-      wifiStatus = "reconnecting";
-      String savedSSID = preferences.getString("wifi_ssid", "");
-      String savedPassword = preferences.getString("wifi_password", "");
-      Serial.print("🔍 DEBUG: Reconnecting with saved SSID: ");
-      Serial.println(savedSSID);
-      
-      if (!connectToWiFi(savedSSID, savedPassword)) {
-        Serial.println("❌ Reconnection failed, switching to setup mode");
-        startSetupMode();
-      } else {
-        Serial.println("🔍 DEBUG: Reconnection successful, restarting normal mode");
-        startNormalMode();
-        disconnectReported = false;
-      }
-      lastReconnectAttempt = millis();
-    }
-  }
   
   delay(5);
 }
@@ -486,38 +527,34 @@ void handleWiFiConfig() {
   Serial.print("💾 Saved WiFi credentials: ");
   Serial.println(ssid);
   
-  // Test connection immediately
-  Serial.println("🔍 Testing WiFi connection...");
-  if (connectToWiFi(ssid, password)) {
-    Serial.println("✅ WiFi configured successfully!");
-    
-    // Show success page (only success gets a redirect)
-    String html = "<!DOCTYPE html><html><head><title>Connected!</title>";
-    html += "<meta http-equiv='refresh' content='3;url=/'>";
-    html += "<style>body{font-family:Arial,sans-serif;text-align:center;margin:50px auto;max-width:400px;}";
-    html += ".success{background:#d4edda;color:#155724;padding:20px;border-radius:8px;margin:20px 0;}";
-    html += "</style></head><body>";
-    html += "<h1>Success!</h1>";
-    html += "<div class='success'>";
-    html += "<p>Tabbie connected to " + ssid + " successfully!</p>";
-    html += "<p>You can now close this page and use your dashboard.</p>";
-    html += "</div>";
-    html += "<p>This page will redirect automatically...</p>";
-    html += "</body></html>";
-    
-    server.send(200, "text/html", html);
-    
-    // Switch to normal mode
-    isInSetupMode = false;
-    startNormalMode();
-  } else {
-    Serial.println("❌ WiFi configuration failed");
-    lastError = "Failed to connect to " + ssid + ". Please check the password and try again.";
-    wifiStatus = "setup";
-    
-    // Show setup page with error (NO redirect)
-    handleSetupPage();
-  }
+  // Update saved credentials and trigger connection
+  savedSSID = ssid;
+  savedPassword = password;
+  
+  // Show connection page
+  String html = "<!DOCTYPE html><html><head><title>Connecting...</title>";
+  html += "<meta http-equiv='refresh' content='10;url=/'>";
+  html += "<style>body{font-family:Arial,sans-serif;text-align:center;margin:50px auto;max-width:400px;}";
+  html += ".connecting{background:#cce5ff;color:#004085;padding:20px;border-radius:8px;margin:20px 0;}";
+  html += "</style></head><body>";
+  html += "<h1>Connecting...</h1>";
+  html += "<div class='connecting'>";
+  html += "<p>Tabbie is connecting to " + ssid + "</p>";
+  html += "<p>This page will redirect in 10 seconds.</p>";
+  html += "<p>If connection fails, you'll see the setup page again.</p>";
+  html += "</div>";
+  html += "</body></html>";
+  
+  server.send(200, "text/html", html);
+  
+  // Reset WiFi state to trigger fresh connection
+  Serial.println("🔄 Restarting WiFi connection...");
+  prepareWiFiForRetry(500);
+  isInSetupMode = false;
+  wifiStatus = "connecting";
+  wifiAttemptCount = 0;
+  
+  Serial.println("📡 WiFi will connect in background...");
 }
 
 void handleWiFiSettings() {
@@ -637,28 +674,27 @@ void updateDisplay() {
     return;
   }
   
+  // In setup mode, show setup screen
   if (isInSetupMode) {
     drawSetupMode();
-  } else if (wifiStatus == "connecting" || wifiStatus == "reconnecting") {
-    drawConnecting();
-  } else if (wifiStatus == "connected") {
-    if (currentAnimation == "idle") {
-      drawIdleAnimation();
-    } else if (currentAnimation == "focus") {
-      drawFocusAnimation();
-    } else if (currentAnimation == "break") {
-      drawRelaxAnimation();
-    } else if (currentAnimation == "paused") {
-      drawAngryImage();
-    } else if (currentAnimation == "love") {
-      drawLoveAnimation();
-    } else if (currentAnimation == "pomodoro") {
-      drawPomodoroAnimation();
-    } else if (currentAnimation == "complete") {
-      drawTaskCompleteAnimation();
-    }
-  } else {
-    drawError();
+    return;
+  }
+  
+  // Otherwise, always show animations - WiFi connection happens in background
+  if (currentAnimation == "idle") {
+    drawIdleAnimation();
+  } else if (currentAnimation == "focus") {
+    drawFocusAnimation();
+  } else if (currentAnimation == "break") {
+    drawRelaxAnimation();
+  } else if (currentAnimation == "paused") {
+    drawAngryImage();
+  } else if (currentAnimation == "love") {
+    drawLoveAnimation();
+  } else if (currentAnimation == "pomodoro") {
+    drawPomodoroAnimation();
+  } else if (currentAnimation == "complete") {
+    drawTaskCompleteAnimation();
   }
 }
 
