@@ -160,13 +160,13 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActivityState('complete');
     sendAnimation('love', taskTitle);
     
-    // Return to idle after 5 seconds
+    // Return to idle after 9 seconds (LOVE animation is ~8 seconds at 8fps)
     setTimeout(() => {
       console.log('💤 Returning to idle state after task completion');
       setIsPlayingCompletionAnimation(false);
       setActivityState('idle');
       sendAnimation('idle');
-    }, 5000);
+    }, 9000);
   }, [isConnected, sendAnimation]);
 
   const disconnect = useCallback(() => {

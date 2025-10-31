@@ -51,6 +51,8 @@ interface TodoContextType {
   skipBreak: () => void; // New method to skip break and start next work session
   debugSetTimerTo10Seconds: () => void; // Debug function to set timer to 10 seconds
   debugSetTimerTo14m45Overtime: () => void; // Debug function to jump to 14:45 overtime
+  debugStart30SecondTimer: () => void; // Debug function to start a 30-second test timer
+  debugAdd23Minutes: () => void; // Debug function to add 23 minutes to current timer
   
   // Notes methods
   updateUserNotes: (type: 'global' | 'category', content: string, categoryId?: string) => void;
@@ -1141,6 +1143,53 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const debugStart30SecondTimer = () => {
+    const debugTask: Task = {
+      id: 'debug-test-' + Date.now(),
+      title: 'Debug Test (0:30)',
+      description: 'Test timer for debugging animations',
+      completed: false,
+      categoryId: 'work',
+      estimatedPomodoros: 1,
+      pomodoroSessions: [],
+      created: new Date(),
+    };
+    
+    const session: PomodoroSession = {
+      id: generateId(),
+      taskId: debugTask.id,
+      started: new Date(),
+      duration: 0.5, // 30 seconds
+      completed: false,
+      type: 'work',
+    };
+    
+    setCurrentTaskId(debugTask.id);
+    setPomodoroTimer({
+      isRunning: true,
+      timeLeft: 30, // 30 seconds
+      currentSession: session,
+      sessionType: 'work',
+      justCompleted: false,
+      pausedAt: null,
+      totalPausedTime: 0,
+      overtimeAutoPaused: null,
+    });
+    
+    showNotification('🔧 Debug Mode', 'Started 30-second test timer');
+  };
+
+  const debugAdd23Minutes = () => {
+    if (pomodoroTimer.currentSession) {
+      setPomodoroTimer(prev => ({
+        ...prev,
+        timeLeft: prev.timeLeft - (23 * 60), // Subtract 23 minutes (1380 seconds)
+      }));
+      
+      showNotification('🐛 Debug -23min', 'Subtracted 23 minutes from timer');
+    }
+  };
+
   const updateUserNotes = (type: 'global' | 'category', content: string, categoryId?: string) => {
     setUserData(prev => {
       const currentNotes = prev.notes || { global: '', categories: {} };
@@ -1198,7 +1247,9 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startNextSession,
     skipBreak,
     debugSetTimerTo10Seconds,
-  debugSetTimerTo14m45Overtime,
+    debugSetTimerTo14m45Overtime,
+    debugStart30SecondTimer,
+    debugAdd23Minutes,
     
     updateUserNotes,
   };

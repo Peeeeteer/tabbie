@@ -9,11 +9,11 @@
 
 // Animation data
 #include "idle01.h"
-#include "focus_bitmap.h"
-#include "relax_bitmap.h"
-#include "love_bitmap.h"
-#include "startup_bitmap.h"
-#include "angry_bitmap.h"
+#include "focus01.h"
+#include "relax01.h"
+#include "love01.h"
+#include "startup01.h"
+#include "angry_bitmap.h"  // Keep angry as static image
 
 // OLED display configuration - Using U8g2 with SH1106 driver
 U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -62,10 +62,10 @@ void drawConnecting();
 void drawConnected();
 void drawError();
 void drawIdleAnimation();
-void drawFocusImage();
-void drawRelaxImage();
-void drawLoveImage();
-void drawStartupImage();
+void drawFocusAnimation();
+void drawRelaxAnimation();
+void drawLoveAnimation();
+void drawStartupAnimation();
 void drawAngryImage();
 void drawPomodoroAnimation();
 void drawTaskCompleteAnimation();
@@ -97,8 +97,8 @@ void setupDisplay() {
   
   display.begin();
   display.clearBuffer();
-  display.setFont(u8g2_font_6x10_tf);
-  display.drawStr(0, 10, "Tabbie Starting...");
+  // Don't show "Starting..." text - just clear the display
+  // Startup animation will begin immediately in loop()
   display.sendBuffer();
   
   Serial.println("✅ OLED Display initialized (U8g2 SH1106)");
@@ -207,7 +207,12 @@ bool connectToWiFi(String ssid, String password) {
   // Wait up to 20 seconds for connection
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-    delay(500);
+    // Instead of a single long delay, update the display frequently
+    for (int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
+      delay(50); // 10 × 50ms = 500ms total per attempt (same as before)
+      updateDisplay();
+    }
+
     Serial.print(".");
     attempts++;
     
@@ -626,13 +631,10 @@ void handleAnimation() {
 }
 
 void updateDisplay() {
-  // Handle startup animation for 5 seconds
-  if (!hasCompletedStartup && (millis() - startupTime < 5000)) {
-    drawStartupImage();
+  // Handle startup animation - play once then go to idle
+  if (!hasCompletedStartup) {
+    drawStartupAnimation();
     return;
-  } else if (!hasCompletedStartup) {
-    hasCompletedStartup = true;
-    currentAnimation = "idle";
   }
   
   if (isInSetupMode) {
@@ -640,22 +642,16 @@ void updateDisplay() {
   } else if (wifiStatus == "connecting" || wifiStatus == "reconnecting") {
     drawConnecting();
   } else if (wifiStatus == "connected") {
-    // Handle love animation (auto-return to idle after 5 seconds)
-    if (currentAnimation == "love" && (millis() - animationStartTime > 5000)) {
-      currentAnimation = "idle";
-      currentTask = "";
-    }
-    
     if (currentAnimation == "idle") {
       drawIdleAnimation();
     } else if (currentAnimation == "focus") {
-      drawFocusImage();
+      drawFocusAnimation();
     } else if (currentAnimation == "break") {
-      drawRelaxImage();
+      drawRelaxAnimation();
     } else if (currentAnimation == "paused") {
       drawAngryImage();
     } else if (currentAnimation == "love") {
-      drawLoveImage();
+      drawLoveAnimation();
     } else if (currentAnimation == "pomodoro") {
       drawPomodoroAnimation();
     } else if (currentAnimation == "complete") {
@@ -792,28 +788,123 @@ void drawIdleAnimation() {
   }
 }
 
-void drawFocusImage() {
-  display.clearBuffer();
-  display.drawBitmap(0, 0, 128 / 8, 64, focus_bitmap);
-  display.sendBuffer();
+void drawFocusAnimation() {
+  static int currentFrame = 0;
+  static unsigned long lastFrameTime = 0;
+  
+  unsigned long currentTime = millis();
+  
+  // Update frame at 12fps using FOCUS01_FRAME_DELAY
+  if (currentTime - lastFrameTime >= FOCUS01_FRAME_DELAY) {
+    display.clearBuffer();
+    
+    // Get the frame from PROGMEM
+    const uint8_t* frameData = (const uint8_t*)pgm_read_ptr(&focus01_frames[currentFrame]);
+    display.drawBitmap(0, 0, 128 / 8, 64, frameData);
+    
+    display.sendBuffer();
+    
+    currentFrame++;
+    if (currentFrame >= FOCUS01_FRAME_COUNT) {
+      currentFrame = 0;  // Loop continuously
+    }
+    
+    lastFrameTime = currentTime;
+  }
 }
 
-void drawRelaxImage() {
-  display.clearBuffer();
-  display.drawBitmap(0, 0, 128 / 8, 64, relax_bitmap);
-  display.sendBuffer();
+void drawRelaxAnimation() {
+  static int currentFrame = 0;
+  static unsigned long lastFrameTime = 0;
+  
+  unsigned long currentTime = millis();
+  
+  // Update frame at 12fps using RELAX01_FRAME_DELAY
+  if (currentTime - lastFrameTime >= RELAX01_FRAME_DELAY) {
+    display.clearBuffer();
+    
+    // Get the frame from PROGMEM
+    const uint8_t* frameData = (const uint8_t*)pgm_read_ptr(&relax01_frames[currentFrame]);
+    display.drawBitmap(0, 0, 128 / 8, 64, frameData);
+    
+    display.sendBuffer();
+    
+    currentFrame++;
+    if (currentFrame >= RELAX01_FRAME_COUNT) {
+      currentFrame = 0;  // Loop continuously
+    }
+    
+    lastFrameTime = currentTime;
+  }
 }
 
-void drawLoveImage() {
-  display.clearBuffer();
-  display.drawBitmap(0, 0, 128 / 8, 64, love_bitmap);
-  display.sendBuffer();
+void drawLoveAnimation() {
+  static int currentFrame = 0;
+  static unsigned long lastFrameTime = 0;
+  static unsigned long lastAnimationStart = 0;
+
+  // Reset animation timing when a new love animation is triggered
+  if (animationStartTime != lastAnimationStart) {
+    currentFrame = 0;
+    lastFrameTime = 0;
+    lastAnimationStart = animationStartTime;
+  }
+  
+  unsigned long currentTime = millis();
+  
+  // Update frame at 8fps using LOVE01_FRAME_DELAY
+  if (currentTime - lastFrameTime >= LOVE01_FRAME_DELAY) {
+    display.clearBuffer();
+    
+    // Get the frame from PROGMEM
+    const uint8_t* frameData = (const uint8_t*)pgm_read_ptr(&love01_frames[currentFrame]);
+    display.drawBitmap(0, 0, 128 / 8, 64, frameData);
+    
+    display.sendBuffer();
+    
+    currentFrame++;
+    if (currentFrame >= LOVE01_FRAME_COUNT) {
+      // Play once fully, then return to idle
+      currentAnimation = "idle";
+      currentTask = "";
+      currentFrame = 0;
+      lastAnimationStart = 0; // allow restart next time
+      return;
+    }
+    
+    lastFrameTime = currentTime;
+  }
 }
 
-void drawStartupImage() {
-  display.clearBuffer();
-  display.drawBitmap(0, 0, 128 / 8, 64, startup_bitmap);
-  display.sendBuffer();
+void drawStartupAnimation() {
+  static int currentFrame = 0;
+  static unsigned long lastFrameTime = 0;
+  static bool hasPlayedOnce = false;
+  
+  unsigned long currentTime = millis();
+  
+  // Update frame at 8fps using STARTUP01_FRAME_DELAY
+  if (currentTime - lastFrameTime >= STARTUP01_FRAME_DELAY) {
+    display.clearBuffer();
+    
+    // Get the frame from PROGMEM
+    const uint8_t* frameData = (const uint8_t*)pgm_read_ptr(&startup01_frames[currentFrame]);
+    display.drawBitmap(0, 0, 128 / 8, 64, frameData);
+    
+    display.sendBuffer();
+    
+    currentFrame++;
+    if (currentFrame >= STARTUP01_FRAME_COUNT) {
+      // Play once fully, then switch to idle
+      hasCompletedStartup = true;
+      currentAnimation = "idle";
+      currentFrame = 0;
+      hasPlayedOnce = false;
+      return;
+    }
+    
+    lastFrameTime = currentTime;
+  }
 }
 
 void drawAngryImage() {
