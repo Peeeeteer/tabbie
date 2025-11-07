@@ -43,16 +43,17 @@ I recommend buying the parts on **Amazon or Aliexpress**
 
 ## **Don't want to deal with parts & printing?** [Pre-order a complete kit here](https://www.tabbie.me/buy/kit)
 
-
 <div align="center">
-  <p style="font-size: 36px; font-weight: bold;">
-    Let's start. How to Build Tabbie
-  </p>
+
+### **START. How to Build Tabbie**
+**The video below covers everything for both Windows and Mac users.**
+
 </div>
 
 
-The video covers everything for both Windows and Mac users. 
-**[Watch the step-by-step video here]** *(Thumbnail here)*
+[![Watch the video](../tutorial-thumb.png)](https://youtu.be/OyjsMKxYkQ0)
+
+
 
 
 ---
