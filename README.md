@@ -5,7 +5,8 @@ Ever wanted a **to-do app with a Cute Face**? One that lives on your desk?
 
 **That's Tabbie.**
 
-[🛠️ Make Tabbie](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@LloydDecember1) · [👥 Join the community](https://www.reddit.com/r/deskbuddy/)
+[🛠️ Get started](https://tabbie.me) · [📺 Follow the build](https://www.youtube.com/@LloydDecember1) · [👥 Join the community](https://www.reddit.com/r/deskbuddy/) · [📘 Hardware Starer Guide](https://tabbie.me/hardware-guide)
+
 
 </div>
 
@@ -28,25 +29,27 @@ Tabbie lives on your desk, connects to your computer, and helps with small daily
 **Think:** a mini Twitch streamer sitting on your desk, cheering you on — but also keeping you on track.
 
 
-https://github.com/user-attachments/assets/8622418c-c75d-4014-b173-b217fcf1de87
-
+https://github.com/user-attachments/assets/2cbf9e57-a491-4764-b69d-660fd9c50714
 
 
 ## ✨ Made to Be Built
 
 Tabbie is open-source and totally customizable.  
-You can build it yourself with 3D-printed parts and off-the-shelf components — or just buy a Kit.
+You can build it yourself with 3D-printed parts and off-the-shelf components — [or just buy a Kit.](https://www.tabbie.me/buy)
 
 Powered by:
-- 🧠 An ESP32 microcontroller
-- 🖥️ A local React dashboard that talks to the robot
-- 🎨 3D-printed body with custom designs and colors
+- An ESP32 microcontroller
+- A local React dashboard that talks to the robot
+- 3D-printed body with custom designs and colors
+
+If you're new to electronics:  
+I also put together a [simple hardware starter guide](https://tabbie.me/hardware-guide) that explains the basics behind Tabbie
 
 ---
 
-## 🚀 Get Started (STIL WIP, BUT FULL INSTRUCTIONS COMING NOVEMBER 1)
+## 🚀 Get Started(STIL WIP, BUT FULL INSTRUCTIONS COMING NOVEMBER 10)
 
-Start with the step-by-step guide:
+Start with the step-by-step guide (WITH A **15 MINUTE VIDEO TUTORIAL**):
 - 👉 See: [`docs/get_started.md`](docs/get_started.md)
 
 That guide covers:
@@ -80,7 +83,11 @@ tabbie/
 
 ---
 
+Want to understand Tabbie’s internals or eventually modify the hardware? [There’s a beginner-friendly hardware guide here](https://tabbie.me/hardware-guide)
+
 ## 🤝 Contributing
 
-Contributions are welcome — from code to docs to 3D models.  
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
+Contributions are welcome, but lets talk first!
+
+
+
