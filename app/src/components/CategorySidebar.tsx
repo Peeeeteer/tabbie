@@ -33,8 +33,8 @@ import { useTodo } from '@/contexts/TodoContext';
 import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 
 interface CategorySidebarProps {
-  currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie';
-  onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie') => void;
+  currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie' | 'schedule';
+  onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie' | 'schedule') => void;
       currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
@@ -238,6 +238,23 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     {getTotalTaskCount()}
                   </span>
                 )}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={() => onPageChange('schedule')}
+                isActive={currentPage === 'schedule'}
+                className={
+                  theme === 'retro' && currentPage === 'schedule'
+                    ? "h-12 px-4 !bg-[#c4b5fd] dark:!bg-violet-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
+                    : theme === 'retro'
+                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#c4b5fd]/60 dark:hover:bg-violet-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
+                    : ""
+                }
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Schedule</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             

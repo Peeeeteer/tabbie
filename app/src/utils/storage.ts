@@ -37,10 +37,10 @@ export const loadPomodoroState = (): PomodoroState | null => {
     const storedState = localStorage.getItem(POMODORO_STATE_KEY);
     if (storedState) {
       const parsed = JSON.parse(storedState, reviveDate) as PomodoroState;
-      
+
       // Ensure totalPausedTime is always a number
       const safeTotalPausedTime = sanitizePausedSeconds(parsed.totalPausedTime);
-      
+
       // If there's a running session, calculate the actual time left
       if (parsed.isRunning && parsed.startedAt && parsed.currentSession) {
         const actualTimeLeft = computeTimeLeftSeconds({
@@ -49,14 +49,14 @@ export const loadPomodoroState = (): PomodoroState | null => {
           totalPausedSeconds: safeTotalPausedTime,
           isRunning: parsed.isRunning,
         });
-        
+
         return {
           ...parsed,
           timeLeft: actualTimeLeft,
           totalPausedTime: safeTotalPausedTime,
         };
       }
-      
+
       // If session was paused, restore the paused time
       if (!parsed.isRunning && parsed.pausedAt && parsed.currentSession) {
         return {
@@ -64,22 +64,22 @@ export const loadPomodoroState = (): PomodoroState | null => {
           totalPausedTime: safeTotalPausedTime,
         };
       }
-      
+
       return {
         ...parsed,
         totalPausedTime: safeTotalPausedTime,
         overtimeAutoPaused: parsed.overtimeAutoPaused
           ? {
-              ...parsed.overtimeAutoPaused,
-              triggeredAt: new Date(parsed.overtimeAutoPaused.triggeredAt).getTime(),
-            }
+            ...parsed.overtimeAutoPaused,
+            triggeredAt: new Date(parsed.overtimeAutoPaused.triggeredAt).getTime(),
+          }
           : null,
       };
     }
   } catch (error) {
     console.error('Error loading pomodoro state:', error);
   }
-  
+
   return null;
 };
 
@@ -105,7 +105,7 @@ export const clearPomodoroState = (): void => {
 export const debugPomodoroState = (): void => {
   const savedState = loadPomodoroState();
   const userData = loadUserData();
-  
+
   console.log('=== Pomodoro State Debug ===');
   console.log('Saved pomodoro state:', savedState);
   console.log('User data tasks:', userData.tasks.length);
@@ -119,7 +119,7 @@ export const loadUserData = (): UserData => {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
       const parsed = JSON.parse(storedData, reviveDate) as UserData;
-      
+
       // Ensure all required fields exist with defaults
       const tasks = (parsed.tasks || []).map((task, index) => ({
         ...task,
@@ -129,7 +129,7 @@ export const loadUserData = (): UserData => {
 
       // Validate and migrate categories
       let categories = parsed.categories || DEFAULT_CATEGORIES;
-      
+
       // Ensure categories have all required fields
       categories = categories.map(category => ({
         id: category.id || generateId(),
@@ -140,7 +140,7 @@ export const loadUserData = (): UserData => {
       }));
 
       // Remove duplicate categories by ID
-      const uniqueCategories = categories.filter((category, index, self) => 
+      const uniqueCategories = categories.filter((category, index, self) =>
         index === self.findIndex(c => c.id === category.id)
       );
 
@@ -167,12 +167,13 @@ export const loadUserData = (): UserData => {
         pomodoroSessions: parsed.pomodoroSessions || [],
         notes: parsed.notes || { global: '', categories: {} },
         settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+        timeBlocks: parsed.timeBlocks || [],
       };
     }
   } catch (error) {
     console.error('Error loading user data:', error);
   }
-  
+
   // Return default data if nothing stored or error occurred
   return {
     categories: DEFAULT_CATEGORIES,
@@ -197,7 +198,7 @@ export const saveUserData = (userData: UserData): void => {
 export const saveCategory = (category: Category): void => {
   const userData = loadUserData();
   const existingIndex = userData.categories.findIndex(c => c.id === category.id);
-  
+
   // Ensure category has all required fields
   const validatedCategory: Category = {
     id: category.id || generateId(),
@@ -206,13 +207,13 @@ export const saveCategory = (category: Category): void => {
     icon: category.icon || '📁',
     created: category.created || new Date(),
   };
-  
+
   if (existingIndex >= 0) {
     userData.categories[existingIndex] = validatedCategory;
   } else {
     userData.categories.push(validatedCategory);
   }
-  
+
   saveUserData(userData);
 };
 
@@ -227,13 +228,13 @@ export const deleteCategory = (categoryId: string): void => {
 export const saveTask = (task: Task): void => {
   const userData = loadUserData();
   const existingIndex = userData.tasks.findIndex(t => t.id === task.id);
-  
+
   if (existingIndex >= 0) {
     userData.tasks[existingIndex] = { ...task, updated: new Date() };
   } else {
     userData.tasks.push(task);
   }
-  
+
   saveUserData(userData);
 };
 
@@ -247,13 +248,13 @@ export const deleteTask = (taskId: string): void => {
 export const savePomodoroSession = (session: PomodoroSession): void => {
   const userData = loadUserData();
   const existingIndex = userData.pomodoroSessions.findIndex(p => p.id === session.id);
-  
+
   if (existingIndex >= 0) {
     userData.pomodoroSessions[existingIndex] = session;
   } else {
     userData.pomodoroSessions.push(session);
   }
-  
+
   saveUserData(userData);
 };
 
@@ -266,13 +267,13 @@ export const updateSettings = (settings: Partial<UserData['settings']>): void =>
 export const saveCompletedTask = (completedTask: CompletedTask): void => {
   const userData = loadUserData();
   const existingIndex = userData.completedTasks.findIndex(t => t.id === completedTask.id);
-  
+
   if (existingIndex >= 0) {
     userData.completedTasks[existingIndex] = completedTask;
   } else {
     userData.completedTasks.push(completedTask);
   }
-  
+
   saveUserData(userData);
 };
 

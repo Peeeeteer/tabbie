@@ -6,6 +6,17 @@ export interface Category {
   created: Date;
 }
 
+export interface TimeBlock {
+  id: string;
+  categoryId: string;
+  dayOfWeek: number; // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime: number; // Minutes from midnight (0-1439)
+  endTime: number;   // Minutes from midnight
+  taskId?: string;      // Link to a specific task
+  label?: string;       // Custom label for busy blocks (e.g., "Gym")
+  isBusy?: boolean;     // If true, this block is fixed/busy
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -20,6 +31,11 @@ export interface Task {
   estimatedPomodoros?: number;
   order: number;
   workspaceUrls?: string[]; // URLs to open when starting Pomodoro for this task
+  
+  // Scheduling
+  scheduledDate?: string; // ISO string 'YYYY-MM-DD' for the day this task is scheduled
+  scheduledTime?: number; // Start time in minutes from midnight
+  duration?: number; // Duration in minutes
 }
 
 export interface CompletedTask {
@@ -56,6 +72,7 @@ export interface UserData {
   tasks: Task[];
   completedTasks: CompletedTask[];
   pomodoroSessions: PomodoroSession[];
+  timeBlocks: TimeBlock[]; // Weekly schedule templates
   notes?: Notes; // User notes
   settings: {
     workDuration: number; // minutes
@@ -111,4 +128,4 @@ export const DEFAULT_SETTINGS = {
   theme: 'clean' as 'clean' | 'retro',
   themeMode: 'auto' as 'light' | 'dark' | 'auto',
   pomodoroSound: true,
-}; 
+};

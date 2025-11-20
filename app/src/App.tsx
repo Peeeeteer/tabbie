@@ -26,6 +26,7 @@ import DashboardPage from "@/components/DashboardPage"
 import PomodoroPage from "@/components/PomodoroPage"
 import NotesPage from "@/components/NotesPage"
 import TabbiePage from "@/components/TabbiePage"
+import SchedulePage from "@/components/SchedulePage"
 import { ActivityStatsProvider } from "@/components/ActivityStatsProvider"
 import OnboardingModal from "@/components/OnboardingModal"
 import { updateSettings } from "@/utils/storage"
@@ -36,7 +37,7 @@ const ONBOARDING_FORCE_SHOW_KEY = 'tabbie_onboarding_force_show';
 function AppContent() {
   const { userData } = useTodo();
   const { setThemeMode } = useDarkMode();
-  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie'>('dashboard');
+  const [currentPage, setCurrentPage] = React.useState<'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie' | 'schedule'>('dashboard');
   const [currentView, setCurrentView] = React.useState<'today' | 'tomorrow' | 'next7days' | 'completed' | string>('next7days');
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   
@@ -98,8 +99,6 @@ function AppContent() {
 
 
 
-
-
   return (
     <>
       <OnboardingModal 
@@ -139,6 +138,7 @@ function AppContent() {
                   <BreadcrumbPage>
                     {currentPage === 'dashboard' ? 'Dashboard' :
                      currentPage === 'tasks' ? 'Tasks' :
+                     currentPage === 'schedule' ? 'Schedule' :
                      currentPage === 'reminders' ? 'Reminders' :
                      currentPage === 'events' ? 'Events' :
                      currentPage === 'notifications' ? 'Notifications' :
@@ -167,6 +167,8 @@ function AppContent() {
               onPageChange={setCurrentPage}
               theme={theme}
             />
+          ) : currentPage === 'schedule' ? (
+            <SchedulePage theme={theme} />
           ) : currentPage === 'reminders' ? (
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">🔔 Reminders</h2>

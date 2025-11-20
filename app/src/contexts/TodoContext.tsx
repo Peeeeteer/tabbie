@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { UserData, Category, Task, PomodoroSession, CompletedTask } from '@/types/todo';
+import type { UserData, Category, Task, PomodoroSession, CompletedTask, TimeBlock } from '@/types/todo';
 import { DEFAULT_CATEGORIES } from '@/types/todo';
 import { loadUserData, saveUserData, generateId, loadPomodoroState, savePomodoroState, clearPomodoroState, type PomodoroState } from '@/utils/storage';
 import { computeTimeLeftSeconds, sanitizePausedSeconds } from '@/utils/pomodoroTime';
@@ -25,21 +25,21 @@ interface TodoContextType {
     totalPausedTime: number; // Total time paused in seconds
     overtimeAutoPaused: OvertimeAutoPausedState | null;
   };
-  
+
   // Category methods
   addCategory: (name: string, color: string, icon: string) => void;
   updateCategory: (categoryId: string, updates: Partial<Category>) => void;
   deleteCategory: (categoryId: string) => void;
   setSelectedCategory: (categoryId: string | null) => void;
   resetCategoriesToDefault: () => void;
-  
+
   // Task methods
   addTask: (title: string, categoryId?: string, description?: string, dueDate?: Date, estimatedPomodoros?: number, workspaceUrls?: string[]) => string;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskComplete: (taskId: string) => void;
   reorderTasks: (taskIds: string[]) => void;
-  
+
   // Pomodoro methods
   startPomodoro: (task: Task) => void;
   pausePomodoro: () => void;
@@ -53,9 +53,14 @@ interface TodoContextType {
   debugSetTimerTo14m45Overtime: () => void; // Debug function to jump to 14:45 overtime
   debugStart30SecondTimer: () => void; // Debug function to start a 30-second test timer
   debugAdd23Minutes: () => void; // Debug function to add 23 minutes to current timer
-  
+
   // Notes methods
   updateUserNotes: (type: 'global' | 'category', content: string, categoryId?: string) => void;
+
+  // TimeBlock methods
+  addTimeBlock: (categoryId: string, dayOfWeek: number, startTime: number, endTime: number, taskId?: string, label?: string, isBusy?: boolean) => void;
+  updateTimeBlock: (id: string, updates: Partial<TimeBlock>) => void;
+  deleteTimeBlock: (id: string) => void;
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
@@ -72,7 +77,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userData, setUserData] = useState<UserData>(loadUserData);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  
+
   // Initialize pomodoro timer with persisted state
   const [pomodoroTimer, setPomodoroTimer] = useState(() => {
     const savedState = loadPomodoroState();
@@ -80,12 +85,12 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const safeTotalPausedTime = sanitizePausedSeconds(savedState.totalPausedTime);
       const restoredTimeLeft = savedState.isRunning && savedState.currentSession && savedState.startedAt
         ? computeTimeLeftSeconds({
-            startedAt: savedState.startedAt,
-            durationMinutes: savedState.currentSession.duration,
-            totalPausedSeconds: safeTotalPausedTime,
-            isRunning: savedState.isRunning,
-            pausedAt: savedState.pausedAt ?? null,
-          })
+          startedAt: savedState.startedAt,
+          durationMinutes: savedState.currentSession.duration,
+          totalPausedSeconds: safeTotalPausedTime,
+          isRunning: savedState.isRunning,
+          pausedAt: savedState.pausedAt ?? null,
+        })
         : savedState.timeLeft;
 
       return {
@@ -98,10 +103,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         totalPausedTime: safeTotalPausedTime,
         overtimeAutoPaused: savedState.overtimeAutoPaused
           ? {
-              sessionType: savedState.overtimeAutoPaused.sessionType,
-              triggeredAt: new Date(savedState.overtimeAutoPaused.triggeredAt),
-              overtimeSeconds: savedState.overtimeAutoPaused.overtimeSeconds,
-            }
+            sessionType: savedState.overtimeAutoPaused.sessionType,
+            triggeredAt: new Date(savedState.overtimeAutoPaused.triggeredAt),
+            overtimeSeconds: savedState.overtimeAutoPaused.overtimeSeconds,
+          }
           : null,
       };
     }
@@ -151,14 +156,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionType: pomodoroTimer.sessionType,
       justCompleted: pomodoroTimer.justCompleted,
       currentTaskId: currentTaskId,
-      startedAt: pomodoroTimer.currentSession 
-        ? pomodoroTimer.currentSession.started.getTime() 
+      startedAt: pomodoroTimer.currentSession
+        ? pomodoroTimer.currentSession.started.getTime()
         : null,
       pausedAt: pomodoroTimer.pausedAt ? pomodoroTimer.pausedAt.getTime() : null,
       totalPausedTime: sanitizePausedSeconds(pomodoroTimer.totalPausedTime),
       overtimeAutoPaused: pomodoroTimer.overtimeAutoPaused,
     };
-    
+
     // Only save if there's an active session or if we're clearing the state
     if (pomodoroTimer.currentSession || pomodoroTimer.justCompleted) {
       savePomodoroState(pomodoroState);
@@ -177,10 +182,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const seconds = absSeconds % 60;
       const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       const formattedTime = pomodoroTimer.timeLeft < 0 ? `+${timeStr}` : timeStr;
-      
+
       const emoji = pomodoroTimer.sessionType === 'work' ? '🍅' : '☕';
       const sessionName = pomodoroTimer.sessionType === 'work' ? 'Focus' : 'Break';
-      
+
       document.title = `${emoji} ${formattedTime} - ${sessionName} | ${currentTask.title} | Tabbie`;
     } else {
       document.title = 'Tabbie Dashboard';
@@ -202,10 +207,10 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       console.log(`🔊 Attempting to play notification sound: ${soundFile}`);
-      
+
       // Create audio context to ensure sound plays even when tab is not focused
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
+
       // Load and decode the audio file
       fetch(soundFile)
         .then(response => response.arrayBuffer())
@@ -213,13 +218,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .then(audioBuffer => {
           const source = audioContext.createBufferSource();
           const gainNode = audioContext.createGain();
-          
+
           source.buffer = audioBuffer;
           source.connect(gainNode);
           gainNode.connect(audioContext.destination);
-          
+
           gainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
-          
+
           source.start(audioContext.currentTime);
           console.log(`🔊 Sound played successfully: ${soundFile}`);
         })
@@ -230,16 +235,16 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             oscillator.frequency.value = 800;
             oscillator.type = 'sine';
-            
+
             gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
+
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
             console.log('🔊 Fallback beep played');
@@ -284,7 +289,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let interval: NodeJS.Timeout;
     let lastOvertimeNotification = 0; // Track last overtime notification time
-    
+
     if (pomodoroTimer.isRunning && pomodoroTimer.currentSession) {
       interval = setInterval(() => {
         const now = Date.now();
@@ -297,26 +302,26 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           now,
         });
         const safeActualTimeLeft = Number.isFinite(actualTimeLeft) ? actualTimeLeft : pomodoroTimer.timeLeft;
-        
+
         setPomodoroTimer(prev => {
           const currentTask = getCurrentTask();
-          
+
           if (safeActualTimeLeft <= 0 && prev.timeLeft > 0) {
             if (prev.sessionType === 'shortBreak') {
               playBreakCompleteSound();
               showNotification(
-                '☕ Break Complete!', 
+                '☕ Break Complete!',
                 'Break time is over. Ready to get back to work?'
               );
             } else if (prev.sessionType === 'work') {
               playPomodoroCompleteSound();
               showNotification(
-                '🍅 Pomodoro Complete!', 
+                '🍅 Pomodoro Complete!',
                 `Great job! You completed a focus session${currentTask ? ` on "${currentTask.title}"` : ''}. You can continue working or take a break!`
               );
             }
           }
-          
+
           const overtimeSeconds = Math.abs(safeActualTimeLeft);
           const hasExceededOvertimeThreshold = safeActualTimeLeft <= -900; // 15 minutes in seconds
           const isAlreadyAutoPaused = prev.overtimeAutoPaused !== null;
@@ -356,19 +361,19 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (isWorkSession) {
               playOvertimeReminderSound();
               showNotification(
-                '⏰ Still Working!', 
+                '⏰ Still Working!',
                 `You've been working for ${overtimeMinutes} minutes overtime. Consider taking a break!`
               );
             } else if (isBreakSession) {
               playBreakOvertimeReminderSound();
               showNotification(
-                '⏰ Break Overdue!', 
+                '⏰ Break Overdue!',
                 `You've been on break for ${overtimeMinutes} minutes longer than planned. Ready to get back to work?`
               );
             }
             lastOvertimeNotification = now;
           }
-          
+
           return {
             ...prev,
             timeLeft: safeActualTimeLeft,
@@ -396,7 +401,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentTaskId(null);
         return;
       }
-      
+
       // Recalculate time left based on actual elapsed time, accounting for paused time
       const safeTotalPausedTime = sanitizePausedSeconds(savedState.totalPausedTime);
       const actualTimeLeft = computeTimeLeftSeconds({
@@ -406,23 +411,23 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isRunning: savedState.isRunning,
         pausedAt: savedState.pausedAt ?? null,
       });
-      
+
       // Check if session is overdue
       if (actualTimeLeft < 0) {
         if (savedState.sessionType === 'work') {
           showNotification(
-            '⏰ Session Overdue!', 
+            '⏰ Session Overdue!',
             `Your pomodoro session has been running longer than planned. Consider taking a break!`
           );
         }
       }
-      
+
       // Check if session has been running for too long (more than 2x the intended duration)
       const maxAllowedTime = savedState.currentSession.duration * 120; // twice duration in seconds
       if (actualTimeLeft < -maxAllowedTime) {
         // Session has been running for too long, auto-stop it
         showNotification(
-          '⏰ Session Auto-Stopped', 
+          '⏰ Session Auto-Stopped',
           'Your pomodoro session was running for too long and has been automatically stopped.'
         );
         clearPomodoroState();
@@ -439,7 +444,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null,
           totalPausedTime: safeTotalPausedTime,
         }));
-        
+
         // Also restore the current task ID
         if (savedState.currentTaskId) {
           setCurrentTaskId(savedState.currentTaskId);
@@ -465,7 +470,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isRunning: pomodoroTimer.isRunning,
             pausedAt: pomodoroTimer.pausedAt,
           });
-          
+
           // Only update if there's a significant difference to prevent unnecessary re-renders
           if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
             setPomodoroTimer(prev => ({
@@ -493,7 +498,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isRunning: pomodoroTimer.isRunning,
           pausedAt: pomodoroTimer.pausedAt,
         });
-        
+
         // Only update if there's a significant difference to prevent unnecessary re-renders
         if (Math.abs(actualTimeLeft - pomodoroTimer.timeLeft) > 1) {
           setPomodoroTimer(prev => ({
@@ -514,7 +519,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (pomodoroTimer.currentSession) {
         // Force save the current state
         const safeTotalPausedTime = sanitizePausedSeconds(pomodoroTimer.totalPausedTime);
-          
+
         const pomodoroState: PomodoroState = {
           isRunning: pomodoroTimer.isRunning,
           timeLeft: pomodoroTimer.timeLeft,
@@ -639,7 +644,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!task.completed) {
       // Task is being completed - move to completedTasks
       const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
-      
+
       const completedTask: CompletedTask = {
         id: task.id,
         title: task.title,
@@ -700,16 +705,16 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Helper function to open workspace URLs
   const openWorkspaceUrls = (urls: string[]) => {
     if (!urls || urls.length === 0) return;
-    
+
     console.log(`🔗 Opening ${urls.length} workspace URLs for focused work session...`);
-    
+
     urls.forEach((url, index) => {
       try {
         // Add protocol if missing
-        const formattedUrl = url.startsWith('http://') || url.startsWith('https://') 
-          ? url 
+        const formattedUrl = url.startsWith('http://') || url.startsWith('https://')
+          ? url
           : `https://${url}`;
-        
+
         // Small delay between opening tabs to avoid being blocked by popup blockers
         setTimeout(() => {
           const newTab = window.open(formattedUrl, '_blank');
@@ -756,8 +761,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const pausePomodoro = () => {
-    setPomodoroTimer(prev => ({ 
-      ...prev, 
+    setPomodoroTimer(prev => ({
+      ...prev,
       isRunning: false,
       pausedAt: new Date(), // Record when we paused
       timeLeft: computeTimeLeftSeconds({
@@ -790,12 +795,12 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Calculate how long we were paused
         // Use precise seconds and ceil to avoid losing up to ~1s during resume
         const pauseDuration = Math.ceil((Date.now() - prev.pausedAt.getTime()) / 1000);
-        
+
         // Ensure totalPausedTime is valid before adding to it
         const currentTotalPausedTime = sanitizePausedSeconds(prev.totalPausedTime);
-        
+
         const newTotalPausedTime = currentTotalPausedTime + pauseDuration;
-        
+
         // Only update totalPausedTime; do not shift the session start time
         // The ticking logic already subtracts totalPausedTime when computing elapsed time
         return {
@@ -806,8 +811,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           overtimeAutoPaused: null,
         };
       }
-      return { 
-        ...prev, 
+      return {
+        ...prev,
         isRunning: true,
         totalPausedTime: sanitizePausedSeconds(prev.totalPausedTime),
         overtimeAutoPaused: null,
@@ -842,11 +847,11 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const completedWorkSessions = currentTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
     const estimatedSessions = currentTask.estimatedPomodoros || 3;
-    
+
     // Check if we should continue with more pomodoros (allow exceeding estimated count)
-    const shouldContinue = completedWorkSessions < estimatedSessions || 
-                          (pomodoroTimer.sessionType === 'work' && completedWorkSessions === estimatedSessions);
-    
+    const shouldContinue = completedWorkSessions < estimatedSessions ||
+      (pomodoroTimer.sessionType === 'work' && completedWorkSessions === estimatedSessions);
+
     if (pomodoroTimer.sessionType === 'work' && shouldContinue) {
       // Start break after work session
       const breakSession: PomodoroSession = {
@@ -866,7 +871,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         justCompleted: false,
         overtimeAutoPaused: null,
       }));
-      
+
       // Save state immediately for better recovery
       savePomodoroState({
         isRunning: true,
@@ -899,7 +904,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         justCompleted: false,
         overtimeAutoPaused: null,
       }));
-      
+
       // Save state immediately for better recovery
       savePomodoroState({
         isRunning: true,
@@ -938,7 +943,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ended: new Date(),
         completed: true,
       };
-      
+
       setUserData(prev => ({
         ...prev,
         pomodoroSessions: [...prev.pomodoroSessions, completedSession],
@@ -951,21 +956,21 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pomodoroSessions: [...currentTask.pomodoroSessions, completedSession],
         });
       }
-      
+
 
       // Check if this was the last session
-      const completedWorkSessions = (currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) + 
-                                   (pomodoroTimer.sessionType === 'work' ? 1 : 0);
+      const completedWorkSessions = (currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) +
+        (pomodoroTimer.sessionType === 'work' ? 1 : 0);
       const isLastSession = completedWorkSessions >= (currentTask?.estimatedPomodoros || 3);
-      
+
       if (isLastSession) {
         // Task completed!
         playTaskCompleteSound();
         showNotification(
-          '🎉 Task Complete!', 
+          '🎉 Task Complete!',
           `Congratulations! You completed all pomodoros for "${currentTask?.title}"`
         );
-        
+
         setPomodoroTimer({
           isRunning: false,
           timeLeft: 0,
@@ -1000,7 +1005,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (pomodoroTimer.sessionType === 'work' && pomodoroTimer.currentSession && currentTask) {
       // Complete the current work session
       completePomodoro();
-      
+
       // Start the break session immediately
       const breakSession: PomodoroSession = {
         id: generateId(),
@@ -1035,7 +1040,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ended: new Date(),
           completed: true,
         };
-        
+
         setUserData(prev => ({
           ...prev,
           pomodoroSessions: [...prev.pomodoroSessions, completedSession],
@@ -1049,15 +1054,15 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Start next work session immediately
       const completedWorkSessions = currentTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
       const isLastSession = completedWorkSessions >= (currentTask.estimatedPomodoros || 3);
-      
+
       if (isLastSession) {
         // Task completed!
         playTaskCompleteSound();
         showNotification(
-          '🎉 Task Complete!', 
+          '🎉 Task Complete!',
           `Congratulations! You completed all pomodoros for "${currentTask.title}"`
         );
-        
+
         setPomodoroTimer({
           isRunning: false,
           timeLeft: 0,
@@ -1129,9 +1134,9 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         currentSession: prev.currentSession
           ? {
-              ...prev.currentSession,
-              started: newStartedAt,
-            }
+            ...prev.currentSession,
+            started: newStartedAt,
+          }
           : null,
         timeLeft: targetTimeLeft,
         isRunning: true,
@@ -1154,7 +1159,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pomodoroSessions: [],
       created: new Date(),
     };
-    
+
     const session: PomodoroSession = {
       id: generateId(),
       taskId: debugTask.id,
@@ -1163,7 +1168,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completed: false,
       type: 'work',
     };
-    
+
     setCurrentTaskId(debugTask.id);
     setPomodoroTimer({
       isRunning: true,
@@ -1175,7 +1180,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       totalPausedTime: 0,
       overtimeAutoPaused: null,
     });
-    
+
     showNotification('🔧 Debug Mode', 'Started 30-second test timer');
   };
 
@@ -1185,7 +1190,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         timeLeft: prev.timeLeft - (23 * 60), // Subtract 23 minutes (1380 seconds)
       }));
-      
+
       showNotification('🐛 Debug -23min', 'Subtracted 23 minutes from timer');
     }
   };
@@ -1193,7 +1198,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUserNotes = (type: 'global' | 'category', content: string, categoryId?: string) => {
     setUserData(prev => {
       const currentNotes = prev.notes || { global: '', categories: {} };
-      
+
       if (type === 'global') {
         return {
           ...prev,
@@ -1214,9 +1219,42 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         };
       }
-      
+
       return prev;
     });
+  };
+
+  const addTimeBlock = (categoryId: string, dayOfWeek: number, startTime: number, endTime: number, taskId?: string, label?: string, isBusy?: boolean) => {
+    const newBlock: TimeBlock = {
+      id: generateId(),
+      categoryId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      taskId,
+      label,
+      isBusy,
+    };
+    setUserData(prev => ({
+      ...prev,
+      timeBlocks: [...(prev.timeBlocks || []), newBlock]
+    }));
+  };
+
+  const updateTimeBlock = (id: string, updates: Partial<TimeBlock>) => {
+    setUserData(prev => ({
+      ...prev,
+      timeBlocks: (prev.timeBlocks || []).map(block =>
+        block.id === id ? { ...block, ...updates } : block
+      )
+    }));
+  };
+
+  const deleteTimeBlock = (id: string) => {
+    setUserData(prev => ({
+      ...prev,
+      timeBlocks: (prev.timeBlocks || []).filter(block => block.id !== id)
+    }));
   };
 
   const value: TodoContextType = {
@@ -1225,19 +1263,19 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentTaskId,
     currentTask: getCurrentTask(),
     pomodoroTimer,
-    
+
     addCategory,
     updateCategory,
     deleteCategory,
     setSelectedCategory,
     resetCategoriesToDefault,
-    
+
     addTask,
     updateTask,
     deleteTask,
     toggleTaskComplete,
     reorderTasks,
-    
+
     startPomodoro,
     pausePomodoro,
     resumePomodoro,
@@ -1250,8 +1288,12 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     debugSetTimerTo14m45Overtime,
     debugStart30SecondTimer,
     debugAdd23Minutes,
-    
+
     updateUserNotes,
+
+    addTimeBlock,
+    updateTimeBlock,
+    deleteTimeBlock,
   };
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>;
