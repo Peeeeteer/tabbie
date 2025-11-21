@@ -123,6 +123,80 @@ const TimeSlot = ({ dayIndex, hour, totalHeight, onClick }: { dayIndex: number, 
   );
 };
 
+const TaskCard = React.forwardRef(({
+  block,
+  task,
+  style,
+  className,
+  onClick,
+  onResizeStart,
+  theme,
+  currentTaskId,
+  isTimerRunning,
+  attributes,
+  listeners
+}: any, ref: any) => {
+  const duration = block.endTime - block.startTime;
+  const showDetails = duration >= 30;
+
+  return (
+    <div
+      ref={ref}
+      {...listeners}
+      {...attributes}
+      data-no-drag-create="true"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick && onClick();
+      }}
+      className={cn(
+        "absolute rounded-r-md rounded-l-[2px] overflow-hidden cursor-grab active:cursor-grabbing shadow-sm transition-all flex flex-col border-y border-r bg-card hover:bg-accent/50 group/task",
+        // Left Accent Border
+        "border-l-[3px] border-l-primary",
+        theme === 'retro' && "border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+        block.taskId === currentTaskId && isTimerRunning && "ring-2 ring-primary ring-offset-0 animate-pulse",
+        className
+      )}
+      style={style}
+    >
+      {/* Resize Handle Top */}
+      <div
+        onPointerDown={(e) => onResizeStart && onResizeStart(e, block.id, 'top')}
+        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 opacity-0 group-hover/task:opacity-100"
+      />
+
+      {/* Content */}
+      <div className="flex flex-col px-2 py-1 h-full min-h-0">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className="truncate font-medium text-xs leading-tight">
+            {task?.title || 'Unknown Task'}
+          </span>
+          {showDetails && (
+            <span className="text-[9px] text-muted-foreground font-mono whitespace-nowrap shrink-0">
+              {duration}m
+            </span>
+          )}
+        </div>
+
+        {showDetails && (
+          <span className="text-[10px] text-muted-foreground/70 font-mono truncate mt-0.5">
+            {Math.floor(block.startTime / 60)}:{String(block.startTime % 60).padStart(2, '0')}
+            {" - "}
+            {Math.floor(block.endTime / 60)}:{String(block.endTime % 60).padStart(2, '0')}
+          </span>
+        )}
+      </div>
+
+      {/* Resize Handle Bottom */}
+      <div
+        onPointerDown={(e) => onResizeStart && onResizeStart(e, block.id, 'bottom')}
+        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 opacity-0 group-hover/task:opacity-100"
+      />
+    </div>
+  );
+});
+TaskCard.displayName = 'TaskCard';
+
 const TaskItem = React.memo(({
   block,
   task,
@@ -161,53 +235,23 @@ const TaskItem = React.memo(({
     right: '4px',
     zIndex: isDragging ? 999 : 10,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0 : 1 // Hide original when dragging
   };
 
   return (
-    <div
+    <TaskCard
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onPointerDown={(e) => e.stopPropagation()} // Prevent Drag-to-Create
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className={cn(
-        "absolute rounded-sm p-1 text-[10px] overflow-hidden cursor-grab active:cursor-grabbing shadow-sm transition-all flex items-center gap-1 border group/task",
-        theme === 'retro'
-          ? "bg-white border-black shadow-[1px_1px_0_0_rgba(0,0,0,1)] dark:bg-slate-800 dark:border-gray-600 dark:text-white"
-          : "bg-background border-border",
-        block.taskId === currentTaskId && isTimerRunning && "ring-2 ring-primary ring-offset-0 animate-pulse"
-      )}
+      block={block}
+      task={task}
       style={style}
-    >
-      {/* Resize Handle Top */}
-      <div
-        onPointerDown={(e) => onResizeStart(e, block.id, 'top')}
-        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-black/5 z-20 opacity-0 group-hover/task:opacity-100"
-      />
-
-      <div className="flex items-center justify-between w-full gap-2">
-        <span className="truncate font-medium">{task?.title || 'Unknown Task'}</span>
-        <div className="flex items-center gap-2 opacity-70 text-[9px] font-mono whitespace-nowrap">
-          <div className="flex items-center gap-0.5">
-            <Clock className="w-3 h-3" />
-            <span>{Math.floor(block.startTime / 60)}:{String(block.startTime % 60).padStart(2, '0')}</span>
-          </div>
-          <div className="flex items-center gap-0.5">
-            <Timer className="w-3 h-3" />
-            <span>{((block.endTime - block.startTime) / 30).toFixed(1)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Resize Handle Bottom */}
-      <div
-        onPointerDown={(e) => onResizeStart(e, block.id, 'bottom')}
-        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-black/5 z-20 opacity-0 group-hover/task:opacity-100"
-      />
-    </div>
+      onClick={onClick}
+      onResizeStart={onResizeStart}
+      theme={theme}
+      currentTaskId={currentTaskId}
+      isTimerRunning={isTimerRunning}
+      attributes={attributes}
+      listeners={listeners}
+    />
   );
 });
 TaskItem.displayName = 'TaskItem';
@@ -221,7 +265,8 @@ const ContainerBlock = React.memo(({
   onClick,
   theme,
   currentTaskId,
-  isTimerRunning
+  isTimerRunning,
+  onDistribute
 }: {
   block: any,
   category: any,
@@ -231,13 +276,12 @@ const ContainerBlock = React.memo(({
   onClick: (b: any) => void,
   theme: string,
   currentTaskId: string | null,
-  isTimerRunning: boolean
+  isTimerRunning: boolean,
+  onDistribute?: (blockId: string) => void
 }) => {
-  // Container is draggable too
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `block-${block.id}`,
-    data: { type: 'block', block }
-  });
+  // Container is NOT draggable anymore (as per user request)
+  // const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ ... });
+  const isDragging = false; // Placeholder
 
   // Use Droppable to detect drops specifically ON this container
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
@@ -258,10 +302,10 @@ const ContainerBlock = React.memo(({
     height: `${heightPercent}%`,
     backgroundColor: block.isBusy
       ? undefined // Handled by className for dark mode support
-      : (category?.color ? `${category.color}15` : '#ccc'),
-    border: `1px solid ${block.isBusy ? '#9ca3af' : (category?.color || '#ccc')}`,
-    zIndex: isDragging ? 999 : 1,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+      : (category?.color ? `${category.color}08` : '#ccc'), // Very subtle background
+    border: `1px dashed ${block.isBusy ? '#9ca3af' : (category?.color || '#ccc')}`, // Dashed border for container
+    zIndex: 1,
+    // transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, // Removed
     backgroundImage: block.isBusy
       ? 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.05) 5px, rgba(0,0,0,0.05) 10px)'
       : 'none'
@@ -269,7 +313,7 @@ const ContainerBlock = React.memo(({
 
   // Merge refs
   const setRefs = (node: HTMLElement | null) => {
-    setNodeRef(node);
+    // setNodeRef(node); // Removed
     setDroppableRef(node);
   };
 
@@ -278,16 +322,15 @@ const ContainerBlock = React.memo(({
       ref={setRefs}
       style={style}
       className={cn(
-        "absolute left-0.5 right-0.5 rounded-md overflow-hidden group transition-all",
+        "absolute left-0.5 right-0.5 rounded-md group transition-all",
         theme === 'retro' && "border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.1)]",
         isOver && !isDragging && "ring-2 ring-primary ring-offset-1 bg-primary/10",
         block.isBusy && "cursor-grab active:cursor-grabbing",
         // Dark mode support for busy blocks
         block.isBusy && theme === 'retro' && "bg-[#dedede] dark:bg-slate-800 dark:border-gray-600"
       )}
-      {...listeners}
-      {...attributes}
-      onPointerDown={(e) => e.stopPropagation()} // Prevent Drag-to-Create
+
+      data-no-drag-create="true"
       onClick={(e) => {
         e.stopPropagation();
         onClick(block);
@@ -299,17 +342,33 @@ const ContainerBlock = React.memo(({
         className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-black/5 z-20"
       />
 
-      {/* Container Label */}
-      <div className="absolute top-1 left-1 right-1 flex items-center gap-1 opacity-50 pointer-events-none">
-        {block.label ? (
-          <span className="text-xs font-bold uppercase text-muted-foreground">{block.label}</span>
-        ) : block.isBusy ? (
-          <span className="text-xs font-bold uppercase text-muted-foreground">BUSY</span>
-        ) : (
-          <>
-            <span className="text-lg">{category?.icon}</span>
-            <span className="text-xs font-bold uppercase tracking-wider">{category?.name}</span>
-          </>
+      {/* Container Label & Controls - TAB STYLE */}
+      <div className="absolute -top-6 right-0 flex items-center gap-1 z-40">
+        {/* Label Tab */}
+        <div className="bg-background border shadow-sm rounded-t-md px-2 py-1 flex items-center gap-1 text-xs font-medium text-muted-foreground h-6">
+          {block.label || category?.name || 'Container'}
+        </div>
+
+        {/* Distribute Button Tab */}
+        {!block.isBusy && childBlocks.length > 0 && onDistribute && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-6 w-6 rounded-full shadow-sm bg-background hover:bg-primary hover:text-primary-foreground border-primary/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDistribute(block.id);
+                }}
+              >
+                <SplitSquareHorizontal className="w-3 h-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Distribute Tasks</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 
@@ -340,11 +399,26 @@ const ContainerBlock = React.memo(({
 });
 ContainerBlock.displayName = 'ContainerBlock';
 
+// Droppable Slot Component
+const DroppableTimeSlot = ({ dayIndex, hour, children }: { dayIndex: number, hour: number, children: React.ReactNode }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot-${dayIndex}-${hour}`,
+    data: { dayIndex, hour }
+  });
+
+  return (
+    <div ref={setNodeRef} className={cn("h-[60px] border-b border-dashed border-muted/50 relative", isOver && "bg-primary/5")}>
+      {children}
+    </div>
+  );
+};
+
 const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
   const { userData, addTimeBlock, deleteTimeBlock, updateTimeBlock, startPomodoro, pomodoroTimer, currentTaskId } = useTodo();
   const [activeDragItem, setActiveDragItem] = useState<any>(null);
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false); // Track resize state to prevent click
 
   // Category Selection
   const [selectedCategory, setSelectedCategory] = useState<string>(() => {
@@ -503,6 +577,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
   const handleResizeStart = (e: React.PointerEvent, blockId: string, direction: 'top' | 'bottom') => {
     e.stopPropagation();
     e.preventDefault();
+    isResizingRef.current = true;
 
     const block = userData.timeBlocks?.find(b => b.id === blockId);
     if (!block) return;
@@ -591,6 +666,11 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     setResizeDirection(null);
     setInitialBlockData(null);
     (e.target as Element).releasePointerCapture(e.pointerId);
+
+    // Reset ref after a short delay to ensure onClick is skipped
+    setTimeout(() => {
+      isResizingRef.current = false;
+    }, 100);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -599,7 +679,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     } else if (event.active.data.current?.type === 'busy') {
       setActiveDragItem({ type: 'busy' });
     } else if (event.active.data.current?.type === 'block') {
-      // Block dragging logic handled in dragEnd/move
+      setActiveDragItem({ type: 'block', data: event.active.data.current?.block });
     }
   };
 
@@ -711,19 +791,17 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     // If we are moving a block (activeType === 'block'), we treat it as a move.
     // If creating new, we treat it as an insertion.
 
-    let blocksToResolve = [...allBlocks];
-    if (activeType === 'block') {
-      // Update existing in list
-      blocksToResolve = blocksToResolve.map(b => b.id === blockId ? { ...b, dayOfWeek: dayIndex, startTime: proposedStart, endTime: proposedEnd } : b);
-    } else {
-      // Add temp to list for resolution
-      blocksToResolve.push(newBlock);
-    }
-
     // Resolve Overlaps
-    // We only pass the "Changed" block to start the ripple? 
-    // Actually resolveOverlaps takes (changed, all).
-    // For a move, the "changed" is the moved block.
+    // FIX: Only resolve for the TARGET day.
+    // We need to construct the state of the target day as if the move happened.
+
+    // 1. Get all blocks currently on the target day (excluding the one we are moving, if it was already there)
+    const targetDayBlocks = allBlocks.filter(b => b.dayOfWeek === dayIndex && b.id !== blockId);
+
+    // 2. Add our new/moved block to this list
+    const blocksToResolve = [...targetDayBlocks, newBlock];
+
+    // 3. Resolve overlaps on this day
     const resolved = resolveOverlaps([newBlock], blocksToResolve);
 
     // Apply Changes
@@ -741,7 +819,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
   };
 
   const handleBlockClick = (block: any) => {
-    if (resizingBlockId) return;
+    if (resizingBlockId || isResizingRef.current) return;
 
     setEditingBlock(block.id);
     const startH = Math.floor(block.startTime / 60).toString().padStart(2, '0');
@@ -925,12 +1003,42 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
 
         categoryIndex++;
         rangeCursor = proposedEnd;
-
-        // Stop if we've created enough parts? 
-        // User asked to "split into 3", which implies 3 working blocks.
-        // But if busy blocks fragment the day, we might get more or fewer natural slots.
-        // For now, let's just fill the available time with blocks of `targetChunkDuration`.
       }
+    });
+  };
+
+  const handleDistributeTasks = (containerBlockId: string) => {
+    const container = userData.timeBlocks?.find(b => b.id === containerBlockId);
+    if (!container) return;
+
+    const children = userData.timeBlocks?.filter(b =>
+      b.taskId &&
+      b.categoryId === container.categoryId &&
+      b.startTime >= container.startTime &&
+      b.endTime <= container.endTime
+    ).sort((a, b) => a.startTime - b.startTime);
+
+    if (!children || children.length < 2) return;
+
+    const containerDuration = container.endTime - container.startTime;
+    const gap = 10; // 10 minutes
+    const totalGap = (children.length - 1) * gap;
+    const availableTime = containerDuration - totalGap;
+
+    if (availableTime <= 0) return; // Too many tasks / too small container
+
+    const taskDuration = Math.floor(availableTime / children.length);
+
+    let cursor = container.startTime;
+    children.forEach((child) => {
+      const newStart = cursor;
+      const newEnd = cursor + taskDuration;
+
+      if (child.startTime !== newStart || child.endTime !== newEnd) {
+        updateTimeBlock(child.id, { startTime: newStart, endTime: newEnd });
+      }
+
+      cursor = newEnd + gap;
     });
   };
 
@@ -1077,60 +1185,8 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
               </Select>
             </div>
             <div className="flex gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      if (confirm("Are you sure you want to clear today's schedule?")) {
-                        clearDay(currentDayIndex);
-                      }
-                    }}>
-                      <Eraser className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Clear Today</p>
-                  </TooltipContent>
-                </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => splitDay(currentDayIndex, 3)}>
-                      <SplitSquareHorizontal className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Split Day (3 slots)</p>
-                  </TooltipContent>
-                </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      // Compact Schedule Logic: Remove gaps
-                      const dayBlocks = (userData.timeBlocks || [])
-                        .filter(b => b.dayOfWeek === currentDayIndex)
-                        .sort((a, b) => a.startTime - b.startTime);
-
-                      if (dayBlocks.length === 0) return;
-
-                      let cursor = dayBlocks[0].startTime;
-                      dayBlocks.forEach(block => {
-                        const duration = block.endTime - block.startTime;
-                        if (block.startTime !== cursor) {
-                          updateTimeBlock(block.id, { startTime: cursor, endTime: cursor + duration });
-                        }
-                        cursor += duration;
-                      });
-                    }}>
-                      <Minimize2 className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Compact Schedule (Remove Gaps)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -1156,33 +1212,65 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
                 <div key={day} className="flex-1 border-r min-w-[120px] relative group/col">
                   {/* Header */}
                   <div className={cn(
-                    "h-10 border-b bg-muted/50 flex items-center justify-center font-medium text-sm sticky top-0 z-20 backdrop-blur",
+                    "h-10 border-b bg-muted/50 flex items-center justify-between px-2 font-medium text-sm sticky top-0 z-20 backdrop-blur",
                     dayIndex === currentDayIndex && "bg-primary/5 text-primary"
                   )}>
-                    {day}
-                    <div className="absolute right-1 flex gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                        copySchedule(dayIndex);
-                        alert(`Copied ${day}'s schedule!`);
-                      }}>
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                        if (confirm(`Paste schedule to ${day}? This will overwrite existing blocks.`)) {
-                          pasteSchedule(dayIndex);
-                        }
-                      }}>
-                        <ClipboardPaste className="w-3 h-3" />
-                      </Button>
+                    <span>{day}</span>
+                    <div className="flex gap-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 data-[state=open]:bg-accent">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => splitDay(dayIndex, 2)}>
+                            <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 2
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => splitDay(dayIndex, 3)}>
+                            <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 3
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            copySchedule(dayIndex);
+                            alert(`Copied ${day}'s schedule!`);
+                          }}>
+                            <Copy className="mr-2 h-4 w-4" /> Copy Schedule
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            if (confirm(`Paste schedule to ${day}? This will overwrite existing blocks.`)) {
+                              pasteSchedule(dayIndex);
+                            }
+                          }}>
+                            <ClipboardPaste className="mr-2 h-4 w-4" /> Paste Schedule
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Clear all tasks for ${day}?`)) {
+                                clearDay(dayIndex);
+                              }
+                            }}>
+                            <Eraser className="mr-2 h-4 w-4" /> Clear Day
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
+
+
 
                   {/* Grid Slots */}
                   <div className="relative h-[calc(100%-40px)]"
                     onPointerDown={(e) => handleGridPointerDown(e, dayIndex, 0)}>
-                    {/* Background Lines */}
+                    {/* Background Lines / Droppable Slots */}
                     {Array.from({ length: HOURS_COUNT }).map((_, i) => (
-                      <div key={i} className="h-[60px] border-b border-dashed border-muted/50" />
+                      <DroppableTimeSlot key={i} dayIndex={dayIndex} hour={START_HOUR + i}>
+                        {null}
+                      </DroppableTimeSlot>
                     ))}
 
                     {/* Current Time Line - ONLY ON CURRENT DAY */}
@@ -1237,23 +1325,32 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
                             theme={theme}
                             currentTaskId={currentTaskId}
                             isTimerRunning={pomodoroTimer.isRunning}
+                            onDistribute={handleDistributeTasks}
                           />
                         );
                       });
 
                       const orphanTasks = taskBlocks.filter(b => !processedTaskIds.has(b.id)).map(block => (
-                        <ContainerBlock
+                        <div
                           key={block.id}
-                          block={block}
-                          category={userData.categories.find(c => c.id === block.categoryId)}
-                          childBlocks={[]}
-                          tasks={userData.tasks}
-                          onResizeStart={handleResizeStart}
-                          onClick={handleBlockClick}
-                          theme={theme}
-                          currentTaskId={currentTaskId}
-                          isTimerRunning={pomodoroTimer.isRunning}
-                        />
+                          className="absolute left-1 right-1 z-10"
+                          style={{
+                            top: `${((block.startTime - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100}%`,
+                            height: `${((block.endTime - block.startTime) / (HOURS_COUNT * 60)) * 100}%`,
+                          }}
+                        >
+                          <TaskItem
+                            block={block}
+                            task={userData.tasks.find(t => t.id === block.taskId)}
+                            containerStart={block.startTime} // It's its own container effectively
+                            containerDuration={block.endTime - block.startTime} // 100% height
+                            onClick={() => handleBlockClick(block)}
+                            onResizeStart={handleResizeStart}
+                            theme={theme}
+                            currentTaskId={currentTaskId}
+                            isTimerRunning={pomodoroTimer.isRunning}
+                          />
+                        </div>
                       ));
 
                       const renderedBusy = busyBlocks.map(block => (
@@ -1377,17 +1474,38 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
 
       <DragOverlay>
         {activeDragItem ? (
-          <div className={cn(
-            "flex items-center gap-2 p-2 rounded-md border shadow-xl opacity-90 cursor-grabbing bg-background",
-            theme === 'retro' && "bg-card border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:bg-slate-800 dark:text-white"
-          )}>
-            {activeDragItem.type === 'task' && (
-              <span className="text-sm font-medium">{activeDragItem.data.title}</span>
-            )}
-            {activeDragItem.type === 'busy' && (
-              <span className="text-sm font-medium">🚫 Block Time</span>
-            )}
-          </div>
+          activeDragItem.type === 'block' && activeDragItem.data.taskId ? (
+            <div className="w-[150px] h-[60px] relative"> {/* Fixed size preview */}
+              <TaskCard
+                block={activeDragItem.data}
+                task={userData.tasks.find(t => t.id === activeDragItem.data.taskId)}
+                style={{ height: '100%', width: '100%' }}
+                theme={theme}
+                currentTaskId={currentTaskId}
+                isTimerRunning={pomodoroTimer.isRunning}
+              />
+            </div>
+          ) : (
+            <div className={cn(
+              "flex items-center gap-2 p-2 rounded-md border shadow-xl opacity-90 cursor-grabbing bg-background min-w-[150px]",
+              theme === 'retro' && "bg-card border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:bg-slate-800 dark:text-white"
+            )}>
+              {activeDragItem.type === 'task' && (
+                <span className="text-sm font-medium">{activeDragItem.data.title}</span>
+              )}
+              {activeDragItem.type === 'busy' && (
+                <span className="text-sm font-medium">🚫 Block Time</span>
+              )}
+              {activeDragItem.type === 'block' && (
+                <div className="flex flex-col w-full">
+                  {/* Time removed as per user request */}
+                  <span className="text-sm font-medium">
+                    {activeDragItem.data.label || 'Block'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )
         ) : null}
       </DragOverlay>
 
@@ -1508,7 +1626,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DndContext>
+    </DndContext >
   );
 };
 
