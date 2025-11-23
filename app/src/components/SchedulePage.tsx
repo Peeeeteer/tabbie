@@ -12,27 +12,20 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import {
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  MoreHorizontal,
-  GripVertical,
-  X,
-  Check,
   Trash2,
-  Edit2,
-  Clock,
-  Play,
-  Pause,
-  RotateCcw,
   Eraser,
   SplitSquareHorizontal,
   Copy,
   ClipboardPaste,
-  Timer,
-  Minimize2
+  ArrowRight,
+  Check,
+  MoreHorizontal,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon
 } from 'lucide-react';
+import { startOfWeek, addWeeks, subWeeks, format, addDays, isSameDay, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -66,6 +59,7 @@ import {
 
 interface SchedulePageProps {
   theme?: 'clean' | 'retro';
+  onNavigateToPomodoro?: () => void;
 }
 
 // Constants
@@ -82,13 +76,53 @@ const DraggableTask = React.memo(({ task, theme }: { task: any, theme: string })
     data: { type: 'task', task }
   });
 
+  // Determine status icon/color
+  let statusIcon = null;
+  let statusColor = "text-muted-foreground";
+  let statusText = "";
+
+  if (task.dueDate) {
+    const due = new Date(task.dueDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const next3Days = new Date(today);
+    next3Days.setDate(next3Days.getDate() + 3);
+
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+
+    if (dueDay < today) {
+      statusIcon = <div className="w-2 h-2 rounded-full bg-red-500" />;
+      statusColor = "text-red-500";
+      statusText = "Overdue";
+    } else if (dueDay.getTime() === today.getTime()) {
+      statusIcon = <div className="w-2 h-2 rounded-full bg-green-500" />;
+      statusColor = "text-green-500";
+      statusText = "Today";
+    } else if (dueDay.getTime() === tomorrow.getTime()) {
+      statusIcon = <div className="w-2 h-2 rounded-full bg-yellow-500" />;
+      statusColor = "text-yellow-600";
+      statusText = "Tomorrow";
+    } else if (dueDay <= next3Days) {
+      statusIcon = <div className="w-2 h-2 rounded-full bg-blue-500" />;
+      statusColor = "text-blue-500";
+      statusText = "Soon";
+    }
+  } else {
+    // Unscheduled (No Due Date)
+    statusIcon = <div className="w-2 h-2 rounded-full border border-muted-foreground/50" />;
+    statusColor = "text-muted-foreground";
+    statusText = "Unscheduled";
+  }
+
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
       className={cn(
-        "p-3 mb-2 border shadow-sm rounded-md cursor-grab active:cursor-grabbing transition-all hover:scale-105 bg-card hover:bg-accent border-transparent hover:border-border text-sm flex items-center gap-2 text-foreground",
+        "p-3 mb-2 border shadow-sm rounded-md cursor-grab active:cursor-grabbing transition-all hover:scale-105 bg-card hover:bg-accent border-transparent hover:border-border text-sm flex flex-col gap-1 text-foreground",
         theme === 'retro' && "bg-card border-2 border-black dark:border-gray-600 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] dark:bg-slate-800 dark:text-white"
       )}
       style={transform ? {
@@ -96,7 +130,26 @@ const DraggableTask = React.memo(({ task, theme }: { task: any, theme: string })
         zIndex: 999,
       } : undefined}
     >
-      <span className="truncate">{task.title}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-medium">{task.title}</span>
+        {statusIcon && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {statusIcon}
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{statusText}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+      {statusText && (
+        <span className={cn("text-[10px] font-medium", statusColor)}>
+          {statusText}
+        </span>
+      )}
     </div>
   );
 });
@@ -133,6 +186,7 @@ const TaskCard = React.forwardRef(({
   theme,
   currentTaskId,
   isTimerRunning,
+  onStartPomodoro,
   attributes,
   listeners
 }: any, ref: any) => {
@@ -171,6 +225,9 @@ const TaskCard = React.forwardRef(({
           <span className="truncate font-medium text-xs leading-tight">
             {task?.title || 'Unknown Task'}
           </span>
+          {block.taskId === currentTaskId && isTimerRunning && (
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_1px_rgba(239,68,68,0.8)] animate-pulse shrink-0" />
+          )}
           {showDetails && (
             <span className="text-[9px] text-muted-foreground font-mono whitespace-nowrap shrink-0">
               {duration}m
@@ -185,6 +242,30 @@ const TaskCard = React.forwardRef(({
             {Math.floor(block.endTime / 60)}:{String(block.endTime % 60).padStart(2, '0')}
           </span>
         )}
+
+        {/* Hover Actions */}
+        <div className="opacity-0 group-hover/task:opacity-100 transition-opacity flex items-center ml-auto pl-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartPomodoro && onStartPomodoro(task);
+                  }}
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Start Session</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {/* Resize Handle Bottom */}
@@ -204,6 +285,7 @@ const TaskItem = React.memo(({
   containerDuration,
   onClick,
   onResizeStart,
+  onStartPomodoro,
   theme,
   isTimerRunning,
   currentTaskId
@@ -214,6 +296,7 @@ const TaskItem = React.memo(({
   containerDuration: number,
   onClick: () => void,
   onResizeStart: (e: React.PointerEvent, blockId: string, direction: 'top' | 'bottom') => void,
+  onStartPomodoro: (task: any) => void,
   theme: string,
   isTimerRunning: boolean,
   currentTaskId: string | null
@@ -228,9 +311,12 @@ const TaskItem = React.memo(({
   const topPercent = (relativeStart / containerDuration) * 100;
   const heightPercent = ((block.endTime - block.startTime) / containerDuration) * 100;
 
+  // Check if touching bottom
+  const isAtBottom = (block.endTime - containerStart) >= containerDuration;
+
   const style: React.CSSProperties = {
     top: `${topPercent}%`,
-    height: `${heightPercent}%`,
+    height: isAtBottom ? `calc(${heightPercent}% - 12px)` : `${heightPercent}%`,
     left: '4px',
     right: '4px',
     zIndex: isDragging ? 999 : 10,
@@ -246,6 +332,7 @@ const TaskItem = React.memo(({
       style={style}
       onClick={onClick}
       onResizeStart={onResizeStart}
+      onStartPomodoro={onStartPomodoro}
       theme={theme}
       currentTaskId={currentTaskId}
       isTimerRunning={isTimerRunning}
@@ -266,7 +353,8 @@ const ContainerBlock = React.memo(({
   theme,
   currentTaskId,
   isTimerRunning,
-  onDistribute
+  onDistribute,
+  onStartPomodoro
 }: {
   block: any,
   category: any,
@@ -277,7 +365,8 @@ const ContainerBlock = React.memo(({
   theme: string,
   currentTaskId: string | null,
   isTimerRunning: boolean,
-  onDistribute?: (blockId: string) => void
+  onDistribute?: (blockId: string) => void,
+  onStartPomodoro: (task: any) => void
 }) => {
   // Container is NOT draggable anymore (as per user request)
   // const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ ... });
@@ -382,6 +471,7 @@ const ContainerBlock = React.memo(({
           containerDuration={duration}
           onClick={() => onClick(child)}
           onResizeStart={onResizeStart}
+          onStartPomodoro={onStartPomodoro}
           theme={theme}
           currentTaskId={currentTaskId}
           isTimerRunning={isTimerRunning}
@@ -400,23 +490,63 @@ const ContainerBlock = React.memo(({
 ContainerBlock.displayName = 'ContainerBlock';
 
 // Droppable Slot Component
-const DroppableTimeSlot = ({ dayIndex, hour, children }: { dayIndex: number, hour: number, children: React.ReactNode }) => {
+// Droppable Slot Component
+const DroppableTimeSlot = ({ dayIndex, hour, minute, children }: { dayIndex: number, hour: number, minute: number, children: React.ReactNode }) => {
   const { setNodeRef, isOver } = useDroppable({
-    id: `slot-${dayIndex}-${hour}`,
-    data: { dayIndex, hour }
+    id: `slot-${dayIndex}-${hour}-${minute}`,
+    data: { dayIndex, hour, minute }
   });
 
   return (
-    <div ref={setNodeRef} className={cn("h-[60px] border-b border-dashed border-muted/50 relative", isOver && "bg-primary/5")}>
+    <div ref={setNodeRef} className={cn(
+      "h-[15px] border-r border-muted/50 relative",
+      minute === 45 ? "border-b border-dashed" : "", // Only show border at end of hour
+      isOver && "bg-primary/5"
+    )}>
       {children}
     </div>
   );
 };
 
-const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
-  const { userData, addTimeBlock, deleteTimeBlock, updateTimeBlock, startPomodoro, pomodoroTimer, currentTaskId } = useTodo();
+// Sidebar Droppable Component
+const SidebarDroppable = ({ children }: { children: React.ReactNode }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'sidebar-unschedule',
+    data: { type: 'sidebar' }
+  });
+
+  return (
+    <div ref={setNodeRef} className={cn("h-full transition-colors", isOver && "bg-destructive/10 ring-2 ring-inset ring-destructive")}>
+      {children}
+    </div>
+  );
+};
+
+const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigateToPomodoro }) => {
+  const {
+    userData,
+    addTimeBlock,
+    updateTimeBlock,
+    deleteTimeBlock,
+    currentTaskId,
+    pomodoroTimer,
+    startPomodoro,
+    stopPomodoro,
+    updateUserNotes
+  } = useTodo();
+
   const [activeDragItem, setActiveDragItem] = useState<any>(null);
-  const [editingBlock, setEditingBlock] = useState<string | null>(null);
+
+  // Date Navigation State
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+
+  const handlePrevWeek = () => setCurrentWeekStart(prev => subWeeks(prev, 1));
+  const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1));
+  const handleToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+
+  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+  const weekRangeStr = `${format(currentWeekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false); // Track resize state to prevent click
 
@@ -450,6 +580,8 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
   const [initialBlockData, setInitialBlockData] = useState<{ start: number, end: number } | null>(null);
 
   // Dialog State
+  const [editingBlock, setEditingBlock] = useState<string | null>(null);
+  const [editCategory, setEditCategory] = useState<string>("");
   const [editStartTime, setEditStartTime] = useState("09:00");
   const [editEndTime, setEditEndTime] = useState("10:00");
 
@@ -683,11 +815,38 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     }
   };
 
+  // Sidebar Droppable Component
+  const SidebarDroppable = ({ children }: { children: React.ReactNode }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: 'sidebar-unschedule',
+      data: { type: 'sidebar' }
+    });
+
+    return (
+      <div ref={setNodeRef} className={cn("h-full transition-colors", isOver && "bg-destructive/10 ring-2 ring-inset ring-destructive")}>
+        {children}
+      </div>
+    );
+  };
+
+  // ... inside SchedulePage ...
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragItem(null);
 
     if (!over) return;
+
+    // Handle Drag to Sidebar (Unschedule)
+    if (over.id === 'sidebar-unschedule') {
+      if (active.data.current?.type === 'block') {
+        const blockId = active.data.current.block.id;
+        if (confirm("Unschedule this task?")) {
+          deleteTimeBlock(blockId);
+        }
+      }
+      return;
+    }
 
     const activeType = active.data.current?.type;
     const overType = over.data.current?.type;
@@ -699,13 +858,50 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     if (over.data.current?.dayIndex !== undefined) {
       const slotData = over.data.current;
       dayIndex = slotData.dayIndex;
-      proposedStart = slotData.hour * 60;
-      proposedEnd = (slotData.hour + 1) * 60;
+      const minute = slotData.minute || 0;
+      proposedStart = slotData.hour * 60 + minute;
+      proposedEnd = proposedStart + 60; // Default 1h duration for new items
     } else if (overType === 'container') {
       const containerBlock = over.data.current?.block;
       dayIndex = containerBlock.dayOfWeek;
-      proposedStart = containerBlock.startTime;
-      proposedEnd = proposedStart + 60;
+
+      // PRECISE DROP POSITIONING
+      // Strategy: Use the `active.rect.current.translated` (final position)
+      // and compare it to `over.rect` (container position).
+
+      if (active.rect.current?.translated && over.rect) {
+        const containerTop = over.rect.top;
+        const dropTop = active.rect.current.translated.top;
+        const relativeY = dropTop - containerTop;
+
+        // Convert pixels to minutes
+        // We know the container height corresponds to its duration
+        const containerHeight = over.rect.height;
+        const containerDuration = containerBlock.endTime - containerBlock.startTime;
+
+        const minutesOffset = (relativeY / containerHeight) * containerDuration;
+
+        // Snap to 15m
+        const snappedOffset = Math.round(minutesOffset / 15) * 15;
+
+        proposedStart = containerBlock.startTime + snappedOffset;
+
+        // Clamp start to container start
+        proposedStart = Math.max(proposedStart, containerBlock.startTime);
+      } else {
+        // Fallback
+        proposedStart = containerBlock.startTime;
+      }
+
+      // For existing blocks, preserve duration
+      if (activeType === 'block') {
+        const block = active.data.current?.block;
+        const duration = block.endTime - block.startTime;
+        proposedEnd = proposedStart + duration;
+      } else {
+        proposedEnd = proposedStart + 60; // Default
+      }
+
     } else {
       return;
     }
@@ -734,8 +930,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
       taskId = block.taskId;
       isBusy = block.isBusy;
       label = block.label;
-      const duration = block.endTime - block.startTime;
-      proposedEnd = proposedStart + duration;
+      // Duration already handled above for precise positioning
     }
 
     // --- LOGIC ---
@@ -760,68 +955,119 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
           alert(`Category Mismatch!`);
           return;
         }
-        // Clamp
-        proposedStart = Math.max(proposedStart, targetContainer.startTime);
-        proposedEnd = Math.min(proposedEnd, targetContainer.endTime);
-        if (proposedEnd <= proposedStart) proposedEnd = Math.min(proposedStart + 30, targetContainer.endTime);
 
-        // Add/Update Task
-        if (activeType === 'block') {
-          updateTimeBlock(blockId, { dayOfWeek: dayIndex, startTime: proposedStart, endTime: proposedEnd });
-        } else {
+        // LOGIC SPLIT:
+        // 1. NEW TASKS (from sidebar) -> Auto-Distribute / Smart Fill
+        // 2. EXISTING BLOCKS (moving) -> Preserve Duration / Clamp (Independent Move)
+
+        if (activeType === 'task') {
+          // --- NEW TASK LOGIC (Auto-Fill / Distribute) ---
+
+          // Find existing tasks in this container
+          const childTasks = existingBlocks.filter(b =>
+            b.taskId &&
+            b.categoryId === targetContainer.categoryId &&
+            b.startTime >= targetContainer.startTime &&
+            b.endTime <= targetContainer.endTime
+          ).sort((a, b) => a.startTime - b.startTime);
+
+          // AUTO-DISTRIBUTE LOGIC (If 2+ tasks total)
+          // User wants to split even if it's just the 2nd task
+          if (childTasks.length >= 1) {
+            const containerDuration = targetContainer.endTime - targetContainer.startTime;
+            const totalTasks = childTasks.length + 1; // Existing + New
+            const gap = 15; // 15 minutes gap (User requested 15-20)
+            const totalGap = (totalTasks - 1) * gap;
+            const availableTime = containerDuration - totalGap;
+
+            if (availableTime > 0) {
+              // Calculate duration per task (floor to nearest minute, or maybe 5m?)
+              // Let's keep it simple.
+              const taskDuration = Math.floor(availableTime / totalTasks);
+
+              // 1. Update Existing Tasks
+              let cursor = targetContainer.startTime;
+              childTasks.forEach(child => {
+                const newStart = cursor;
+                const newEnd = cursor + taskDuration;
+                updateTimeBlock(child.id, { startTime: newStart, endTime: newEnd });
+                cursor = newEnd + gap;
+              });
+
+              // 2. Add New Task at the end
+              proposedStart = cursor;
+              proposedEnd = cursor + taskDuration;
+
+              addTimeBlock(categoryId, dayIndex, proposedStart, proposedEnd, taskId, label, isBusy);
+              return;
+            }
+          }
+
+          // SMART AUTO-FILL LOGIC (Fallback)
+          const lastTaskEnd = childTasks.length > 0
+            ? Math.max(...childTasks.map(t => t.endTime))
+            : targetContainer.startTime;
+
+          let newStart = lastTaskEnd;
+          let newEnd = targetContainer.endTime;
+
+          if (newStart >= newEnd) {
+            alert("Container is full!");
+            return;
+          }
+
+          proposedStart = newStart;
+          proposedEnd = newEnd;
+
           addTimeBlock(categoryId, dayIndex, proposedStart, proposedEnd, taskId, label, isBusy);
+
+        } else {
+          // --- EXISTING BLOCK LOGIC (Move / Clamp) ---
+          // Preserve duration, just clamp to container bounds
+          // proposedStart is already calculated precisely above
+
+          // Clamp Start
+          proposedStart = Math.max(proposedStart, targetContainer.startTime);
+
+          // Clamp End (ensure it doesn't exceed container)
+          proposedEnd = Math.min(proposedEnd, targetContainer.endTime);
+
+          // If clamping end made it invalid (start >= end), push start back?
+          if (proposedEnd <= proposedStart) {
+            // Try to keep minimum 15m
+            proposedStart = Math.max(targetContainer.startTime, proposedEnd - 15);
+          }
+
+          updateTimeBlock(blockId, { dayOfWeek: dayIndex, startTime: proposedStart, endTime: proposedEnd });
         }
-        return; // Done, no push needed for nested tasks
+
+        return; // Done
       }
     } else {
       // If dropping a TASK on empty space (no container), REJECT IT
-      if (activeType === 'task') {
-        alert("Please drag tasks into a matching Category Block.");
-        return;
+      // Tasks MUST go into containers (unless they are orphans, but we prefer containers)
+      // Wait, user might want to create a new block + task?
+      // Current logic: If dropping on empty slot, create a CONTAINER for it?
+      // Or just an orphan task?
+      // Let's allow orphan tasks for now, but maybe wrap them?
+      // For now, standard behavior:
+
+      if (activeType === 'block') {
+        updateTimeBlock(blockId, { dayOfWeek: dayIndex, startTime: proposedStart, endTime: proposedEnd });
+      } else {
+        // Create new block (orphan or container?)
+        // Let's create it as a container-less block (orphan)
+        addTimeBlock(categoryId, dayIndex, proposedStart, proposedEnd, taskId, label, isBusy);
       }
     }
-
-    // 2. Standard Drop (Top Level)
-    // Create/Update the block
-    let newBlock: any = { id: blockId || 'temp', categoryId, dayOfWeek: dayIndex, startTime: proposedStart, endTime: proposedEnd, taskId, isBusy, label };
-
-    // If it's a new block, we don't have an ID yet, but resolveOverlaps needs one to track it.
-    // We can simulate it.
-
-    // If we are moving a block (activeType === 'block'), we treat it as a move.
-    // If creating new, we treat it as an insertion.
-
-    // Resolve Overlaps
-    // FIX: Only resolve for the TARGET day.
-    // We need to construct the state of the target day as if the move happened.
-
-    // 1. Get all blocks currently on the target day (excluding the one we are moving, if it was already there)
-    const targetDayBlocks = allBlocks.filter(b => b.dayOfWeek === dayIndex && b.id !== blockId);
-
-    // 2. Add our new/moved block to this list
-    const blocksToResolve = [...targetDayBlocks, newBlock];
-
-    // 3. Resolve overlaps on this day
-    const resolved = resolveOverlaps([newBlock], blocksToResolve);
-
-    // Apply Changes
-    resolved.forEach(b => {
-      if (b.id === 'temp') {
-        // This is our new block
-        addTimeBlock(b.categoryId, b.dayOfWeek, b.startTime, b.endTime, b.taskId, b.label, b.isBusy);
-      } else {
-        const original = allBlocks.find(o => o.id === b.id);
-        if (original && (original.startTime !== b.startTime || original.endTime !== b.endTime)) {
-          updateTimeBlock(b.id, { startTime: b.startTime, endTime: b.endTime });
-        }
-      }
-    });
   };
+
 
   const handleBlockClick = (block: any) => {
     if (resizingBlockId || isResizingRef.current) return;
 
     setEditingBlock(block.id);
+    setEditCategory(block.categoryId || "");
     const startH = Math.floor(block.startTime / 60).toString().padStart(2, '0');
     const startM = (block.startTime % 60).toString().padStart(2, '0');
     const endH = Math.floor(block.endTime / 60).toString().padStart(2, '0');
@@ -844,7 +1090,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
       return;
     }
 
-    updateTimeBlock(editingBlock, { startTime, endTime });
+    updateTimeBlock(editingBlock, { startTime, endTime, categoryId: editCategory });
     setEditingBlock(null);
   };
 
@@ -857,6 +1103,17 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
 
   const handleStartPomodoro = () => {
     if (!editingBlock) return;
+
+    // Save changes first
+    const [startH, startM] = editStartTime.split(':').map(Number);
+    const [endH, endM] = editEndTime.split(':').map(Number);
+    const startTime = startH * 60 + startM;
+    const endTime = endH * 60 + endM;
+
+    if (endTime > startTime) {
+      updateTimeBlock(editingBlock, { startTime, endTime, categoryId: editCategory });
+    }
+
     const block = userData.timeBlocks?.find(b => b.id === editingBlock);
     if (block && block.taskId) {
       const task = userData.tasks?.find(t => t.id === block.taskId);
@@ -864,6 +1121,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
         startPomodoro(task);
         // In a real app, we might navigate here. 
         // Assuming the user can see the timer elsewhere or it's global.
+        onNavigateToPomodoro && onNavigateToPomodoro();
       }
     }
     setEditingBlock(null);
@@ -1072,7 +1330,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
     // FIX: Use fixed pixel height (1px = 1min) and account for 40px header
     // The grid rows are h-[60px], so 60px = 60min => 1px = 1min.
     const headerHeight = 40;
-    const relativeY = e.clientY - containerRect.top + containerRef.current.scrollTop;
+    const relativeY = e.clientY - containerRect.top + containerRef.current!.scrollTop;
     const gridY = Math.max(0, relativeY - headerHeight);
     const minutes = Math.floor(gridY) + (START_HOUR * 60);
 
@@ -1131,7 +1389,8 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
       const duration = Math.max(15, finalEnd - finalStart);
       const adjustedEnd = finalStart + duration;
 
-      addTimeBlock(categoryId, creationStart.dayIndex, finalStart, adjustedEnd, undefined, newBlockLabel || undefined, isBusy);
+      const dateStr = format(addDays(currentWeekStart, creationStart.dayIndex), 'yyyy-MM-dd');
+      addTimeBlock(categoryId, creationStart.dayIndex, finalStart, adjustedEnd, undefined, newBlockLabel || undefined, isBusy, dateStr);
     }
     setShowCategorySelect(false);
     setCreationStart(null);
@@ -1155,266 +1414,327 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
 
         {/* --- Toolbar / Header --- */}
         <div className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/50 z-10">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              Weekly Schedule
-              <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-muted">
-                Beta
-              </span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Category Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Filter Tasks:</span>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px] h-8">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {userData.categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{cat.icon}</span> {cat.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
+              <p className="text-muted-foreground">Plan your weekly routine</p>
             </div>
-            <div className="flex gap-2">
 
+            <div className="flex items-center gap-4">
+              {/* Week Navigation */}
+              <div className="flex items-center gap-2 bg-card border rounded-md p-1 shadow-sm">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrevWeek}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="px-2 text-sm font-medium min-w-[140px] text-center flex items-center justify-center gap-2 cursor-pointer hover:bg-accent/50 rounded py-1" onClick={handleToday}>
+                  <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                  {weekRangeStr}
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNextWeek}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
 
+              <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+                <Button
+                  variant={selectedCategory === 'all' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedCategory('all')}
+                  className="text-xs h-7"
+                >
+                  All
+                </Button>
+                {userData.categories.map(cat => (
+                  <Button
+                    key={cat.id}
+                    variant={selectedCategory === cat.id ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className="text-xs h-7 gap-1.5 px-2"
+                    style={selectedCategory === cat.id ? { backgroundColor: `${cat.color}20`, color: cat.color } : {}}
+                  >
+                    <span>{cat.icon}</span>
+                    {cat.name}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={onNavigateToPomodoro} className="gap-2 hidden md:flex">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  Focus Mode
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden">
-          {/* Calendar Grid */}
-          <div className="flex-1 overflow-y-auto relative select-none" ref={containerRef}>
-            <div className="flex min-w-[800px] min-h-[1000px]">
-              {/* Time Labels */}
-              <div className="w-16 shrink-0 border-r bg-background sticky left-0 z-30">
-                <div className="h-10 border-b bg-muted/50" /> {/* Header spacer */}
-                {Array.from({ length: HOURS_COUNT }).map((_, i) => (
-                  <div key={i} className="h-[60px] border-b text-xs text-muted-foreground p-1 text-right pr-2 relative">
-                    <span className="-top-2 relative bg-background px-1">
-                      {String(START_HOUR + i).padStart(2, '0')}:00
-                    </span>
-                  </div>
-                ))}
-              </div>
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
+            {/* Main Calendar Grid */}
+            <div
+              ref={containerRef}
+              className="flex-1 overflow-y-auto relative select-none"
+              onPointerMove={handleGridPointerMove}
+              onPointerUp={handleGridPointerUp}
+            >
+              {/* Header Row Removed as per user request */}
 
-              {/* Days Columns */}
-              {DAYS.map((day, dayIndex) => (
-                <div key={day} className="flex-1 border-r min-w-[120px] relative group/col">
-                  {/* Header */}
-                  <div className={cn(
-                    "h-10 border-b bg-muted/50 flex items-center justify-between px-2 font-medium text-sm sticky top-0 z-20 backdrop-blur",
-                    dayIndex === currentDayIndex && "bg-primary/5 text-primary"
-                  )}>
-                    <span>{day}</span>
-                    <div className="flex gap-1">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 data-[state=open]:bg-accent">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => splitDay(dayIndex, 2)}>
-                            <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 2
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => splitDay(dayIndex, 3)}>
-                            <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 3
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => {
-                            copySchedule(dayIndex);
-                            alert(`Copied ${day}'s schedule!`);
-                          }}>
-                            <Copy className="mr-2 h-4 w-4" /> Copy Schedule
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            if (confirm(`Paste schedule to ${day}? This will overwrite existing blocks.`)) {
-                              pasteSchedule(dayIndex);
-                            }
-                          }}>
-                            <ClipboardPaste className="mr-2 h-4 w-4" /> Paste Schedule
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              if (confirm(`Clear all tasks for ${day}?`)) {
-                                clearDay(dayIndex);
+              {/* Body Row (Time + Days) */}
+              <div className="flex min-h-0">
+                {/* Time Labels */}
+                <div className="w-16 shrink-0 border-r bg-background sticky left-0 z-30">
+                  <div className="h-10 border-b bg-muted/50 flex items-center justify-center text-xs font-medium text-muted-foreground">
+                    Time
+                  </div>
+                  {Array.from({ length: HOURS_COUNT }).map((_, i) => (
+                    <div key={i} className="h-[60px] border-b text-xs text-muted-foreground p-1 text-right pr-2 relative">
+                      <span className="-top-2 relative bg-background px-1">
+                        {String(START_HOUR + i).padStart(2, '0')}:00
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Days Columns */}
+                {DAYS.map((day, dayIndex) => (
+                  <div key={day} className="flex-1 border-r min-w-[120px] relative group/col">
+                    {/* Header */}
+                    <div className={cn(
+                      "h-10 border-b bg-muted/50 flex items-center justify-between px-2 font-medium text-sm sticky top-0 z-20 backdrop-blur",
+                      dayIndex === currentDayIndex && "bg-primary/5 text-primary"
+                    )}>
+                      <span>{format(addDays(currentWeekStart, dayIndex), 'EEE d')}</span>
+                      <div className="flex gap-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 data-[state=open]:bg-accent">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => splitDay(dayIndex, 2)}>
+                              <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 2
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => splitDay(dayIndex, 3)}>
+                              <SplitSquareHorizontal className="mr-2 h-4 w-4" /> Split into 3
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              copySchedule(dayIndex);
+                              alert(`Copied ${day}'s schedule!`);
+                            }}>
+                              <Copy className="mr-2 h-4 w-4" /> Copy Schedule
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              if (confirm(`Paste schedule to ${day}? This will overwrite existing blocks.`)) {
+                                pasteSchedule(dayIndex);
                               }
                             }}>
-                            <Eraser className="mr-2 h-4 w-4" /> Clear Day
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                              <ClipboardPaste className="mr-2 h-4 w-4" /> Paste Schedule
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Clear all tasks for ${day}?`)) {
+                                  clearDay(dayIndex);
+                                }
+                              }}>
+                              <Eraser className="mr-2 h-4 w-4" /> Clear Day
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
 
 
 
-                  {/* Grid Slots */}
-                  <div className="relative h-[calc(100%-40px)]"
-                    onPointerDown={(e) => handleGridPointerDown(e, dayIndex, 0)}>
-                    {/* Background Lines / Droppable Slots */}
-                    {Array.from({ length: HOURS_COUNT }).map((_, i) => (
-                      <DroppableTimeSlot key={i} dayIndex={dayIndex} hour={START_HOUR + i}>
-                        {null}
-                      </DroppableTimeSlot>
-                    ))}
+                    {/* Grid Slots */}
+                    <div className="relative h-[calc(100%-40px)]"
+                      onPointerDown={(e) => handleGridPointerDown(e, dayIndex, 0)}>
+                      {/* Background Lines / Droppable Slots */}
+                      {Array.from({ length: HOURS_COUNT * 4 }).map((_, i) => {
+                        const hour = START_HOUR + Math.floor(i / 4);
+                        const minute = (i % 4) * 15;
+                        return (
+                          <DroppableTimeSlot key={i} dayIndex={dayIndex} hour={hour} minute={minute}>
+                            {null}
+                          </DroppableTimeSlot>
+                        );
+                      })}
 
-                    {/* Current Time Line - ONLY ON CURRENT DAY */}
-                    {dayIndex === currentDayIndex && isWithinView && (
-                      <div
-                        className="absolute left-0 right-0 border-t-2 border-red-500 z-50 pointer-events-none flex items-center"
-                        style={{ top: currentTimePercent + "%" }}
-                      >
-                        <div className="w-3 h-3 bg-red-500 rounded-full -ml-1.5 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
-                        <div className="absolute right-0 text-[10px] font-bold text-red-500 bg-background/80 px-1 rounded-l-sm">
-                          {Math.floor(currentMinutes / 60)}:{String(currentMinutes % 60).padStart(2, '0')}
+                      {/* Current Time Line - ONLY ON CURRENT DAY */}
+                      {dayIndex === currentDayIndex && isWithinView && (
+                        <div
+                          className="absolute left-0 right-0 border-t-2 border-red-500 z-50 pointer-events-none flex items-center"
+                          style={{ top: currentTimePercent + "%" }}
+                        >
+                          <div className="w-3 h-3 bg-red-500 rounded-full -ml-1.5 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+                          <div className="absolute right-0 text-[10px] font-bold text-red-500 bg-background/80 px-1 rounded-l-sm">
+                            {Math.floor(currentMinutes / 60)}:{String(currentMinutes % 60).padStart(2, '0')}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Creation Preview Block */}
-                    {isCreating && creationStart?.dayIndex === dayIndex && creationEnd && (
-                      <div className="absolute left-1 right-1 bg-primary/20 border-2 border-primary border-dashed rounded-md z-50 pointer-events-none flex items-center justify-center text-xs font-bold text-primary"
-                        style={{
-                          top: ((Math.min(creationStart.time, creationEnd) - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100 + "%",
-                          height: (Math.abs(creationEnd - creationStart.time) / (HOURS_COUNT * 60)) * 100 + "%"
-                        }}>
-                        New Block
-                      </div>
-                    )}
+                      {/* Creation Preview Block */}
+                      {isCreating && creationStart?.dayIndex === dayIndex && creationEnd && (
+                        <div className="absolute left-1 right-1 bg-primary/20 border-2 border-primary border-dashed rounded-md z-50 pointer-events-none flex items-center justify-center text-xs font-bold text-primary"
+                          style={{
+                            top: ((Math.min(creationStart.time, creationEnd) - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100 + "%",
+                            height: (Math.abs(creationEnd - creationStart.time) / (HOURS_COUNT * 60)) * 100 + "%"
+                          }}>
+                          New Block
+                        </div>
+                      )}
 
-                    {/* Render Blocks Grouped by Container */}
-                    {(() => {
-                      const dayBlocks = (userData.timeBlocks || []).filter(b => b.dayOfWeek === dayIndex);
-                      const containers = dayBlocks.filter(b => !b.taskId && !b.isBusy);
-                      const busyBlocks = dayBlocks.filter(b => b.isBusy);
-                      const taskBlocks = dayBlocks.filter(b => b.taskId);
-                      const processedTaskIds = new Set<string>();
+                      {/* Render Blocks Grouped by Container */}
+                      {(() => {
+                        const dayDateStr = format(addDays(currentWeekStart, dayIndex), 'yyyy-MM-dd');
+                        const currentRealWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+                        const isCurrentRealWeek = isSameDay(currentWeekStart, currentRealWeekStart);
 
-                      const renderedContainers = containers.map(container => {
-                        const childTasks = taskBlocks.filter(taskBlock => {
-                          const taskMid = (taskBlock.startTime + taskBlock.endTime) / 2;
-                          const isInside = taskMid >= container.startTime && taskMid <= container.endTime;
-                          if (isInside) processedTaskIds.add(taskBlock.id);
-                          return isInside;
+                        const dayBlocks = (userData.timeBlocks || []).filter(b => {
+                          if (b.date) return b.date === dayDateStr;
+                          // Legacy blocks (no date): Show only if we are viewing the current real week
+                          return b.dayOfWeek === dayIndex && isCurrentRealWeek;
+                        });
+                        const containers = dayBlocks.filter(b => !b.taskId && !b.isBusy);
+                        const busyBlocks = dayBlocks.filter(b => b.isBusy);
+                        const taskBlocks = dayBlocks.filter(b => b.taskId);
+                        const processedTaskIds = new Set<string>();
+
+                        const renderedContainers = containers.map(container => {
+                          const childTasks = taskBlocks.filter(taskBlock => {
+                            const taskMid = (taskBlock.startTime + taskBlock.endTime) / 2;
+                            const isInside = taskMid >= container.startTime && taskMid <= container.endTime;
+                            if (isInside) processedTaskIds.add(taskBlock.id);
+                            return isInside;
+                          });
+
+                          return (
+                            <ContainerBlock
+                              key={container.id}
+                              block={container}
+                              category={userData.categories.find(c => c.id === container.categoryId)}
+                              childBlocks={childTasks}
+                              tasks={userData.tasks}
+                              onResizeStart={handleResizeStart}
+                              onClick={handleBlockClick}
+                              theme={theme}
+                              currentTaskId={currentTaskId}
+                              isTimerRunning={pomodoroTimer.isRunning}
+                              onDistribute={handleDistributeTasks}
+                              onStartPomodoro={startPomodoro}
+                            />
+                          );
                         });
 
-                        return (
+                        const orphanTasks = taskBlocks.filter(b => !processedTaskIds.has(b.id)).map(block => (
+                          <div
+                            key={block.id}
+                            className="absolute left-1 right-1 z-10"
+                            style={{
+                              top: `${((block.startTime - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100}%`,
+                              height: `${((block.endTime - block.startTime) / (HOURS_COUNT * 60)) * 100}%`,
+                            }}
+                          >
+                            <TaskItem
+                              block={block}
+                              task={userData.tasks.find(t => t.id === block.taskId)}
+                              containerStart={block.startTime} // It's its own container effectively
+                              containerDuration={block.endTime - block.startTime} // 100% height
+                              onClick={() => handleBlockClick(block)}
+                              onResizeStart={handleResizeStart}
+                              onStartPomodoro={(task) => {
+                                startPomodoro(task);
+                                onNavigateToPomodoro && onNavigateToPomodoro();
+                              }}
+                              theme={theme}
+                              currentTaskId={currentTaskId}
+                              isTimerRunning={!!pomodoroTimer.isRunning}
+                            />
+                          </div>
+                        ));
+
+                        const renderedBusy = busyBlocks.map(block => (
                           <ContainerBlock
-                            key={container.id}
-                            block={container}
-                            category={userData.categories.find(c => c.id === container.categoryId)}
-                            childBlocks={childTasks}
-                            tasks={userData.tasks}
+                            key={block.id}
+                            block={block}
+                            category={null}
+                            childBlocks={[]}
+                            tasks={[]}
                             onResizeStart={handleResizeStart}
                             onClick={handleBlockClick}
                             theme={theme}
                             currentTaskId={currentTaskId}
-                            isTimerRunning={pomodoroTimer.isRunning}
-                            onDistribute={handleDistributeTasks}
+                            isTimerRunning={!!pomodoroTimer?.isRunning}
+                            onStartPomodoro={(task) => {
+                              startPomodoro(task);
+                              onNavigateToPomodoro && onNavigateToPomodoro();
+                            }}
                           />
-                        );
-                      });
+                        ));
 
-                      const orphanTasks = taskBlocks.filter(b => !processedTaskIds.has(b.id)).map(block => (
-                        <div
-                          key={block.id}
-                          className="absolute left-1 right-1 z-10"
-                          style={{
-                            top: `${((block.startTime - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100}%`,
-                            height: `${((block.endTime - block.startTime) / (HOURS_COUNT * 60)) * 100}%`,
-                          }}
-                        >
-                          <TaskItem
-                            block={block}
-                            task={userData.tasks.find(t => t.id === block.taskId)}
-                            containerStart={block.startTime} // It's its own container effectively
-                            containerDuration={block.endTime - block.startTime} // 100% height
-                            onClick={() => handleBlockClick(block)}
-                            onResizeStart={handleResizeStart}
-                            theme={theme}
-                            currentTaskId={currentTaskId}
-                            isTimerRunning={pomodoroTimer.isRunning}
-                          />
-                        </div>
-                      ));
-
-                      const renderedBusy = busyBlocks.map(block => (
-                        <ContainerBlock
-                          key={block.id}
-                          block={block}
-                          category={null}
-                          childBlocks={[]}
-                          tasks={[]}
-                          onResizeStart={handleResizeStart}
-                          onClick={handleBlockClick}
-                          theme={theme}
-                          currentTaskId={currentTaskId}
-                          isTimerRunning={pomodoroTimer.isRunning}
-                        />
-                      ));
-
-                      return [...renderedContainers, ...orphanTasks, ...renderedBusy];
-                    })()}
+                        return [...renderedContainers, ...orphanTasks, ...renderedBusy];
+                      })()}
+                    </div>
                   </div>
-                </div>
-              ))}
+
+                ))}
+              </div>
             </div>
           </div>
           {/* Sidebar */}
-          <div className="w-64 border-l bg-card/50 backdrop-blur-sm flex flex-col">
-            <div className="p-3 border-b bg-muted/20">
-              <h3 className="font-semibold text-sm">Tasks & Blocks</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Drag items to schedule</p>
-            </div>
+          <SidebarDroppable>
+            <div className="w-64 border-l bg-card/50 backdrop-blur-sm flex flex-col h-full">
+              <div className="p-3 border-b bg-muted/20">
+                <h3 className="font-semibold text-sm">Tasks & Blocks</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Drag items to schedule</p>
+              </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-4">
-              {/* Group by Category */}
-              {userData.categories
-                .filter(cat => selectedCategory === 'all' || cat.id === selectedCategory)
-                .map(cat => {
-                  const catTasks = (userData.tasks || []).filter(t => t.categoryId === cat.id && !t.completed && !t.scheduledDate);
-                  if (catTasks.length === 0) return null;
+              <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                {/* Group by Category */}
+                {userData.categories
+                  .filter(cat => selectedCategory === 'all' || cat.id === selectedCategory)
+                  .map(cat => {
+                    const catTasks = (userData.tasks || []).filter(t => t.categoryId === cat.id && !t.completed && !t.scheduledDate);
+                    if (catTasks.length === 0) return null;
 
-                  return (
-                    <div key={cat.id} className="space-y-1">
-                      <div className="text-xs font-medium text-muted-foreground px-2 py-1 flex items-center gap-1">
-                        <span>{cat.icon}</span> {cat.name}
+                    return (
+                      <div key={cat.id} className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground px-2 py-1 flex items-center gap-1">
+                          <span>{cat.icon}</span> {cat.name}
+                        </div>
+                        {catTasks.map(task => (
+                          <DraggableTask key={task.id} task={task} theme={theme} />
+                        ))}
                       </div>
-                      {catTasks.map(task => (
-                        <DraggableTask key={task.id} task={task} theme={theme} />
-                      ))}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-              {/* Empty State */}
-              {(!userData.tasks || userData.tasks.filter(t => !t.completed && !t.scheduledDate).length === 0) && (
-                <div className="p-4 text-center text-muted-foreground text-xs">
-                  No unscheduled tasks found. Great job!
+                {/* Empty State */}
+                {(!userData.tasks || userData.tasks.filter(t => !t.completed && !t.scheduledDate).length === 0) && (
+                  <div className="p-4 text-center text-muted-foreground text-xs">
+                    No unscheduled tasks found. Great job!
+                  </div>
+                )}
+
+                {/* Drop Zone Hint */}
+                <div className="mt-4 border-2 border-dashed border-muted rounded-lg p-4 text-center text-xs text-muted-foreground">
+                  Drop here to unschedule
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          </SidebarDroppable>
         </div>
-      </div>
+      </div >
+
 
       {/* Category Selection Modal for Drag-to-Create */}
-      <Dialog open={showCategorySelect} onOpenChange={setShowCategorySelect}>
+      < Dialog open={showCategorySelect} onOpenChange={setShowCategorySelect} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Block</DialogTitle>
@@ -1470,7 +1790,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       <DragOverlay>
         {activeDragItem ? (
@@ -1520,32 +1840,91 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <span className="text-xs font-medium">Start Time</span>
-                <Input
-                  type="time"
-                  value={editStartTime}
-                  onChange={(e) => setEditStartTime(e.target.value)}
-                  className={theme === 'retro' ? "border-2 border-black" : ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <span className="text-xs font-medium">End Time</span>
-                <Input
-                  type="time"
-                  value={editEndTime}
-                  onChange={(e) => setEditEndTime(e.target.value)}
-                  className={theme === 'retro' ? "border-2 border-black" : ""}
-                />
+            {/* Category Selection */}
+            <div className="space-y-2">
+              <span className="text-xs font-medium">Category</span>
+              <Select value={editCategory} onValueChange={setEditCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userData.categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{cat.icon}</span> {cat.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Time Selection */}
+            <div className="space-y-2">
+              <span className="text-xs font-medium">Time & Duration</span>
+              <div className="p-3 bg-muted/30 rounded-md border space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Start</span>
+                    <Input
+                      type="time"
+                      value={editStartTime}
+                      onChange={(e) => setEditStartTime(e.target.value)}
+                      className="h-8 mt-1"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center pt-4 text-muted-foreground">
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">End</span>
+                    <Input
+                      type="time"
+                      value={editEndTime}
+                      onChange={(e) => setEditEndTime(e.target.value)}
+                      className="h-8 mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Duration Buttons */}
+                <div className="flex flex-wrap gap-1.5">
+                  {(() => {
+                    const isTask = editingBlock && userData.timeBlocks?.find(b => b.id === editingBlock)?.taskId;
+                    const durations = isTask
+                      ? [15, 30, 45, 60, 90, 120] // Minutes for tasks
+                      : [60, 120, 180, 240, 300, 360]; // Hours for categories/containers
+
+                    return durations.map(mins => (
+                      <Button
+                        key={mins}
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => {
+                          const [h, m] = editStartTime.split(':').map(Number);
+                          const startMins = h * 60 + m;
+                          const endMins = startMins + mins;
+                          const endH = Math.floor(endMins / 60) % 24;
+                          const endM = endMins % 60;
+                          setEditEndTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
+                        }}
+                      >
+                        +{isTask ? `${mins}m` : `${mins / 60}h`}
+                      </Button>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
 
             {/* Show Task Info if linked */}
             {editingBlock && userData.timeBlocks?.find(b => b.id === editingBlock)?.taskId && (
-              <div className="p-3 bg-muted/30 rounded-md border border-dashed">
-                <span className="text-xs text-muted-foreground block mb-1">Linked Task:</span>
-                <div className="font-medium">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800">
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium block mb-1 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Linked Task
+                </span>
+                <div className="font-medium text-sm">
                   {userData.tasks?.find(t => t.id === userData.timeBlocks?.find(b => b.id === editingBlock)?.taskId)?.title}
                 </div>
               </div>
@@ -1631,3 +2010,4 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean' }) => {
 };
 
 export default SchedulePage;
+

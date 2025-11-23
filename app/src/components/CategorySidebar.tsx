@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Plus, Settings2, X, Monitor, CheckSquare, Clock, Bell, BarChart3, 
-  Calendar, Zap, Activity, ChevronDown, ChevronRight, AlertTriangle,
-  Palette, MoreHorizontal, Trophy, Wrench, Play, Pause, Square, Coffee, SkipForward,
+import {
+  Plus, Settings2, X, Clock, Monitor, CheckSquare, BarChart3,
+  Calendar, Zap, Activity, ChevronDown, ChevronRight,
+  Palette, Play, Pause, Square, Coffee, SkipForward,
   BookOpen, Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ import { DarkModeToggle } from '@/components/ui/dark-mode-toggle';
 interface CategorySidebarProps {
   currentPage: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie' | 'schedule';
   onPageChange: (page: 'dashboard' | 'tasks' | 'reminders' | 'events' | 'notifications' | 'pomodoro' | 'notes' | 'activity' | 'timetracking' | 'settings' | 'tabbie' | 'schedule') => void;
-      currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
+  currentView?: 'today' | 'tomorrow' | 'next7days' | 'completed' | string; // Allow any string for dynamic category IDs
   onViewChange?: (view: 'today' | 'tomorrow' | 'next7days' | 'completed' | string) => void; // Allow any string for dynamic category IDs
   activityStats?: {
     totalPomodoros: number;
@@ -43,9 +43,9 @@ interface CategorySidebarProps {
   theme?: 'clean' | 'retro';
 }
 
-const CategorySidebar: React.FC<CategorySidebarProps> = ({ 
-  currentPage, 
-  onPageChange, 
+const CategorySidebar: React.FC<CategorySidebarProps> = ({
+  currentPage,
+  onPageChange,
   currentView: _currentView,
   onViewChange,
   activityStats,
@@ -90,7 +90,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
 
   // Check if work session is overdue
   const isWorkOverdue = pomodoroTimer.sessionType === 'work' && pomodoroTimer.timeLeft < 0;
-  
+
   // Check if break session is overdue
   const isBreakOverdue = pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.timeLeft < 0;
 
@@ -113,7 +113,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     if (newCategoryName.trim()) {
       const color = newCategoryColor || getNextColor();
       addCategory(newCategoryName.trim(), color, newCategoryIcon);
-      
+
       // Reset form
       setNewCategoryName('');
       setNewCategoryIcon('📝');
@@ -146,11 +146,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     // All completed tasks are still stored in userData.tasks for historical analysis
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    
-    return userData.tasks.filter(task => 
-      task.categoryId === categoryId && 
-      task.completed && 
-      task.updated && 
+
+    return userData.tasks.filter(task =>
+      task.categoryId === categoryId &&
+      task.completed &&
+      task.updated &&
       new Date(task.updated) >= twoWeeksAgo
     ).length;
   };
@@ -162,7 +162,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   return (
     <TooltipProvider>
       <SidebarHeader className="border-b border-sidebar-border">
-        <div 
+        <div
           className="flex items-center gap-2 px-2 py-4 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md transition-colors"
           onClick={() => onPageChange('activity')}
         >
@@ -194,14 +194,14 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
             </Button>
           </div>
         )}
-        
+
         {/* Main Navigation */}
         <SidebarGroup className={theme === 'retro' ? "mt-2" : ""}>
           <SidebarGroupLabel className={theme === 'retro' ? "text-xs font-black uppercase tracking-wider text-foreground mb-2" : ""}>Main</SidebarGroupLabel>
           <SidebarMenu className={theme === 'retro' ? "gap-3" : ""}>
             {!theme || theme !== 'retro' ? (
               <SidebarMenuItem>
-                <SidebarMenuButton 
+                <SidebarMenuButton
                   onClick={() => onPageChange('dashboard')}
                   isActive={currentPage === 'dashboard'}
                 >
@@ -210,10 +210,10 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : null}
-            
-            
+
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => {
                   onPageChange('tasks');
                   onViewChange?.('next7days');
@@ -223,8 +223,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   theme === 'retro' && currentPage === 'tasks'
                     ? "h-12 px-4 !bg-[#d4f1ff] dark:!bg-blue-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
                     : theme === 'retro'
-                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#d4f1ff]/60 dark:hover:bg-blue-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
-                    : ""
+                      ? "h-12 px-4 border-2 border-transparent hover:bg-[#d4f1ff]/60 dark:hover:bg-blue-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
+                      : ""
                 }
               >
                 <CheckSquare className="w-4 h-4" />
@@ -240,34 +240,34 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>
-            
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => onPageChange('schedule')}
                 isActive={currentPage === 'schedule'}
                 className={
                   theme === 'retro' && currentPage === 'schedule'
                     ? "h-12 px-4 !bg-[#c4b5fd] dark:!bg-violet-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
                     : theme === 'retro'
-                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#c4b5fd]/60 dark:hover:bg-violet-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
-                    : ""
+                      ? "h-12 px-4 border-2 border-transparent hover:bg-[#c4b5fd]/60 dark:hover:bg-violet-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
+                      : ""
                 }
               >
                 <Calendar className="w-4 h-4" />
                 <span>Schedule</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => onPageChange('pomodoro')}
                 isActive={currentPage === 'pomodoro'}
                 className={
                   theme === 'retro' && currentPage === 'pomodoro'
                     ? "h-12 px-4 !bg-[#ffd4f4] dark:!bg-pink-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
                     : theme === 'retro'
-                    ? "h-12 px-4 border-2 border-transparent hover:bg-[#ffd4f4]/60 dark:hover:bg-pink-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
-                    : ""
+                      ? "h-12 px-4 border-2 border-transparent hover:bg-[#ffd4f4]/60 dark:hover:bg-pink-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all"
+                      : ""
                 }
               >
                 <Clock className="w-4 h-4" />
@@ -282,9 +282,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>
-            
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => onPageChange('notes')}
                 isActive={currentPage === 'notes'}
                 className={
@@ -297,24 +297,11 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 <span>Notes</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            
+
+
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('reminders')}
-                isActive={currentPage === 'reminders'}
-                className={
-                  theme === 'retro' && currentPage === 'reminders'
-                    ? "h-12 px-4 !bg-[#fff3b0] dark:!bg-yellow-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#fff3b0]/60 dark:hover:bg-yellow-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
-                }
-              >
-                <Bell className="w-4 h-4" />
-                <span>Reminders</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => onPageChange('events')}
                 isActive={currentPage === 'events'}
                 className={
@@ -327,39 +314,13 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 <span>Events</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            
+
+
+
+
+
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('notifications')}
-                isActive={currentPage === 'notifications'}
-                className={
-                  theme === 'retro' && currentPage === 'notifications'
-                    ? "h-12 px-4 !bg-[#e9d5ff] dark:!bg-purple-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#e9d5ff]/60 dark:hover:bg-purple-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
-                }
-              >
-                <Bell className="w-4 h-4" />
-                <span>Notifications</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={() => onPageChange('activity')}
-                isActive={currentPage === 'activity'}
-                className={
-                  theme === 'retro' && currentPage === 'activity'
-                    ? "h-12 px-4 !bg-[#fed7aa] dark:!bg-orange-900/30 text-gray-900 dark:text-gray-100 border-2 border-black dark:border-gray-600 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] font-black"
-                    : theme === 'retro' ? "h-12 px-4 border-2 border-transparent hover:bg-[#fed7aa]/60 dark:hover:bg-orange-900/30 hover:text-gray-900 dark:hover:text-gray-100 hover:border-black dark:hover:border-gray-600 rounded-xl font-bold transition-all" : ""
-                }
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Insight</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 onClick={() => onPageChange('tabbie')}
                 isActive={currentPage === 'tabbie'}
                 className={
@@ -387,7 +348,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 ? "px-3 py-4 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 rounded-[12px] mx-2 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,0.6)]"
                 : "px-3 py-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-800 rounded-lg mx-2 border border-blue-200 dark:border-gray-600 shadow-sm"
             }>
-              <div 
+              <div
                 className={
                   theme === 'retro'
                     ? "text-sm font-black text-gray-900 dark:text-gray-100 mb-3 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2"
@@ -401,7 +362,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 </span>
                 <span className="truncate">{currentTask?.title || 'Pomodoro'}</span>
               </div>
-              
+
               {/* Progress Bar */}
               {pomodoroTimer.currentSession && (
                 <div className="mb-3">
@@ -410,16 +371,15 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       ? "w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2 mb-1 border border-black dark:border-gray-600"
                       : "w-full bg-blue-200 dark:bg-gray-700 rounded-full h-2 mb-1"
                   }>
-                    <div 
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        isWorkOverdue ? 'bg-orange-500 dark:bg-orange-600' : 
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${isWorkOverdue ? 'bg-orange-500 dark:bg-orange-600' :
                         isBreakOverdue ? 'bg-red-500 dark:bg-red-600' : 'bg-blue-500 dark:bg-blue-600'
-                      }`}
-                      style={{ 
-                        width: `${Math.max(0, Math.min(100, 
-                          ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
-                          (pomodoroTimer.currentSession.duration * 60)) * 100
-                        ))}%` 
+                        }`}
+                      style={{
+                        width: `${Math.max(0, Math.min(100,
+                          ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) /
+                            (pomodoroTimer.currentSession.duration * 60)) * 100
+                        ))}%`
                       }}
                     />
                   </div>
@@ -428,25 +388,24 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       ? "text-xs text-gray-700 dark:text-gray-300 font-bold"
                       : "text-xs text-blue-600 dark:text-gray-300"
                   }>
-                    {Math.round(Math.max(0, Math.min(100, 
-                      ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) / 
-                      (pomodoroTimer.currentSession.duration * 60)) * 100
+                    {Math.round(Math.max(0, Math.min(100,
+                      ((pomodoroTimer.currentSession.duration * 60 - pomodoroTimer.timeLeft) /
+                        (pomodoroTimer.currentSession.duration * 60)) * 100
                     )))}% complete
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center justify-between">
                 <div className={
                   theme === 'retro'
                     ? "text-sm text-gray-900 dark:text-gray-100"
                     : "text-sm text-blue-700 dark:text-gray-300"
                 }>
-                  <div className={`font-mono font-bold text-lg ${
-                    isWorkOverdue ? 'text-orange-600 dark:text-orange-400' : 
-                    isBreakOverdue ? 'text-red-600 dark:text-red-400' : 
-                    theme === 'retro' ? 'text-gray-900 dark:text-gray-100' : 'text-blue-800 dark:text-blue-400'
-                  }`}>
+                  <div className={`font-mono font-bold text-lg ${isWorkOverdue ? 'text-orange-600 dark:text-orange-400' :
+                    isBreakOverdue ? 'text-red-600 dark:text-red-400' :
+                      theme === 'retro' ? 'text-gray-900 dark:text-gray-100' : 'text-blue-800 dark:text-blue-400'
+                    }`}>
                     {formatTime(pomodoroTimer.timeLeft)}
                   </div>
                   <div className={
@@ -454,19 +413,19 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       ? "mt-1 text-xs font-bold text-gray-700 dark:text-gray-300"
                       : "mt-1 text-xs font-medium text-blue-700 dark:text-gray-400"
                   }>
-                    {isWorkOverdue ? 'Take break' : 
-                     isBreakOverdue ? 'Break over!' :
-                     pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
+                    {isWorkOverdue ? 'Take break' :
+                      isBreakOverdue ? 'Break over!' :
+                        pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
                   {isWorkOverdue ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={completeWorkSession}
                           className={
                             theme === 'retro'
@@ -484,9 +443,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   ) : isBreakOverdue ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={skipBreak}
                           className={
                             theme === 'retro'
@@ -504,9 +463,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   ) : pomodoroTimer.sessionType === 'shortBreak' && pomodoroTimer.isRunning ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={skipBreak}
                           className={
                             theme === 'retro'
@@ -524,9 +483,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   ) : pomodoroTimer.isRunning ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={pausePomodoro}
                           className={
                             theme === 'retro'
@@ -544,9 +503,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={resumePomodoro}
                           className={
                             theme === 'retro'
@@ -564,9 +523,9 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                   )}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={stopPomodoro}
                         className={
                           theme === 'retro'
@@ -592,8 +551,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center justify-between w-full px-3 py-2">
-              <SidebarMenuButton 
-                onClick={() => onPageChange('settings')} 
+              <SidebarMenuButton
+                onClick={() => onPageChange('settings')}
                 className={
                   theme === 'retro' && currentPage === 'settings'
                     ? "flex-1 bg-[#ffd4f4]/20 dark:bg-[#ff69b4]/10 text-foreground border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0_0_rgba(0,0,0,0.3)] dark:shadow-[2px_2px_0_0_rgba(255,255,255,0.1)] font-bold"

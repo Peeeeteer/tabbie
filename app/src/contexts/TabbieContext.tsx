@@ -14,7 +14,7 @@ interface TabbieStatus {
   ip: string;
 }
 
-type TabbieActivityState = 'idle' | 'pomodoro' | 'break' | 'complete';
+type TabbieActivityState = 'idle' | 'pomodoro' | 'break' | 'complete' | 'focus' | 'paused';
 
 interface TabbieContextType {
   isConnected: boolean;
@@ -23,7 +23,7 @@ interface TabbieContextType {
   connectionError: string;
   customIP: string;
   activityState: TabbieActivityState;
-  
+
   // Methods
   checkConnection: () => Promise<void>;
   setCustomIP: (ip: string) => void;
@@ -44,7 +44,7 @@ export const useTabbieSync = () => {
 
 export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userData, pomodoroTimer, currentTaskId } = useTodo();
-  
+
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [tabbieStatus, setTabbieStatus] = useState<TabbieStatus | null>(null);
@@ -65,13 +65,13 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const checkConnection = useCallback(async () => {
     setIsConnecting(true);
     setConnectionError('');
-    
+
     try {
       const response = await fetch(`http://${customIP}/api/status`, {
         method: 'GET',
         signal: AbortSignal.timeout(5000),
       });
-      
+
       if (response.ok) {
         const status = await response.json();
         setTabbieStatus(status);
@@ -84,7 +84,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (error) {
       setIsConnected(false);
       setTabbieStatus(null);
-      
+
       // Provide more specific error messages
       if (customIP.includes('192.168.4.1') || customIP.includes('tabbie-setup')) {
         setConnectionError('🔧 Tabbie is in setup mode. Complete WiFi configuration first, then reconnect to your home network and try again.');
@@ -101,7 +101,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateStatus = useCallback(async () => {
     if (!isConnected) return;
-    
+
     try {
       const response = await fetch(`http://${customIP}/api/status`, {
         signal: AbortSignal.timeout(5000),
@@ -122,7 +122,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('⚠️ Not connected to Tabbie, skipping animation:', animation);
       return;
     }
-    
+
     try {
       console.log('🎨 Sending animation to Tabbie:', animation, task);
       const response = await fetch(`http://${customIP}/api/animation`, {
@@ -136,7 +136,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }),
         signal: AbortSignal.timeout(5000),
       });
-      
+
       if (response.ok) {
         console.log('✅ Animation sent successfully:', animation);
         // Update status to reflect the change
@@ -154,12 +154,12 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('⚠️ Not connected to Tabbie, skipping task completion animation');
       return;
     }
-    
+
     console.log('🎉 Task completed - triggering love animation:', taskTitle);
     setIsPlayingCompletionAnimation(true);
     setActivityState('complete');
     sendAnimation('love', taskTitle);
-    
+
     // Return to idle after 9 seconds (LOVE animation is ~8 seconds at 8fps)
     setTimeout(() => {
       console.log('💤 Returning to idle state after task completion');
@@ -188,30 +188,30 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         checkConnection();
       }
     }, CHECK_CONNECTION_INTERVAL);
-    
+
     return () => clearInterval(interval);
   }, [isConnected, checkConnection]);
 
   // Periodic status updates when connected
   useEffect(() => {
     if (!isConnected) return;
-    
+
     const interval = setInterval(() => {
       updateStatus();
     }, STATUS_UPDATE_INTERVAL);
-    
+
     return () => clearInterval(interval);
   }, [isConnected, updateStatus]);
 
   // Main synchronization logic - monitor pomodoro state and sync with Tabbie
   useEffect(() => {
     if (!isConnected) return;
-    
+
     // Don't override the animation if we're playing the completion animation
     if (isPlayingCompletionAnimation) return;
 
-    const currentTask = currentTaskId 
-      ? userData.tasks.find(t => t.id === currentTaskId) 
+    const currentTask = currentTaskId
+      ? userData.tasks.find(t => t.id === currentTaskId)
       : null;
 
     // Determine the current activity state and send appropriate animation
@@ -236,7 +236,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Session just completed
       if (activityState !== 'complete') {
         setActivityState('complete');
-        const completionMessage = pomodoroTimer.sessionType === 'work' 
+        const completionMessage = pomodoroTimer.sessionType === 'work'
           ? currentTask?.title || 'Task Complete!'
           : 'Break Complete!';
         sendAnimation('complete', completionMessage);

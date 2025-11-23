@@ -15,6 +15,7 @@ export interface TimeBlock {
   taskId?: string;      // Link to a specific task
   label?: string;       // Custom label for busy blocks (e.g., "Gym")
   isBusy?: boolean;     // If true, this block is fixed/busy
+  date?: string;        // ISO string 'YYYY-MM-DD' for specific date (if not recurring)
 }
 
 export interface Task {
@@ -31,7 +32,7 @@ export interface Task {
   estimatedPomodoros?: number;
   order: number;
   workspaceUrls?: string[]; // URLs to open when starting Pomodoro for this task
-  
+
   // Scheduling
   scheduledDate?: string; // ISO string 'YYYY-MM-DD' for the day this task is scheduled
   scheduledTime?: number; // Start time in minutes from midnight
