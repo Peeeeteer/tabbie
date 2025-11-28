@@ -173,6 +173,9 @@ void prepareWiFiForRetry(unsigned long delayMs) {
   wifiConnecting = false;
   wifiConnectStartTime = 0;
   wifiRetryWaitUntil = delayMs > 0 ? millis() + delayMs : 0;
+  
+  // Reset web server flag so it restarts on new network
+  webServerStarted = false;
 }
 
 void onWiFiConnectionFailure(const String& reason) {
