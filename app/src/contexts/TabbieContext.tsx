@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useTodo } from './TodoContext';
 
 const TABBIE_HOSTNAME = "tabbie.local";
-const CHECK_CONNECTION_INTERVAL = 30000; // Check connection every 30 seconds
+const RECONNECT_INTERVAL = 5000; // Try to reconnect every 5 seconds when disconnected
 const STATUS_UPDATE_INTERVAL = 5000; // Update status every 5 seconds
+const CONNECTION_TIMEOUT = 3000; // 3 second timeout for faster feedback
 
 interface TabbieStatus {
   status: string;
@@ -27,8 +28,9 @@ interface TabbieContextType {
   // Methods
   checkConnection: () => Promise<void>;
   setCustomIP: (ip: string) => void;
-  sendAnimation: (animation: string, task?: string) => Promise<void>;
+  sendAnimation: (animation: string, task?: string) => Promise<boolean>;
   triggerTaskCompletion: (taskTitle: string) => void;
+  triggerDebug: () => Promise<void>;
   disconnect: () => void;
 }
 
@@ -56,20 +58,19 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
   const [activityState, setActivityState] = useState<TabbieActivityState>('idle');
   const [isPlayingCompletionAnimation, setIsPlayingCompletionAnimation] = useState(false);
+  const [lastSyncedAnimation, setLastSyncedAnimation] = useState<string | null>(null);
 
   // Save IP to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('tabbie_ip', customIP);
   }, [customIP]);
 
-  const checkConnection = useCallback(async () => {
-    setIsConnecting(true);
-    setConnectionError('');
-
+  // Try to connect to a specific address
+  const tryConnect = useCallback(async (address: string): Promise<boolean> => {
     try {
-      const response = await fetch(`http://${customIP}/api/status`, {
+      const response = await fetch(`http://${address}/api/status`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT),
       });
 
       if (response.ok) {
@@ -77,27 +78,64 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setTabbieStatus(status);
         setIsConnected(true);
         setConnectionError('');
-        console.log('✅ Connected to Tabbie:', status);
-      } else {
-        throw new Error('Failed to connect to Tabbie');
+        
+        // Save the working IP for next time (extract from status if available)
+        if (status.ip && status.ip !== address) {
+          localStorage.setItem('tabbie_last_working_ip', status.ip);
+        } else if (address !== TABBIE_HOSTNAME) {
+          localStorage.setItem('tabbie_last_working_ip', address);
+        }
+        
+        console.log('✅ Connected to Tabbie at', address, ':', status);
+        return true;
       }
     } catch (error) {
-      setIsConnected(false);
-      setTabbieStatus(null);
-
-      // Provide more specific error messages
-      if (customIP.includes('192.168.4.1') || customIP.includes('tabbie-setup')) {
-        setConnectionError('🔧 Tabbie is in setup mode. Complete WiFi configuration first, then reconnect to your home network and try again.');
-      } else if (customIP === 'tabbie.local' || customIP.includes('.local')) {
-        setConnectionError('🔍 Cannot reach tabbie.local. Check that: 1) Tabbie is powered on, 2) Both devices are on the same WiFi network, 3) Tabbie\'s OLED shows a connected status.');
-      } else {
-        setConnectionError('❌ Connection failed. Verify Tabbie is powered on, connected to WiFi (check OLED display), and on the same network as this computer.');
-      }
-      console.log('❌ Failed to connect to Tabbie:', error);
-    } finally {
-      setIsConnecting(false);
+      console.log(`⏳ Could not reach ${address}`);
     }
-  }, [customIP]);
+    return false;
+  }, []);
+
+  const checkConnection = useCallback(async () => {
+    setIsConnecting(true);
+    setConnectionError('');
+
+    // Build list of addresses to try (smart fallback)
+    const addressesToTry: string[] = [];
+    
+    // 1. First try the user-specified address (if not default)
+    if (customIP && customIP !== TABBIE_HOSTNAME) {
+      addressesToTry.push(customIP);
+    }
+    
+    // 2. Try tabbie.local (mDNS)
+    addressesToTry.push(TABBIE_HOSTNAME);
+    
+    // 3. Try last known working IP (if different from above)
+    const lastWorkingIP = localStorage.getItem('tabbie_last_working_ip');
+    if (lastWorkingIP && !addressesToTry.includes(lastWorkingIP)) {
+      addressesToTry.push(lastWorkingIP);
+    }
+
+    console.log('🔍 Trying to connect to Tabbie at:', addressesToTry);
+
+    // Try each address
+    for (const address of addressesToTry) {
+      if (await tryConnect(address)) {
+        // Update customIP to the working address
+        if (address !== customIP) {
+          setCustomIP(address);
+        }
+        setIsConnecting(false);
+        return;
+      }
+    }
+
+    // All addresses failed
+    setIsConnected(false);
+    setTabbieStatus(null);
+    setConnectionError('🔍 Cannot find Tabbie. Make sure it\'s powered on and connected to the same WiFi network. Press "Show Debug Info" on Tabbie to see its IP address.');
+    setIsConnecting(false);
+  }, [customIP, tryConnect, setCustomIP]);
 
   const updateStatus = useCallback(async () => {
     if (!isConnected) return;
@@ -117,11 +155,8 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [isConnected, customIP]);
 
-  const sendAnimation = useCallback(async (animation: string, task?: string) => {
-    if (!isConnected) {
-      console.log('⚠️ Not connected to Tabbie, skipping animation:', animation);
-      return;
-    }
+  const sendAnimation = useCallback(async (animation: string, task?: string): Promise<boolean> => {
+    // Attempt to send even if we think we're disconnected - this acts as a connection check too
 
     try {
       console.log('🎨 Sending animation to Tabbie:', animation, task);
@@ -134,20 +169,60 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           animation: animation,
           task: task || ''
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT),
       });
 
       if (response.ok) {
         console.log('✅ Animation sent successfully:', animation);
+        setLastSyncedAnimation(animation);
+        // If we succeeded, we are definitely connected
+        if (!isConnected) {
+          setIsConnected(true);
+          setConnectionError('');
+        }
         // Update status to reflect the change
         setTimeout(updateStatus, 500);
+        return true;
       } else {
         console.log('❌ Failed to send animation:', response.statusText);
+        return false;
       }
     } catch (error) {
       console.error('❌ Failed to send animation:', error);
+      // Only mark as disconnected if it was previously connected
+      if (isConnected) {
+        setIsConnected(false);
+      }
+      return false;
     }
   }, [isConnected, customIP, updateStatus]);
+
+  const triggerDebug = useCallback(async () => {
+    if (!isConnected) {
+      console.log('⚠️ Not connected to Tabbie, cannot trigger debug mode');
+      return;
+    }
+
+    try {
+      console.log('🔧 Triggering debug mode on Tabbie...');
+      const response = await fetch(`http://${customIP}/api/debug`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Debug mode activated:', data);
+      } else {
+        console.log('❌ Failed to trigger debug mode:', response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Failed to trigger debug mode:', error);
+    }
+  }, [isConnected, customIP]);
 
   const triggerTaskCompletion = useCallback((taskTitle: string) => {
     if (!isConnected) {
@@ -175,22 +250,28 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setConnectionError('');
   }, []);
 
-  // Auto-connect on component mount
+  // Auto-connect on component mount (with delay so user can enter IP first)
   useEffect(() => {
-    checkConnection();
+    const timer = setTimeout(() => {
+      checkConnection();
+    }, 2000); // 2 second delay before first auto-connect attempt
+    
+    return () => clearTimeout(timer);
   }, [checkConnection]);
 
-  // Periodic connection check
+  // Periodic reconnection attempts when disconnected (every 5 seconds)
   useEffect(() => {
+    if (isConnected) return; // Don't retry when already connected
+
     const interval = setInterval(() => {
-      if (!isConnected) {
-        // Try to reconnect if not connected
+      if (!isConnecting) {
+        console.log('🔄 Auto-retrying connection to Tabbie...');
         checkConnection();
       }
-    }, CHECK_CONNECTION_INTERVAL);
+    }, RECONNECT_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isConnected, checkConnection]);
+  }, [isConnected, isConnecting, checkConnection]);
 
   // Periodic status updates when connected
   useEffect(() => {
@@ -203,9 +284,17 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearInterval(interval);
   }, [isConnected, updateStatus]);
 
+  // Reset sync state when connection is lost so animations get resent on reconnect
+  useEffect(() => {
+    if (!isConnected) {
+      setLastSyncedAnimation(null);
+    }
+  }, [isConnected]);
+
   // Main synchronization logic - monitor pomodoro state and sync with Tabbie
   useEffect(() => {
-    if (!isConnected) return;
+    // We removed the isConnected check here to allow optimistic updates
+    // sendAnimation will handle the connection logic internally
 
     // Don't override the animation if we're playing the completion animation
     if (isPlayingCompletionAnimation) return;
@@ -214,51 +303,62 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ? userData.tasks.find(t => t.id === currentTaskId)
       : null;
 
+    // Helper to check if we need to resync (animation not yet sent or device state mismatch)
+    // This now checks both local sync state and device state
+    const needsSync = (targetAnim: string) => {
+      // If we haven't successfully synced this animation yet, we need to sync
+      if (lastSyncedAnimation !== targetAnim) return true;
+      // If connected and device reports different animation, resync
+      if (isConnected && tabbieStatus && tabbieStatus.animation !== targetAnim) return true;
+      return false;
+    };
+
     // Determine the current activity state and send appropriate animation
     if (pomodoroTimer.isRunning) {
       // Active session running
       if (pomodoroTimer.sessionType === 'work') {
         // Focus session active
-        if (activityState !== 'focus') {
-          setActivityState('focus');
+        setActivityState('focus');
+        if (needsSync('focus')) {
           sendAnimation('focus', currentTask?.title || 'Focus Session');
-          console.log('🍅 Pomodoro started - sent focus animation');
+          console.log('🍅 Pomodoro running - sending focus animation');
         }
       } else if (pomodoroTimer.sessionType === 'shortBreak') {
         // Break session active
-        if (activityState !== 'break') {
-          setActivityState('break');
+        setActivityState('break');
+        if (needsSync('break')) {
           sendAnimation('break', 'Break Time');
-          console.log('☕ Break started - sent break animation');
+          console.log('☕ Break running - sending break animation');
         }
       }
     } else if (pomodoroTimer.justCompleted) {
       // Session just completed
-      if (activityState !== 'complete') {
-        setActivityState('complete');
+      setActivityState('complete');
+      if (needsSync('complete')) {
         const completionMessage = pomodoroTimer.sessionType === 'work'
           ? currentTask?.title || 'Task Complete!'
           : 'Break Complete!';
         sendAnimation('complete', completionMessage);
-        console.log('✅ Session completed - sent complete animation');
+        console.log('✅ Session completed - sending complete animation');
       }
     } else if (pomodoroTimer.currentSession && !pomodoroTimer.isRunning) {
       // Paused session
-      if (activityState !== 'paused') {
-        setActivityState('paused');
+      setActivityState('paused');
+      if (needsSync('paused')) {
         sendAnimation('paused', 'Paused');
-        console.log('⏸️ Session paused - sent paused animation');
+        console.log('⏸️ Session paused - sending paused animation');
       }
     } else {
       // No active session - idle
-      if (activityState !== 'idle') {
-        setActivityState('idle');
+      setActivityState('idle');
+      if (needsSync('idle')) {
         sendAnimation('idle');
-        console.log('💤 Idle state - sent idle animation');
+        console.log('💤 Idle state - sending idle animation');
       }
     }
   }, [
     isConnected,
+    tabbieStatus, // Add tabbieStatus dependency to trigger resync checks
     isPlayingCompletionAnimation,
     pomodoroTimer.isRunning,
     pomodoroTimer.justCompleted,
@@ -266,7 +366,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pomodoroTimer.currentSession,
     currentTaskId,
     userData.tasks,
-    activityState,
+    lastSyncedAnimation,
     sendAnimation
   ]);
 
@@ -281,6 +381,7 @@ export const TabbieProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCustomIP,
     sendAnimation,
     triggerTaskCompletion,
+    triggerDebug,
     disconnect,
   };
 

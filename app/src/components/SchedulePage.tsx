@@ -9,7 +9,7 @@ import {
   useDraggable,
   useDroppable,
 } from '@dnd-kit/core';
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import {
   Trash2,
@@ -23,7 +23,11 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon
+
+  Calendar as CalendarIcon,
+  History,
+  Coffee,
+  AlertCircle
 } from 'lucide-react';
 import { startOfWeek, addWeeks, subWeeks, format, addDays, isSameDay, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -205,9 +209,11 @@ const TaskCard = React.forwardRef(({
       }}
       className={cn(
         "absolute rounded-r-md rounded-l-[2px] overflow-hidden cursor-grab active:cursor-grabbing shadow-sm transition-all flex flex-col border-y border-r bg-card hover:bg-accent/50 group/task",
+        // Dark mode visibility fix
+        "dark:bg-zinc-800 dark:border-zinc-700",
         // Left Accent Border
         "border-l-[3px] border-l-primary",
-        theme === 'retro' && "border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+        theme === 'retro' && "border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] dark:border-gray-600 dark:bg-slate-800",
         block.taskId === currentTaskId && isTimerRunning && "ring-2 ring-primary ring-offset-0 animate-pulse",
         className
       )}
@@ -536,9 +542,21 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
   } = useTodo();
 
   const [activeDragItem, setActiveDragItem] = useState<any>(null);
+  const [dragPreviewTime, setDragPreviewTime] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showLive, setShowLive] = useState(true);
 
   // Date Navigation State
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(timer);
+  }, []);
 
   const handlePrevWeek = () => setCurrentWeekStart(prev => subWeeks(prev, 1));
   const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1));
@@ -577,7 +595,9 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
   const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
   const [resizeDirection, setResizeDirection] = useState<'top' | 'bottom' | null>(null);
   const [initialResizeY, setInitialResizeY] = useState<number>(0);
+
   const [initialBlockData, setInitialBlockData] = useState<{ start: number, end: number } | null>(null);
+  const [resizeStatus, setResizeStatus] = useState<{ time: string, x: number, y: number } | null>(null);
 
   // Dialog State
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
@@ -754,6 +774,16 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
       }
 
       updateTimeBlock(resizingBlockId, { startTime: newStart, endTime: newEnd });
+
+      const timeStr = resizeDirection === 'top'
+        ? `${Math.floor(newStart / 60)}:${String(newStart % 60).padStart(2, '0')}`
+        : `${Math.floor(newEnd / 60)}:${String(newEnd % 60).padStart(2, '0')}`;
+
+      setResizeStatus({
+        time: timeStr,
+        x: e.clientX,
+        y: e.clientY
+      });
       return;
     }
 
@@ -791,12 +821,23 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
         updateTimeBlock(b.id, { startTime: b.startTime, endTime: b.endTime });
       }
     });
+
+    const timeStr = resizeDirection === 'top'
+      ? `${Math.floor(newStart / 60)}:${String(newStart % 60).padStart(2, '0')}`
+      : `${Math.floor(newEnd / 60)}:${String(newEnd % 60).padStart(2, '0')}`;
+
+    setResizeStatus({
+      time: timeStr,
+      x: e.clientX,
+      y: e.clientY
+    });
   };
 
   const handleResizeEnd = (e: React.PointerEvent) => {
     setResizingBlockId(null);
     setResizeDirection(null);
     setInitialBlockData(null);
+    setResizeStatus(null);
     (e.target as Element).releasePointerCapture(e.pointerId);
 
     // Reset ref after a short delay to ensure onClick is skipped
@@ -815,21 +856,44 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
     }
   };
 
-  // Sidebar Droppable Component
-  const SidebarDroppable = ({ children }: { children: React.ReactNode }) => {
-    const { setNodeRef, isOver } = useDroppable({
-      id: 'sidebar-unschedule',
-      data: { type: 'sidebar' }
-    });
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over, active } = event;
+    if (!over) {
+      setDragPreviewTime(null);
+      return;
+    }
 
-    return (
-      <div ref={setNodeRef} className={cn("h-full transition-colors", isOver && "bg-destructive/10 ring-2 ring-inset ring-destructive")}>
-        {children}
-      </div>
-    );
+    let minutes = 0;
+
+    if (over.data.current?.dayIndex !== undefined) {
+      const slotData = over.data.current;
+      const m = slotData.minute || 0;
+      minutes = slotData.hour * 60 + m;
+    } else if (over.data.current?.type === 'container') {
+      const containerBlock = over.data.current.block;
+      if (active.rect.current?.translated && over.rect) {
+        const containerTop = over.rect.top;
+        const dropTop = active.rect.current.translated.top;
+        const relativeY = dropTop - containerTop;
+        const containerHeight = over.rect.height;
+        const containerDuration = containerBlock.endTime - containerBlock.startTime;
+        const minutesOffset = (relativeY / containerHeight) * containerDuration;
+        const snappedOffset = Math.round(minutesOffset / 15) * 15;
+        minutes = Math.max(containerBlock.startTime, containerBlock.startTime + snappedOffset);
+      } else {
+        minutes = containerBlock.startTime;
+      }
+    } else {
+      setDragPreviewTime(null);
+      return;
+    }
+
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    setDragPreviewTime(`${h}:${String(m).padStart(2, '0')}`);
   };
 
-  // ... inside SchedulePage ...
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -1301,7 +1365,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
   };
 
   // Calculate current time position
-  const now = new Date();
+  const now = currentTime;
   const currentDayIndex = (now.getDay() + 6) % 7; // Mon=0, Sun=6
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const dayStartMinutes = START_HOUR * 60;
@@ -1401,7 +1465,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
   // --- Render ---
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
       <div className="h-full flex flex-col overflow-hidden max-h-screen bg-background"
         onPointerMove={(e) => {
           if (resizingBlockId) handleResizeMove(e);
@@ -1460,10 +1524,33 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={onNavigateToPomodoro} className="gap-2 hidden md:flex">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  Focus Mode
+                <Button variant="outline" size="sm" onClick={handleToday}>
+                  Today
                 </Button>
+                <Button
+                  variant={showLive ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setShowLive(!showLive)}
+                  className={cn("gap-2", showLive && "bg-red-500/10 text-red-500 border-red-500/20")}
+                >
+                  <div className={cn("w-2 h-2 rounded-full bg-red-500", showLive && "animate-pulse")} />
+                  {showLive ? "Live On" : "Live Off"}
+                </Button>
+                <Button
+                  variant={showHistory ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={cn("gap-2", showHistory && "bg-primary/10 text-primary border-primary/20")}
+                >
+                  <History className="w-4 h-4" />
+                  {showHistory ? "Hide History" : "Show History"}
+                </Button>
+                <div className="flex items-center rounded-md border bg-background shadow-sm">
+                  <Button variant="outline" size="sm" onClick={onNavigateToPomodoro} className="gap-2 hidden md:flex">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    Focus Mode
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -1678,7 +1765,205 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
                           />
                         ));
 
-                        return [...renderedContainers, ...orphanTasks, ...renderedBusy];
+                        // ACTIVITY TRACK BACKGROUND
+                        // This creates the "one big line" feel
+                        const activityTrack = (
+                          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-muted/30 rounded-full mx-0.5" />
+                        );
+
+
+
+                        // HISTORY RENDERING - ACTIVITY RIBBON
+                        const renderedHistory = showHistory ? (userData.pomodoroSessions || [])
+                          .filter(session => {
+                            if (!session.started || !session.ended) return false;
+                            const sessionDate = new Date(session.started);
+                            const colDate = addDays(currentWeekStart, dayIndex);
+                            return isSameDay(sessionDate, colDate);
+                          })
+                          .map(session => {
+                            const start = new Date(session.started);
+                            const end = new Date(session.ended!);
+                            const startMins = start.getHours() * 60 + start.getMinutes();
+                            const endMins = end.getHours() * 60 + end.getMinutes();
+                            const duration = endMins - startMins;
+
+                            if (duration <= 0) return null;
+
+                            const task = userData.tasks.find(t => t.id === session.taskId);
+                            const category = task ? userData.categories.find(c => c.id === task.categoryId) : null;
+
+                            return (
+                              <div
+                                key={session.id}
+                                className={cn(
+                                  "absolute left-0 z-40 flex flex-col justify-center shadow-sm overflow-hidden transition-all duration-300 ease-out group",
+                                  "w-1.5 hover:w-56 hover:z-50 hover:shadow-xl rounded-r-md mx-0.5", // Added mx-0.5 to align with track
+                                  // Work: Dark (light mode) / White (dark mode)
+                                  // Break: Green
+                                  session.type === 'work'
+                                    ? "bg-zinc-800 dark:bg-zinc-200 text-zinc-100 dark:text-zinc-900"
+                                    : "bg-green-500 text-white"
+                                )}
+                                style={{
+                                  top: `${((startMins - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100}%`,
+                                  height: `${(duration / (HOURS_COUNT * 60)) * 100}%`,
+                                }}
+                              >
+                                {/* Pause Intervals Overlay */}
+                                {session.pauses?.map((pause, i) => {
+                                  const pauseStart = new Date(pause.start);
+                                  const pauseEnd = new Date(pause.end);
+                                  const pauseStartMins = pauseStart.getHours() * 60 + pauseStart.getMinutes();
+                                  const pauseEndMins = pauseEnd.getHours() * 60 + pauseEnd.getMinutes();
+
+                                  // Calculate relative position within the session
+                                  const sessionStartMins = start.getHours() * 60 + start.getMinutes();
+                                  const sessionDuration = (end.getHours() * 60 + end.getMinutes()) - sessionStartMins;
+
+                                  const relativeTop = ((pauseStartMins - sessionStartMins) / sessionDuration) * 100;
+                                  const relativeHeight = ((pauseEndMins - pauseStartMins) / sessionDuration) * 100;
+
+                                  return (
+                                    <div
+                                      key={i}
+                                      className="absolute left-0 w-full bg-red-500/80 z-10"
+                                      style={{
+                                        top: `${relativeTop}%`,
+                                        height: `${relativeHeight}%`,
+                                      }}
+                                    />
+                                  );
+                                })}
+
+                                {/* Content - Hidden until hover */}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 pl-3 pr-2 flex flex-col whitespace-nowrap bg-card/95 backdrop-blur-sm h-full justify-center border-l border-border/50 text-foreground relative z-20">
+                                  <div className="font-bold text-xs flex items-center gap-1">
+                                    {session.type === 'work' ? (
+                                      <>
+                                        {category?.icon} <span className="truncate">{task?.title || 'Unknown Task'}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Coffee className="w-3 h-3" /> {session.type === 'shortBreak' ? 'Short Break' : 'Long Break'}
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] opacity-90 flex items-center gap-1">
+                                    {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
+                                    <span className="font-mono">({duration}m)</span>
+                                  </div>
+                                  {session.pauses && session.pauses.length > 0 && (
+                                    <div className="text-[9px] text-red-500 font-bold mt-0.5">
+                                      {session.pauses.length} Pause{session.pauses.length > 1 ? 's' : ''}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }) : [];
+
+                        // ACTIVE SESSION RENDERING (Live)
+                        // Show active session regardless of history toggle
+                        // ACTIVE SESSION RENDERING (Live)
+                        // Show active session regardless of history toggle
+                        if (showLive && pomodoroTimer.isRunning && pomodoroTimer.currentSession && pomodoroTimer.currentSession.started) {
+                          const session = pomodoroTimer.currentSession;
+                          const start = new Date(session.started);
+
+                          // Check if session belongs to this day
+                          const colDate = addDays(currentWeekStart, dayIndex);
+                          if (isSameDay(start, colDate)) {
+                            const startMins = start.getHours() * 60 + start.getMinutes();
+
+                            // Calculate elapsed time based on current time
+                            const nowMins = currentTime.getHours() * 60 + currentTime.getMinutes();
+                            const elapsedMins = Math.max(1, nowMins - startMins);
+
+                            // Target duration (e.g. 25m)
+                            const targetMins = session.duration || 25;
+
+                            // Display height is max of target or elapsed (handles overtime)
+                            const displayDuration = Math.max(elapsedMins, targetMins);
+
+                            const task = userData.tasks.find(t => t.id === session.taskId);
+                            const category = task ? userData.categories.find(c => c.id === task.categoryId) : null;
+
+                            renderedHistory.push(
+                              <div
+                                key="active-session"
+                                className={cn(
+                                  "absolute left-0 z-50 flex flex-col justify-center shadow-md overflow-hidden transition-all duration-300 ease-out group",
+                                  "w-1.5 hover:w-56 hover:z-[60] hover:shadow-xl rounded-r-md mx-0.5",
+                                  // Paused: Red
+                                  // Running Work: Dark/White
+                                  // Running Break: Green
+                                  !pomodoroTimer.isRunning
+                                    ? "bg-red-500 text-white"
+                                    : session.type === 'work'
+                                      ? "bg-zinc-800 dark:bg-zinc-200 text-zinc-100 dark:text-zinc-900 animate-pulse"
+                                      : "bg-green-500 text-white animate-pulse"
+                                )}
+                                style={{
+                                  top: `${((startMins - (START_HOUR * 60)) / (HOURS_COUNT * 60)) * 100}%`,
+                                  height: `${(displayDuration / (HOURS_COUNT * 60)) * 100}%`,
+                                }}
+                              >
+                                {/* Live Indicator Line */}
+                                <div className={cn(
+                                  "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-500",
+                                  pomodoroTimer.isRunning ? "animate-pulse" : "opacity-50",
+                                  session.type === 'work' ? "bg-white/30" : "bg-white/30"
+                                )} />
+
+                                {/* Content - Hidden until hover */}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 pl-3 pr-2 flex flex-col whitespace-nowrap bg-card/95 backdrop-blur-sm h-full justify-center border-l border-border/50 text-foreground">
+                                  <div className="font-bold text-xs flex items-center gap-1">
+                                    {/* Live Dot */}
+                                    <div className={cn("w-2 h-2 rounded-full", pomodoroTimer.isRunning ? "bg-green-500 animate-pulse" : "bg-red-500")} />
+
+                                    {session.type === 'work' ? (
+                                      <>
+                                        {category?.icon} <span className="truncate">{task?.title || 'Unknown Task'}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Coffee className="w-3 h-3" /> {session.type === 'shortBreak' ? 'Short Break' : 'Long Break'}
+                                      </>
+                                    )}
+                                  </div>
+
+                                  <div className="text-[10px] opacity-90 flex items-center gap-1 mt-0.5">
+                                    {format(start, 'HH:mm')} - Now
+                                    <span className="font-mono">({elapsedMins}m / {targetMins}m)</span>
+                                  </div>
+
+                                  {/* Paused State */}
+                                  {!pomodoroTimer.isRunning && (
+                                    <div className="text-[9px] font-bold text-red-500 uppercase tracking-wider mt-0.5">
+                                      PAUSED
+                                    </div>
+                                  )}
+
+                                  {/* Overtime Indicator */}
+                                  {elapsedMins > targetMins && (
+                                    <div className="text-[9px] font-bold text-red-500 mt-0.5">
+                                      OVERTIME (+{elapsedMins - targetMins}m)
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                        }
+
+                        return [
+                          activityTrack,
+                          ...renderedContainers,
+                          ...orphanTasks,
+                          ...renderedBusy,
+                          ...renderedHistory
+                        ];
                       })()}
                     </div>
                   </div>
@@ -1687,6 +1972,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
               </div>
             </div>
           </div>
+          {/* Sidebar */}
           {/* Sidebar */}
           <SidebarDroppable>
             <div className="w-64 border-l bg-card/50 backdrop-blur-sm flex flex-col h-full">
@@ -1730,11 +2016,11 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
             </div>
           </SidebarDroppable>
         </div>
-      </div >
+      </div>
 
 
       {/* Category Selection Modal for Drag-to-Create */}
-      < Dialog open={showCategorySelect} onOpenChange={setShowCategorySelect} >
+      <Dialog open={showCategorySelect} onOpenChange={setShowCategorySelect}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Block</DialogTitle>
@@ -1790,7 +2076,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
             </div>
           </div>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       <DragOverlay>
         {activeDragItem ? (
@@ -1827,6 +2113,11 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
             </div>
           )
         ) : null}
+        {dragPreviewTime && (
+          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs font-bold px-2 py-1 rounded shadow-lg z-50 pointer-events-none whitespace-nowrap">
+            {dragPreviewTime}
+          </div>
+        )}
       </DragOverlay>
 
       {/* --- Edit Block Dialog --- */}
@@ -1919,16 +2210,52 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
             </div>
 
             {/* Show Task Info if linked */}
-            {editingBlock && userData.timeBlocks?.find(b => b.id === editingBlock)?.taskId && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800">
-                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium block mb-1 flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Linked Task
-                </span>
-                <div className="font-medium text-sm">
-                  {userData.tasks?.find(t => t.id === userData.timeBlocks?.find(b => b.id === editingBlock)?.taskId)?.title}
+            {/* Show Task Info if linked */}
+            {(() => {
+              const block = userData.timeBlocks?.find(b => b.id === editingBlock);
+              const task = block?.taskId ? userData.tasks?.find(t => t.id === block.taskId) : null;
+
+              if (!task) return null;
+
+              return (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800 space-y-2">
+                  <div>
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium block mb-1 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Linked Task
+                    </span>
+                    <div className="font-medium text-sm">{task.title}</div>
+                  </div>
+
+                  {task.description && (
+                    <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 p-2 rounded">
+                      {task.description}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1" title="Completed / Estimated Pomodoros">
+                      <span>🍅</span>
+                      <span className="font-medium">
+                        {task.pomodoroSessions?.filter((s: any) => s.completed).length || 0}
+                        <span className="text-muted-foreground/60 mx-1">/</span>
+                        {task.estimatedPomodoros || '?'}
+                      </span>
+                    </div>
+                    {task.priority && (
+                      <div className="capitalize flex items-center gap-1">
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          task.priority === 'high' ? "bg-red-500" :
+                            task.priority === 'medium' ? "bg-yellow-500" :
+                              "bg-blue-500"
+                        )} />
+                        {task.priority} Priority
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           <DialogFooter className="flex gap-2 sm:justify-between">
@@ -2005,7 +2332,15 @@ const SchedulePage: React.FC<SchedulePageProps> = ({ theme = 'clean', onNavigate
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DndContext >
+      {resizeStatus && (
+        <div
+          className="fixed z-50 bg-black text-white text-xs font-bold px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap"
+          style={{ top: resizeStatus.y - 40, left: resizeStatus.x - 20 }}
+        >
+          {resizeStatus.time}
+        </div>
+      )}
+    </DndContext>
   );
 };
 

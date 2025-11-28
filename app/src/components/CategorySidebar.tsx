@@ -417,6 +417,13 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                       isBreakOverdue ? 'Break over!' :
                         pomodoroTimer.sessionType === 'work' ? 'Focus Time' : 'Break Time'}
                   </div>
+
+                  {/* Goal Reached Indicator */}
+                  {currentTask && (currentTask.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0) >= (currentTask.estimatedPomodoros || 1) && (
+                    <div className="mt-1 text-[10px] font-bold text-green-600 flex items-center gap-1">
+                      <CheckSquare className="w-3 h-3" /> Goal Reached!
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1">

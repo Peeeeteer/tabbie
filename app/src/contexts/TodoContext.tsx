@@ -139,6 +139,61 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [userData, currentTaskId]);
 
+  // Listen for storage events to sync state across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tabbie_pomodoro_state' && e.newValue) {
+        try {
+          const savedState = JSON.parse(e.newValue);
+          // Only update if state is significantly different to avoid conflicts/loops
+          // e.g. if running state changed, or time drifted by > 2 seconds
+          setPomodoroTimer(prev => {
+            const timeDiff = Math.abs(prev.timeLeft - savedState.timeLeft);
+            const shouldUpdate =
+              prev.isRunning !== savedState.isRunning ||
+              prev.sessionType !== savedState.sessionType ||
+              timeDiff > 2 ||
+              prev.currentSession?.id !== savedState.currentSession?.id;
+
+            if (shouldUpdate) {
+              // Reconstruct the state
+              const safeTotalPausedTime = typeof savedState.totalPausedTime === 'number'
+                ? savedState.totalPausedTime
+                : 0;
+
+              return {
+                isRunning: savedState.isRunning,
+                timeLeft: savedState.timeLeft,
+                currentSession: savedState.currentSession ? {
+                  ...savedState.currentSession,
+                  started: new Date(savedState.currentSession.started),
+                  ended: savedState.currentSession.ended ? new Date(savedState.currentSession.ended) : undefined,
+                } : null,
+                sessionType: savedState.sessionType,
+                justCompleted: savedState.justCompleted,
+                pausedAt: savedState.pausedAt ? new Date(savedState.pausedAt) : null,
+                totalPausedTime: safeTotalPausedTime,
+                overtimeAutoPaused: savedState.overtimeAutoPaused
+                  ? {
+                    sessionType: savedState.overtimeAutoPaused.sessionType,
+                    triggeredAt: new Date(savedState.overtimeAutoPaused.triggeredAt),
+                    overtimeSeconds: savedState.overtimeAutoPaused.overtimeSeconds,
+                  }
+                  : null,
+              };
+            }
+            return prev;
+          });
+        } catch (err) {
+          console.error('Failed to parse synced pomodoro state', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Debounced save to localStorage to prevent race conditions
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -828,17 +883,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       openWorkspaceUrls(task.workspaceUrls);
     }
 
-    // Trigger Tabbie animation directly (Backup for TabbieContext)
-    try {
-      const savedIP = localStorage.getItem('tabbie_ip') || 'tabbie.local';
-      fetch(`http://${savedIP}/api/animation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ animation: 'focus', task: task.title }),
-        signal: AbortSignal.timeout(2000)
-      }).catch(e => console.log('Tabbie direct trigger failed:', e));
-    } catch (e) { /* ignore */ }
-
   };
 
   const pausePomodoro = () => {
@@ -877,6 +921,13 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Use precise seconds and ceil to avoid losing up to ~1s during resume
         const pauseDuration = Math.ceil((Date.now() - prev.pausedAt.getTime()) / 1000);
 
+        // Record the pause interval
+        const newPause = { start: prev.pausedAt, end: new Date() };
+        const updatedSession = {
+          ...prev.currentSession,
+          pauses: [...(prev.currentSession.pauses || []), newPause]
+        };
+
         // Ensure totalPausedTime is valid before adding to it
         const currentTotalPausedTime = sanitizePausedSeconds(prev.totalPausedTime);
 
@@ -890,6 +941,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pausedAt: null,
           totalPausedTime: newTotalPausedTime,
           overtimeAutoPaused: null,
+          currentSession: updatedSession,
         };
       }
       return prev;
@@ -908,11 +960,18 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if session was in overtime (timeLeft < 0)
       const isOvertime = pomodoroTimer.timeLeft < 0;
 
+      // Handle final pause if we stop while paused
+      let finalPauses = pomodoroTimer.currentSession.pauses || [];
+      if (pomodoroTimer.pausedAt) {
+        finalPauses = [...finalPauses, { start: pomodoroTimer.pausedAt, end: new Date() }];
+      }
+
       // Save session - mark as completed if it was in overtime
       const session = {
         ...pomodoroTimer.currentSession,
         ended: new Date(),
         completed: isOvertime,
+        pauses: finalPauses,
       };
 
       setUserData(prev => ({
@@ -1044,10 +1103,17 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const completePomodoro = () => {
     if (pomodoroTimer.currentSession) {
+      // Handle final pause if we complete while paused (unlikely but possible)
+      let finalPauses = pomodoroTimer.currentSession.pauses || [];
+      if (pomodoroTimer.pausedAt) {
+        finalPauses = [...finalPauses, { start: pomodoroTimer.pausedAt, end: new Date() }];
+      }
+
       // Save completed session
       const completedSession = {
         ...pomodoroTimer.currentSession,
         ended: new Date(),
+        pauses: finalPauses,
         completed: true,
       };
 

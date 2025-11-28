@@ -61,6 +61,7 @@ export interface PomodoroSession {
   duration: number; // in minutes, typically 25
   completed: boolean; // true if full session completed
   type: 'work' | 'shortBreak' | 'longBreak';
+  pauses?: { start: Date; end: Date }[]; // Track pause intervals
 }
 
 export interface Notes {

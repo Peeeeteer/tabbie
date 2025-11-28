@@ -49,6 +49,16 @@ const int MAX_WIFI_ATTEMPTS = 3;
 int wifiAttemptCount = 0;
 unsigned long wifiRetryWaitUntil = 0;
 
+// Debug mode - shows device info on OLED when triggered
+bool isDebugMode = false;
+unsigned long debugModeStartTime = 0;
+const unsigned long DEBUG_MODE_DURATION = 8000; // Show debug info for 8 seconds
+
+// Physical button for showing debug info
+// Using GPIO27 - safe pin that's not a strapping pin
+const int DEBUG_BUTTON_PIN = 27;
+unsigned long lastButtonPress = 0;
+const unsigned long BUTTON_DEBOUNCE_MS = 300; // Debounce time
 
 // Setup mode configuration
 const char* SETUP_SSID = "Tabbie-Setup";
@@ -82,6 +92,10 @@ void drawStartupAnimation();
 void drawAngryImage();
 void drawPomodoroAnimation();
 void drawTaskCompleteAnimation();
+void drawDebugInfo();
+void handleDebug();
+void handleReset();
+void checkDebugButton();
 void prepareWiFiForRetry(unsigned long delayMs = 0);
 void onWiFiConnectionFailure(const String& reason);
 
@@ -91,6 +105,9 @@ void setup() {
   
   // Record startup time
   startupTime = millis();
+  
+  // Setup debug button (GPIO0 = BOOT button on most ESP32 boards)
+  pinMode(DEBUG_BUTTON_PIN, INPUT_PULLUP);
   
   // CRITICAL: Clean WiFi state from any previous boot/mode
   // This prevents issues when switching between AP and STA modes
@@ -131,40 +148,13 @@ void setupDisplay() {
 void loadWiFiCredentials() {
   Serial.println("📡 Loading WiFi credentials...");
   
-  // Check for forced setup mode
-  #ifdef FORCE_SETUP_MODE
-  if (FORCE_SETUP_MODE == 1) {
-    Serial.println("🔧 Forced setup mode enabled");
-    startSetupMode();
-    return;
-  }
-  #endif
-  
-  // Try preset credentials from wifi.env first
-  #ifdef PRESET_WIFI_SSID
-  savedSSID = String(PRESET_WIFI_SSID);
-  Serial.print("📡 SSID: ");
-  Serial.println(savedSSID);
-  #endif
-  
-  #ifdef PRESET_WIFI_PASSWORD
-  savedPassword = String(PRESET_WIFI_PASSWORD);
-  Serial.println("📡 Password loaded");
-  #endif
-  
-  // If no preset credentials, check saved preferences
-  if (savedSSID.length() == 0 || savedPassword.length() == 0) {
-    savedSSID = preferences.getString("wifi_ssid", "");
-    savedPassword = preferences.getString("wifi_password", "");
-    Serial.println("📡 Using saved credentials");
-  } else {
-    // Save preset credentials to preferences for future use
-    preferences.putString("wifi_ssid", savedSSID);
-    preferences.putString("wifi_password", savedPassword);
-  }
+  // Check saved preferences (from captive portal setup)
+  savedSSID = preferences.getString("wifi_ssid", "");
+  savedPassword = preferences.getString("wifi_password", "");
   
   if (savedSSID.length() > 0 && savedPassword.length() > 0) {
-    Serial.println("📡 Will connect in background");
+    Serial.print("📡 Found saved credentials for: ");
+    Serial.println(savedSSID);
     wifiStatus = "connecting";
     wifiAttemptCount = 0;
     wifiRetryWaitUntil = 0;
@@ -409,6 +399,10 @@ void setupWebServer() {
   server.on("/api/status", HTTP_OPTIONS, handleCORS);
   server.on("/api/animation", HTTP_POST, handleAnimation);
   server.on("/api/animation", HTTP_OPTIONS, handleCORS);
+  server.on("/api/debug", HTTP_POST, handleDebug);
+  server.on("/api/debug", HTTP_OPTIONS, handleCORS);
+  server.on("/api/reset", HTTP_POST, handleReset);
+  server.on("/api/reset", HTTP_OPTIONS, handleCORS);
   server.on("/wifi", HTTP_GET, handleWiFiSettings);
   server.on("/wifi", HTTP_POST, handleWiFiConfig);
   
@@ -418,6 +412,9 @@ void setupWebServer() {
 }
 
 void loop() {
+  // Check if debug button is pressed
+  checkDebugButton();
+  
   // Handle DNS server in setup mode
   if (isInSetupMode) {
     dnsServer.processNextRequest();
@@ -460,7 +457,9 @@ void handleRoot() {
   html += "<button class='button' onclick=\"sendAnimation('complete','Task Done!')\">Complete</button>";
   html += "<h3>Settings:</h3>";
   html += "<button class='button' onclick=\"window.location='/wifi'\">WiFi Settings</button>";
+  html += "<button class='button' style='background:#dc3545;' onclick=\"resetWiFi()\">Reset WiFi</button>";
   html += "<script>";
+  html += "async function resetWiFi(){if(confirm('This will clear WiFi settings and restart Tabbie. Continue?')){try{await fetch('/api/reset',{method:'POST'});alert('Tabbie is restarting in setup mode...');}catch(e){alert('Tabbie is restarting...');}}}";
   html += "async function sendAnimation(type,task=''){";
   html += "try{const response=await fetch('/api/animation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({animation:type,task:task})});";
   html += "if(response.ok){updateStatus();}}catch(e){console.error('Failed to send animation:',e);}}";
@@ -621,6 +620,48 @@ void handleStatus() {
   server.send(200, "application/json", response);
 }
 
+void handleReset() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Content-Type", "application/json");
+  
+  Serial.println("🔄 Resetting WiFi credentials...");
+  
+  // Clear saved WiFi credentials
+  preferences.remove("wifi_ssid");
+  preferences.remove("wifi_password");
+  
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"WiFi credentials cleared. Restarting in setup mode...\"}");
+  
+  delay(1000);
+  ESP.restart();
+}
+
+void handleDebug() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Content-Type", "application/json");
+  
+  // Activate debug mode - shows device info on OLED for 8 seconds
+  isDebugMode = true;
+  debugModeStartTime = millis();
+  
+  Serial.println("🔧 Debug mode activated - showing device info on OLED");
+  
+  JsonDocument response;
+  response["success"] = true;
+  response["message"] = "Debug info displayed on OLED for 8 seconds";
+  response["ip"] = WiFi.localIP().toString();
+  response["ssid"] = WiFi.SSID();
+  response["rssi"] = WiFi.RSSI();
+  response["uptime"] = millis();
+  response["animation"] = currentAnimation;
+  response["wifiStatus"] = wifiStatus;
+  response["mac"] = WiFi.macAddress();
+  
+  String responseStr;
+  serializeJson(response, responseStr);
+  server.send(200, "application/json", responseStr);
+}
+
 void handleAnimation() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Content-Type", "application/json");
@@ -680,6 +721,18 @@ void updateDisplay() {
     return;
   }
   
+  // Handle debug mode - show device info temporarily
+  if (isDebugMode) {
+    if (millis() - debugModeStartTime < DEBUG_MODE_DURATION) {
+      drawDebugInfo();
+      return;
+    } else {
+      // Debug mode expired, return to normal
+      isDebugMode = false;
+      Serial.println("🔧 Debug mode ended - returning to normal display");
+    }
+  }
+  
   // Otherwise, always show animations - WiFi connection happens in background
   if (currentAnimation == "idle") {
     drawIdleAnimation();
@@ -696,6 +749,98 @@ void updateDisplay() {
   } else if (currentAnimation == "complete") {
     drawTaskCompleteAnimation();
   }
+}
+
+void checkDebugButton() {
+  // Don't check button during startup (first 5 seconds) to avoid false triggers
+  if (millis() < 5000) return;
+  
+  // Don't trigger while startup animation is still playing
+  if (!hasCompletedStartup) return;
+  
+  // Don't allow re-triggering while debug mode is active
+  if (isDebugMode) return;
+  
+  // Check if button is pressed (LOW because of INPUT_PULLUP)
+  if (digitalRead(DEBUG_BUTTON_PIN) == LOW) {
+    // Debounce check
+    if (millis() - lastButtonPress > BUTTON_DEBOUNCE_MS) {
+      lastButtonPress = millis();
+      
+      // Activate debug mode
+      isDebugMode = true;
+      debugModeStartTime = millis();
+      Serial.println("🔘 Debug button pressed - showing device info");
+    }
+  }
+}
+
+void drawDebugInfo() {
+  display.clearBuffer();
+  display.setFont(u8g2_font_6x10_tf);
+  
+  // Show different info based on connection state
+  if (isInSetupMode) {
+    // Setup mode - show setup instructions
+    display.drawStr(0, 10, "=== SETUP MODE ===");
+    display.drawStr(0, 24, "Connect to WiFi:");
+    display.drawStr(0, 36, "  Tabbie-Setup");
+    display.drawStr(0, 48, "Then visit:");
+    display.drawStr(0, 60, "  192.168.4.1");
+  } else if (wifiStatus == "connecting") {
+    // Connecting - show status
+    display.drawStr(0, 10, "=== CONNECTING ===");
+    display.drawStr(0, 26, "WiFi:");
+    String ssidShort = savedSSID.substring(0, 15);
+    display.drawStr(36, 26, ssidShort.c_str());
+    display.drawStr(0, 42, "Please wait...");
+    
+    // Show attempt count
+    String attempts = "Attempt " + String(wifiAttemptCount) + "/" + String(MAX_WIFI_ATTEMPTS);
+    display.drawStr(0, 58, attempts.c_str());
+  } else if (wifiStatus == "connected") {
+    // Connected - show IP prominently
+    display.drawStr(0, 10, "=== CONNECTED ===");
+    
+    // IP Address - the most important info!
+    display.setFont(u8g2_font_7x13B_tf); // Slightly bigger font for IP
+    display.drawStr(0, 26, WiFi.localIP().toString().c_str());
+    display.setFont(u8g2_font_6x10_tf);
+    
+    // WiFi name
+    String ssidDisplay = WiFi.SSID();
+    if (ssidDisplay.length() > 18) {
+      ssidDisplay = ssidDisplay.substring(0, 15) + "...";
+    }
+    display.drawStr(0, 40, ssidDisplay.c_str());
+    
+    // Signal strength with visual indicator
+    int rssi = WiFi.RSSI();
+    String signal;
+    if (rssi > -50) signal = "Signal: Great";
+    else if (rssi > -60) signal = "Signal: Good";
+    else if (rssi > -70) signal = "Signal: Fair";
+    else signal = "Signal: Weak";
+    display.drawStr(0, 52, signal.c_str());
+    
+    // Countdown
+    int secondsLeft = (DEBUG_MODE_DURATION - (millis() - debugModeStartTime)) / 1000;
+    String countdown = "(" + String(secondsLeft) + "s)";
+    display.drawStr(100, 52, countdown.c_str());
+  } else {
+    // Failed/disconnected
+    display.drawStr(0, 10, "=== WIFI ERROR ===");
+    display.drawStr(0, 26, "Not connected!");
+    
+    if (lastError.length() > 0) {
+      String errShort = lastError.substring(0, 20);
+      display.drawStr(0, 40, errShort.c_str());
+    }
+    
+    display.drawStr(0, 56, "Check WiFi settings");
+  }
+  
+  display.sendBuffer();
 }
 
 void drawSetupMode() {

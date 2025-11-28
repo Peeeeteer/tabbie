@@ -25,7 +25,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     completeWorkSession,
     skipBreak,
   } = useTodo();
-  
+
   const { triggerTaskCompletion } = useTabbieSync();
 
   // Get current task from userData using currentTaskId
@@ -38,7 +38,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
       console.log('🔇 Sounds are disabled in settings');
       return;
     }
-    
+
     try {
       console.log('🔊 Playing task complete sound...');
       const audio = new Audio('/task_complete.wa.mp3');
@@ -61,39 +61,39 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     .sort((a, b) => {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
+
       // Helper function to check if a date is overdue
       const isOverdue = (date?: Date) => {
         if (!date) return false;
         const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         return taskDate.getTime() < today.getTime();
       };
-      
+
       // Helper function to check if a date is today
       const isToday = (date?: Date) => {
         if (!date) return false;
         const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         return taskDate.getTime() === today.getTime();
       };
-      
+
       // Sort priority: overdue > due today > has due date > no due date
       const aOverdue = isOverdue(a.dueDate);
       const bOverdue = isOverdue(b.dueDate);
       const aToday = isToday(a.dueDate);
       const bToday = isToday(b.dueDate);
-      
+
       if (aOverdue && !bOverdue) return -1;
       if (!aOverdue && bOverdue) return 1;
       if (aToday && !bToday) return -1;
       if (!aToday && bToday) return 1;
       if (a.dueDate && !b.dueDate) return -1;
       if (!a.dueDate && b.dueDate) return 1;
-      
+
       // If both have due dates, sort by date
       if (a.dueDate && b.dueDate) {
         return a.dueDate.getTime() - b.dueDate.getTime();
       }
-      
+
       // Otherwise maintain original order
       return 0;
     });
@@ -101,27 +101,27 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
   // Calculate session info
   const completedWorkSessions = currentTask?.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
   const estimatedSessions = currentTask?.estimatedPomodoros || 3;
-  
+
   // Calculate current session number (work sessions only) - include current session if it's a work session
-  const currentSessionNumber = completedWorkSessions + 
+  const currentSessionNumber = completedWorkSessions +
     (pomodoroTimer.sessionType === 'work' && !pomodoroTimer.justCompleted ? 1 : 0);
 
   // Check if task is completely done
-  const isTaskComplete = completedWorkSessions >= estimatedSessions || 
-    (pomodoroTimer.justCompleted && pomodoroTimer.sessionType === 'work' && 
-     (completedWorkSessions + 1) >= estimatedSessions);
+  const isTaskComplete = completedWorkSessions >= estimatedSessions ||
+    (pomodoroTimer.justCompleted && pomodoroTimer.sessionType === 'work' &&
+      (completedWorkSessions + 1) >= estimatedSessions);
 
   // Generate progress bars data - work sessions and breaks
   const generateProgressBars = () => {
     if (!currentTask) return [];
-    
+
     const bars = [];
     const totalWorkSessions = estimatedSessions;
-    
+
     // Calculate completed work sessions including the current one if it's completed
-    const effectiveCompletedWorkSessions = completedWorkSessions + 
+    const effectiveCompletedWorkSessions = completedWorkSessions +
       (pomodoroTimer.justCompleted && pomodoroTimer.sessionType === 'work' ? 1 : 0);
-    
+
     for (let i = 0; i < totalWorkSessions; i++) {
       // Work session
       bars.push({
@@ -130,7 +130,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
         isCurrent: i === effectiveCompletedWorkSessions && pomodoroTimer.sessionType === 'work' && !pomodoroTimer.justCompleted,
         index: i
       });
-      
+
       // Break session (except after the last work session)
       if (i < totalWorkSessions - 1) {
         bars.push({
@@ -141,7 +141,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
         });
       }
     }
-    
+
     // Add extra pomodoros if user has added more than estimated
     const extraPomodoros = Math.max(0, completedWorkSessions - estimatedSessions);
     for (let i = 0; i < extraPomodoros; i++) {
@@ -153,7 +153,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
         isExtra: true
       });
     }
-    
+
     return bars;
   };
 
@@ -163,11 +163,11 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
   // Calculate progress percentage for circular timer
   const calculateProgress = () => {
     if (!pomodoroTimer.currentSession) return 0;
-    
+
     const totalDuration = pomodoroTimer.currentSession.duration * 60;
     const elapsed = totalDuration - pomodoroTimer.timeLeft;
     const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
-    
+
     return progress;
   };
 
@@ -209,7 +209,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
       });
       return '00:00';
     }
-    
+
     const absSeconds = Math.abs(seconds);
     const minutes = Math.floor(absSeconds / 60);
     const remainingSeconds = absSeconds % 60;
@@ -221,6 +221,17 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
     if (selectedTaskForPomodoro) {
       const task = userData.tasks.find(t => t.id === selectedTaskForPomodoro);
       if (task) {
+        // Check if task has already reached its estimated pomodoros
+        const completedPoms = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
+        const estimated = task.estimatedPomodoros || 1;
+
+        if (completedPoms >= estimated) {
+          // Auto-increment estimated pomodoros if we're starting a new session on a "finished" task
+          updateTask(task.id, {
+            estimatedPomodoros: estimated + 1
+          });
+        }
+
         // Start the pomodoro session with the task as-is, preserving existing data
         startPomodoro(task);
         setShowTaskSelection(false);
@@ -257,8 +268,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
             r={radius}
             stroke={
               isWorkOverdue ? (isRetro ? "rgb(255 128 0)" : "rgb(249 115 22)") : // orange for overdue work
-              isBreakOverdue ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : // red for overdue break
-              pomodoroTimer.sessionType === 'work' ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : (isRetro ? "rgb(0 229 160)" : "rgb(34 197 94)")
+                isBreakOverdue ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : // red for overdue break
+                  pomodoroTimer.sessionType === 'work' ? (isRetro ? "rgb(255 80 80)" : "rgb(239 68 68)") : (isRetro ? "rgb(0 229 160)" : "rgb(34 197 94)")
             }
             strokeWidth={isRetro ? "12" : "8"}
             fill="none"
@@ -268,20 +279,19 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
             className="transition-all duration-1000 ease-out"
           />
         </svg>
-        
+
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className={isRetro ? "text-6xl font-mono font-black text-gray-900 dark:text-white mb-2" : "text-6xl font-mono font-bold text-gray-900 mb-2"}>
             {formatTime(pomodoroTimer.timeLeft)}
           </div>
-          <div className={`text-lg ${isRetro ? 'font-bold' : 'font-medium'} ${
-            isWorkOverdue ? 'text-orange-600 dark:text-orange-400' : 
+          <div className={`text-lg ${isRetro ? 'font-bold' : 'font-medium'} ${isWorkOverdue ? 'text-orange-600 dark:text-orange-400' :
             isBreakOverdue ? 'text-red-600 dark:text-red-400' :
-            pomodoroTimer.sessionType === 'work' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-          }`}>
-            {isWorkOverdue ? '⏰ Take Break' : 
-             isBreakOverdue ? '⏰ Break Overdue' :
-             pomodoroTimer.sessionType === 'work' ? '🍅 Focus Time' : '☕ Break Time'}
+              pomodoroTimer.sessionType === 'work' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+            }`}>
+            {isWorkOverdue ? '⏰ Take Break' :
+              isBreakOverdue ? '⏰ Break Overdue' :
+                pomodoroTimer.sessionType === 'work' ? '🍅 Focus Time' : '☕ Break Time'}
           </div>
         </div>
       </div>
@@ -330,7 +340,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                 : "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2"
             }>No Active Pomodoro</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8">Start a pomodoro session from your task list or choose a task to focus on!</p>
-            
+
             {availableTasks.length > 0 ? (
               <Popover open={showTaskSelection} onOpenChange={setShowTaskSelection}>
                 <PopoverTrigger asChild>
@@ -353,25 +363,24 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                         const category = userData.categories.find(c => c.id === task.categoryId);
                         const completedPomodoros = task.pomodoroSessions?.filter(s => s.completed && s.type === 'work').length || 0;
                         const totalEstimated = task.estimatedPomodoros || 3;
-                        
+
                         // Check due date status
                         const now = new Date();
                         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                         const isOverdue = task.dueDate && new Date(task.dueDate.getFullYear(), task.dueDate.getMonth(), task.dueDate.getDate()).getTime() < today.getTime();
                         const isToday = task.dueDate && new Date(task.dueDate.getFullYear(), task.dueDate.getMonth(), task.dueDate.getDate()).getTime() === today.getTime();
-                        
+
                         return (
                           <div
                             key={task.id}
-                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                              selectedTaskForPomodoro === task.id
-                                ? 'border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-400'
-                                : isOverdue
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedTaskForPomodoro === task.id
+                              ? 'border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-400'
+                              : isOverdue
                                 ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-500 hover:border-red-400 dark:hover:border-red-400'
                                 : isToday
-                                ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-500 hover:border-orange-400 dark:hover:border-orange-400'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
+                                  ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-500 hover:border-orange-400 dark:hover:border-orange-400'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              }`}
                             onClick={() => {
                               setSelectedTaskForPomodoro(task.id);
                             }}
@@ -401,9 +410,9 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                   )}
                                 </div>
                                 {task.description && (
-                                  <div 
+                                  <div
                                     className="text-xs text-gray-600 dark:text-gray-400 mt-1 prose prose-xs max-w-none dark:prose-invert"
-                                    dangerouslySetInnerHTML={{ 
+                                    dangerouslySetInnerHTML={{
                                       __html: task.description
                                         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
                                         .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
@@ -417,7 +426,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                                   </span>
                                   {completedPomodoros > 0 && (
                                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                                      <div 
+                                      <div
                                         className="bg-red-500 dark:bg-red-400 h-1.5 rounded-full transition-all duration-300"
                                         style={{ width: `${Math.min((completedPomodoros / totalEstimated) * 100, 100)}%` }}
                                       />
@@ -508,7 +517,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Left Column - Timer */}
           <div className="lg:col-span-2">
             <div className={
@@ -516,7 +525,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                 ? "bg-white dark:bg-gray-800 rounded-[24px] border-2 border-black dark:border-gray-600 shadow-[8px_8px_0_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_0_rgba(0,0,0,0.6)] p-8"
                 : "bg-white dark:bg-gray-900 rounded-lg shadow-sm border dark:border-gray-700 p-8"
             }>
-              
+
               {/* Task Info */}
               <div className="text-center mb-8">
                 <h2 className={
@@ -527,9 +536,9 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                   {currentTask?.title || 'No Task Selected'}
                 </h2>
                 {currentTask?.description && (
-                  <div 
+                  <div
                     className="text-gray-600 dark:text-gray-400 prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ 
+                    dangerouslySetInnerHTML={{
                       __html: currentTask.description
                         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
                         .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
@@ -558,39 +567,35 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                   {progressBars.map((bar, index) => (
                     <div
                       key={index}
-                      className={`h-3 rounded-sm transition-all duration-300 ${
-                        bar.type === 'work' ? 'flex-1' : 'w-4'
-                      } ${
-                        bar.isCompleted
+                      className={`h-3 rounded-sm transition-all duration-300 ${bar.type === 'work' ? 'flex-1' : 'w-4'
+                        } ${bar.isCompleted
                           ? bar.type === 'work'
-                            ? bar.isExtra 
+                            ? bar.isExtra
                               ? 'bg-blue-500' // Extra pomodoros in blue
                               : 'bg-red-500'
                             : 'bg-green-500'
                           : bar.isCurrent
-                          ? bar.type === 'work'
-                            ? 'bg-red-400 animate-pulse shadow-lg shadow-red-200'
-                            : 'bg-green-400 animate-pulse shadow-lg shadow-green-200'
-                          : 'bg-gray-200'
-                      }`}
+                            ? bar.type === 'work'
+                              ? 'bg-red-400 animate-pulse shadow-lg shadow-red-200'
+                              : 'bg-green-400 animate-pulse shadow-lg shadow-green-200'
+                            : 'bg-gray-200'
+                        }`}
                       title={
                         bar.type === 'work'
-                          ? `Pomodoro ${bar.index + 1} ${
-                              bar.isExtra 
-                                ? '(Extra)'
-                                : bar.isCompleted
-                                ? '(Completed)'
-                                : bar.isCurrent
+                          ? `Pomodoro ${bar.index + 1} ${bar.isExtra
+                            ? '(Extra)'
+                            : bar.isCompleted
+                              ? '(Completed)'
+                              : bar.isCurrent
                                 ? '(Current)'
                                 : '(Upcoming)'
-                            }`
-                          : `Break ${bar.index + 1} ${
-                              bar.isCompleted
-                                ? '(Completed)'
-                                : bar.isCurrent
-                                ? '(Current)'
-                                : '(Upcoming)'
-                            }`
+                          }`
+                          : `Break ${bar.index + 1} ${bar.isCompleted
+                            ? '(Completed)'
+                            : bar.isCurrent
+                              ? '(Current)'
+                              : '(Upcoming)'
+                          }`
                       }
                     />
                   ))}
@@ -665,7 +670,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                 {isAutoPausedForOvertime ? null : isWorkOverdue ? (
                   // Show overdue work controls first - this takes priority over justCompleted
                   <>
-                    <Button 
+                    <Button
                       onClick={completeWorkSession}
                       size="lg"
                       className="bg-blue-600 hover:bg-blue-700 text-white px-8"
@@ -673,7 +678,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                       <Coffee className="w-5 h-5 mr-2" />
                       Take Break
                     </Button>
-                    <Button 
+                    <Button
                       onClick={stopPomodoro}
                       variant="outline"
                       size="lg"
@@ -686,7 +691,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                 ) : isBreakOverdue ? (
                   // Show overdue break controls
                   <>
-                    <Button 
+                    <Button
                       onClick={startNextSession}
                       size="lg"
                       className="bg-red-600 hover:bg-red-700 text-white px-8"
@@ -694,7 +699,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                       <Play className="w-5 h-5 mr-2" />
                       Continue Working
                     </Button>
-                    <Button 
+                    <Button
                       onClick={stopPomodoro}
                       variant="outline"
                       size="lg"
@@ -713,7 +718,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           🎉 Task Completed! All pomodoros finished.
                         </div>
                         <div className="flex gap-3 justify-center">
-                          <Button 
+                          <Button
                             onClick={() => {
                               if (currentTask) {
                                 // Show completion animation overlay
@@ -740,7 +745,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             <CheckSquare className="w-5 h-5 mr-2" />
                             {showingCompletionAnimation ? 'Completing...' : 'Finish Task'}
                           </Button>
-                          <Button 
+                          <Button
                             variant="outline"
                             onClick={() => {
                               if (currentTask) {
@@ -758,6 +763,9 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             Continue Working
                           </Button>
                         </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          "Continue Working" will add an extra Pomodoro to your goal.
+                        </p>
                       </div>
                     ) : (
                       <div className="text-center space-y-4">
@@ -765,13 +773,12 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           {pomodoroTimer.sessionType === 'work' ? '🎉 Great Work!' : '☕ Break Complete!'}
                         </div>
                         <div className="flex gap-3 justify-center">
-                          <Button 
+                          <Button
                             onClick={startNextSession}
-                            className={`${
-                              pomodoroTimer.sessionType === 'work' 
-                                ? 'bg-green-600 hover:bg-green-700' 
-                                : 'bg-red-600 hover:bg-red-700'
-                            } text-white px-8`}
+                            className={`${pomodoroTimer.sessionType === 'work'
+                              ? 'bg-green-600 hover:bg-green-700'
+                              : 'bg-red-600 hover:bg-red-700'
+                              } text-white px-8`}
                           >
                             {pomodoroTimer.sessionType === 'work' ? (
                               <>
@@ -785,9 +792,9 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                               </>
                             )}
                           </Button>
-                          
+
                           {pomodoroTimer.sessionType === 'work' && (
-                            <Button 
+                            <Button
                               onClick={skipBreak}
                               variant="outline"
                               className="px-8"
@@ -796,10 +803,10 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                               Skip Break
                             </Button>
                           )}
-                          
+
                           {/* Add More Pomodoros button when work session is completed */}
                           {pomodoroTimer.sessionType === 'work' && completedWorkSessions >= estimatedSessions && (
-                            <Button 
+                            <Button
                               onClick={() => {
                                 if (currentTask) {
                                   updateTask(currentTask.id, {
@@ -814,8 +821,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                               Add Pomodoro & Continue
                             </Button>
                           )}
-                          
-                          <Button 
+
+                          <Button
                             onClick={() => {
                               if (currentTask) {
                                 // Play task complete sound
@@ -862,7 +869,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           <SkipForward className="w-5 h-5 mr-2" />
                           Skip Break
                         </Button>
-                        <Button 
+                        <Button
                           onClick={stopPomodoro}
                           variant="outline"
                           size="lg"
@@ -876,7 +883,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                       // Work session controls - pause, resume, stop, finish
                       <>
                         {pomodoroTimer.isRunning ? (
-                          <Button 
+                          <Button
                             onClick={pausePomodoro}
                             size="lg"
                             className={
@@ -889,7 +896,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             Pause
                           </Button>
                         ) : (
-                          <Button 
+                          <Button
                             onClick={resumePomodoro}
                             size="lg"
                             className={
@@ -902,7 +909,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                             Resume
                           </Button>
                         )}
-                        <Button 
+                        <Button
                           onClick={stopPomodoro}
                           variant="outline"
                           size="lg"
@@ -915,7 +922,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                           <Square className="w-5 h-5 mr-2" />
                           Stop
                         </Button>
-                        <Button 
+                        <Button
                           onClick={() => {
                             if (currentTask) {
                               // Show completion animation overlay
@@ -982,11 +989,10 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                     </p>
                   </div>
                 </div>
-                <div className={`px-2 py-1 rounded-md text-xs font-bold ${
-                  isAutoPausedForOvertime ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                  pomodoroTimer.isRunning ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
-                  'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}>
+                <div className={`px-2 py-1 rounded-md text-xs font-bold ${isAutoPausedForOvertime ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                  pomodoroTimer.isRunning ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                    'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}>
                   {isAutoPausedForOvertime ? 'Paused' : pomodoroTimer.isRunning ? 'Running' : 'Paused'}
                 </div>
               </div>
@@ -1085,7 +1091,7 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                         : "flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs"
                     }>
                       <span className="text-blue-500 dark:text-blue-400">🌐</span>
-                      <span 
+                      <span
                         className={
                           theme === 'retro'
                             ? "flex-1 text-gray-900 dark:text-gray-100 font-bold dark:font-normal truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
@@ -1094,8 +1100,8 @@ const PomodoroPage: React.FC<PomodoroPageProps> = ({ onPageChange, theme = 'clea
                         title={url}
                         onClick={() => {
                           try {
-                            const formattedUrl = url.startsWith('http://') || url.startsWith('https://') 
-                              ? url 
+                            const formattedUrl = url.startsWith('http://') || url.startsWith('https://')
+                              ? url
                               : `https://${url}`;
                             window.open(formattedUrl, '_blank');
                           } catch (error) {
